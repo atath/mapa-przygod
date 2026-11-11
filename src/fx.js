@@ -1,6 +1,11 @@
 import { L } from "./content.js";
 import { SPR } from "./props.js";
-import { $, esc, pick, rand, reduced, ri, shuffle } from "./util.js";
+import { $, esc, reduced } from "./util.js";
+
+// effects keep their own Math.random so they never shift the game's (possibly seeded) sequence
+const rand = (a, b) => a + Math.random() * (b - a), ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 /* ================== Effects (canvas particles) ================== */
 export const fx = $("fx"), fctx = fx.getContext("2d");

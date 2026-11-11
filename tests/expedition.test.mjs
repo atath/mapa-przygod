@@ -80,6 +80,20 @@ test("going back to camp mid-animation does not move the next expedition", { tim
   } finally { await o.close(); }
 });
 
+test("the same seed gives the same expedition (so failures can be replayed)", { timeout: 60000 }, async () => {
+  const run = async (seed) => {
+    const o = await open({ seed });
+    try {
+      await startWith(o.p, srv.url, oneProfile({ level: 2 }));
+      await o.p.click("#tripBtn"); await o.p.waitForSelector("#goBtn");
+      return await o.p.evaluate(() => { const M = window.__LW_TEST.M; return JSON.stringify({ start: M.start, exits: M.exits, blocks: [...M.blocks], coins: [...M.coins] }); });
+    } finally { await o.close(); }
+  };
+  const a = await run(12345), b = await run(12345), c = await run(54321);
+  assert.equal(a, b, "the same seed gave a different map");
+  assert.notEqual(a, c, "a different seed gave the same map: the seed is ignored");
+});
+
 test("phone width: camp and path room fit without sideways scrolling", { timeout: 60000 }, async () => {
   const o = await open({ viewport: { width: 360, height: 780 } }); const p = o.p;
   try {

@@ -34,6 +34,12 @@ Testy grają w prawdziwą grę w przeglądarce Chromium:
 
 Każdy test kończy się błędem, gdy na stronie wystąpi jakikolwiek nieobsłużony wyjątek.
 
+Gra jest losowa (mapy, potwory, słowa), więc każde uruchomienie sprawdza inne przypadki. Na początku wyników każdy plik wypisuje swoje ziarno losowania, np. `SEED=561586849`. Gdy test się wywróci, ten sam przebieg powtórzysz poleceniem:
+
+```bash
+SEED=561586849 node --test tests/expedition.test.mjs
+```
+
 ## Struktura
 
 | Katalog / plik | Co zawiera |

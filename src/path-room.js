@@ -9,7 +9,7 @@ import { DIRT, GRASS, SPR } from "./props.js";
 import { bob, draw, light, mountCanvas } from "./scene.js";
 import { gw, heroName, petName, say } from "./shell.js";
 import { P } from "./sprites.js";
-import { $, app, esc, mulberry, reduced, ri, shuffle, sleep } from "./util.js";
+import { $, app, esc, mulberry, reduced, ri, shuffle, sleep, rnd } from "./util.js";
 
 /* ---------- Path room (programming, several exits) ---------- */
 export const DIRS = { up: [-1, 0, "↑", "w górę"], down: [1, 0, "↓", "w dół"], left: [0, -1, "←", "w lewo"], right: [0, 1, "→", "w prawo"] };
@@ -56,8 +56,8 @@ export function genMap(lv, types) {
       let r = sr, c = 0, horiz = true, guard = 0;
       while (c < COLS - 2 && guard++ < 30) {
         if (horiz) { const n = ri(1, Math.min(lv.maxSeg, COLS - 2 - c)); for (let i = 0; i < n; i++) open.add(r + "," + ++c); }
-        else if (Math.random() < 0.8) {
-          const towards = Math.random() < 0.6 ? Math.sign(ex.cell[0] - r) : (Math.random() < 0.5 ? -1 : 1);
+        else if (rnd() < 0.8) {
+          const towards = rnd() < 0.6 ? Math.sign(ex.cell[0] - r) : (rnd() < 0.5 ? -1 : 1);
           const dir = towards || (r > 2 ? -1 : 1), room_ = dir < 0 ? r : ROWS - 1 - r;
           if (room_ >= 1) { const n = ri(1, Math.min(lv.maxSeg, room_)); for (let i = 0; i < n; i++) { r += dir; open.add(r + "," + c); } }
         }
@@ -71,7 +71,7 @@ export function genMap(lv, types) {
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const k = r + "," + c; if (open.has(k)) continue;
       if (c === COLS - 1) { blocks.set(k, "tree"); continue; } // right edge: only exits are open
-      const v = Math.random(); if (v < 0.55) blocks.set(k, "tree"); else if (v < 0.68) blocks.set(k, "rock");
+      const v = rnd(); if (v < 0.55) blocks.set(k, "tree"); else if (v < 0.68) blocks.set(k, "rock");
     }
     const M = { COLS, ROWS, start, exits, blocks, seed: ri(1, 99999) };
     const need = exits.map((e) => minBlocks(M, e.cell, lv.loops ? 4 : 1, lv.slide));

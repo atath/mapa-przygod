@@ -9,7 +9,7 @@ import { EICON, ELEM, SPR, counterOf, monsterOf } from "./props.js";
 import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
-import { $, app, esc, pick, reduced, ri, shuffle, sleep } from "./util.js";
+import { $, app, esc, pick, reduced, ri, shuffle, sleep, rnd } from "./util.js";
 
 /* ---------- Monster room (spells + math, turn-based) ---------- */
 export function monsterRoom() {
@@ -42,7 +42,7 @@ export function monsterRoom() {
 
   function makeHand(T) {
     const sol = [];
-    if (T > 18 || (T >= 6 && Math.random() < lv.three)) { const a = ri(Math.max(1, T - 18), Math.min(9, T - 2)); const b = ri(Math.max(1, T - a - 9), Math.min(9, T - a - 1)); sol.push(a, b, T - a - b); }
+    if (T > 18 || (T >= 6 && rnd() < lv.three)) { const a = ri(Math.max(1, T - 18), Math.min(9, T - 2)); const b = ri(Math.max(1, T - a - 9), Math.min(9, T - a - 1)); sol.push(a, b, T - a - b); }
     else { const a = ri(Math.max(1, T - 9), Math.min(9, T - 1)); sol.push(a, T - a); }
     const fill = []; while (sol.length + fill.length < lv.cards) { const v = ri(1, 9); if (v !== T) fill.push(v); }
     return shuffle(sol.concat(fill));

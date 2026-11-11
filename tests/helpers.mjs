@@ -12,6 +12,10 @@ export const { chromium } = require("playwright");
 export const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
 export const PIN = "66647";
 export const PIN_HASH = "9f09a3853e2cc699d01ed23d54c0ba2aa4c9ad5502a604c38d35dd271d986975";
+// One seed per test file run. Every page starts the game's random generator from it, so a
+// failing expedition replays exactly with: SEED=<number> npm test   (or node --test <file>)
+export const SEED = process.env.SEED ? Number(process.env.SEED) : Math.floor(Math.random() * 1e9);
+console.log(`SEED=${SEED}  (powtórka: SEED=${SEED} node --test ${process.argv[1] ? process.argv[1].replace(/.*\/tests\//, "tests/") : "tests/"})`);
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".png": "image/png", ".webmanifest": "application/manifest+json" };
 
 // Serves dist/ on a free port. "localhost" counts as a secure origin, so the service worker runs.
@@ -29,14 +33,14 @@ export async function serve() {
 }
 
 // Opens a browser page; `errs` collects every uncaught page error (each test asserts it stays empty).
-export async function open({ viewport = { width: 700, height: 1100 }, hooks = true } = {}) {
+export async function open({ viewport = { width: 700, height: 1100 }, hooks = true, seed = SEED } = {}) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport });
   const errs = [];
   const page = async () => {
     const p = await ctx.newPage();
     p.on("pageerror", (e) => errs.push(e.message));
-    if (hooks) await p.addInitScript(() => { window.__LW_TEST = {}; });
+    if (hooks) await p.addInitScript((s) => { window.__LW_TEST = { seed: s }; }, seed);
     return p;
   };
   return { browser, ctx, errs, page, p: await page(), close: () => browser.close() };

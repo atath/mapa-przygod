@@ -7,7 +7,7 @@ import { PETSPR } from "./pets.js";
 import { SPR } from "./props.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
-import { $, app, esc, pick, ri, shuffle } from "./util.js";
+import { $, app, esc, pick, ri, shuffle, rnd } from "./util.js";
 
 /* ---------- Door room (Polish: build word) ---------- */
 export function doorRoom() {
@@ -75,7 +75,7 @@ export function signRoom() {
     const [a, b] = shuffle(pool).slice(0, 2);
     target = { w: `${a.w} i ${b.w}`, e: a.e + b.e };
     const set = new Set([target.w]);
-    for (let g = 0; set.size < lv.signs && g < 50; g++) set.add(Math.random() < 0.5 ? `${mutate(a.w)} i ${b.w}` : Math.random() < 0.5 ? `${a.w} i ${mutate(b.w)}` : `${b.w} i ${a.w}`);
+    for (let g = 0; set.size < lv.signs && g < 50; g++) set.add(rnd() < 0.5 ? `${mutate(a.w)} i ${b.w}` : rnd() < 0.5 ? `${a.w} i ${mutate(b.w)}` : `${b.w} i ${a.w}`);
     choices = shuffle([...set]);
   } else {
     target = pick(pool);

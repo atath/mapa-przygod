@@ -1,5 +1,4 @@
 import { GS } from "./state.js";
-import { rand } from "./util.js";
 
 /* ================== Speech & sound ================== */
 export let plVoice = null;
@@ -40,7 +39,7 @@ export function note(f, start, dur, type = "square", vol = 0.07) {
   o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
 }
 export const snd = {
-  step() { note(rand(380, 460), 0, 0.06, "square", 0.035); },
+  step() { note(380 + Math.random() * 80, 0, 0.06, "square", 0.035); },
   coin() { note(988, 0, 0.08); note(1319, 0.07, 0.2); },
   ok() { note(659, 0, 0.1); note(880, 0.09, 0.1); note(1175, 0.18, 0.22); },
   bad() { note(220, 0, 0.15, "triangle", 0.12); note(175, 0.13, 0.25, "triangle", 0.12); },
