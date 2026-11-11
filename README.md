@@ -14,6 +14,26 @@ npm run build        # tworzy dist/: jeden plik index.html + pliki aplikacji (PW
 
 `dist/index.html` działa samodzielnie: otwarty z dysku, z dowolnego hostingu plików statycznych albo z serwera.
 
+## Testy
+
+```bash
+npx playwright install chromium   # raz: przeglądarka do testów
+npm test                          # buduje grę i uruchamia wszystkie testy (ok. 2,5 min)
+npm run test:quick                # tylko szybkie testy bez przeglądarki
+```
+
+Testy grają w prawdziwą grę w przeglądarce Chromium:
+
+| Plik | Co sprawdza |
+| --- | --- |
+| `tests/expedition.test.mjs` | Pełne wyprawy na poziomach 1–3, czy da się zebrać wszystkie monety w limicie klocków, limit prób na poziomie 3, wyjście z wyprawy w trakcie animacji, szerokość telefonu |
+| `tests/save.test.mjs` | Przeniesienie zapisu z pierwszej wersji, PIN, gracze, kopia zapisu, cofanie, uszkodzone pliki, dwie otwarte karty |
+| `tests/camp.test.mjs` | Budowa z pytaniem o odejmowanie, ozdoby, ogródek, sklep, działanie budynków na wyprawie |
+| `tests/offline.test.mjs` | Gra bez internetu, otwarcie pliku z dysku, brak zapytań poza grę |
+| `tests/unit.test.mjs` | SHA-256 dla PIN-u, nazwy kluczy zapisu, wersja w pamięci offline |
+
+Każdy test kończy się błędem, gdy na stronie wystąpi jakikolwiek nieobsłużony wyjątek.
+
 ## Struktura
 
 | Katalog / plik | Co zawiera |
@@ -27,6 +47,7 @@ npm run build        # tworzy dist/: jeden plik index.html + pliki aplikacji (PW
 | `src/*-room.js`, `expedition.js` | Wyprawa i jej pokoje |
 | `src/styles.css`, `src/index.html` | Wygląd i szablon strony |
 | `public/` | Manifest, service worker (tryb offline), ikony |
+| `tests/` | Testy (patrz wyżej) |
 | `tools/` | Generator ikon z grafiki gry |
 
 ## Zapis gry
