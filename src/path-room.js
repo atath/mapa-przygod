@@ -311,6 +311,8 @@ export function pathRoom() {
   const intro = first
     ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadzą"} ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Monety liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
     : `${T.key === "mountains" ? "Szlak się rozwidla" : "Las się rozwidla"}. Wyjścia: ${exitsTxt}. Dokąd idziemy?`;
-  say(petName(), intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
+  // on screen a short line (the board shows the rest); read aloud the full explanation
+  const short = `${first ? "Ułóż strzałki do wyjścia i zbierz monety." : "Dokąd idziemy?"} Wyjścia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 próby." : ""}`;
+  say(petName(), short, intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
     + (lv.slide && first ? ` Nowy klocek: „aż do przeszkody”. ${gw("Bohaterka idzie tak długo, dopóki nic jej nie zatrzyma.", "Bohater idzie tak długo, dopóki nic go nie zatrzyma.")}` : ""));
 }

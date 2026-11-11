@@ -32,7 +32,8 @@ export function startTrip(landKey) {
   const key = typeof landKey === "string" && lands()[landKey] && GS.G.lands.includes(landKey) ? landKey : "forest";
   const lv = L(), pw = pick(PASSWORDS.filter((p) => p.w.length >= lv.pass[0] && p.w.length <= lv.pass[1]));
   // three paths, each leading to a room the child picks; then the chest guardian's riddles and the chest
-  const rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
+  let rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
+  if (window.__LW_TEST && window.__LW_TEST.rooms) rooms = window.__LW_TEST.rooms.slice(); // tests visit every kind of room
   // spread the password letters over the 6 rooms, in random order
   const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
   order.forEach((idx, k) => runes[Math.floor((k * spots) / order.length)].push(pw.w[idx]));

@@ -66,8 +66,7 @@ export function monsterRoom() {
     if (window.__LW_TEST) Object.assign(window.__LW_TEST, { T: N, el });
     $("ctl").innerHTML = `
       <div class="foe"><span class="power"><img src="${EICON[el]}" width="40" height="40" alt="">${esc(mon.name)} · moc <b>${N}</b></span></div>
-      <div class="book" aria-label="Księga czarów">${Object.keys(ELEM).map((k) => `<span><img src="${EICON[k]}" alt="">${ELEM[k].name} pokonuje<img src="${EICON[ELEM[k].beats]}" alt=""></span>`).join("")}</div>
-      <div class="spells" id="spells">${Object.keys(ELEM).map((k) => `<button class="spell" data-s="${k}" aria-pressed="false"><img src="${EICON[k]}" alt="">${ELEM[k].name}</button>`).join("")}</div>
+      <div class="spells" id="spells">${Object.keys(ELEM).map((k) => `<button class="spell" data-s="${k}" aria-pressed="false" aria-label="${ELEM[k].name}, pokonuje: ${ELEM[ELEM[k].beats].name}"><img src="${EICON[k]}" alt="">${ELEM[k].name}<small>pokonuje <img src="${EICON[ELEM[k].beats]}" alt=""></small></button>`).join("")}</div>
       <div class="cards" id="cards">${hand.map((v, i) => `<button class="card" data-i="${i}" aria-pressed="false" aria-label="karta ${v}">${v}</button>`).join("")}</div>
       <div class="sum" id="sum" aria-live="polite"></div>
       <button class="btn main" id="cast" disabled>✨ Rzuć czar</button>`;
@@ -75,7 +74,7 @@ export function monsterRoom() {
       const v = [...sel].map((i) => hand[i]);
       $("sum").textContent = v.length ? `${v.join(" + ")} = ${v.reduce((a, b) => a + b, 0)}` : "";
       $("cast").disabled = !v.length || !spell;
-      $("cast").textContent = !spell ? "Wybierz czar" : !v.length ? "Wybierz karty" : "✨ Rzuć czar";
+      $("cast").innerHTML = !spell ? "Wybierz czar" : !v.length ? "Wybierz karty" : `✨ Rzuć czar<span class="castsum">: ${v.join(" + ")} = ${v.reduce((a, b) => a + b, 0)}</span>`;
     };
     upd();
     app.querySelectorAll(".spell").forEach((b) => b.addEventListener("click", () => {
@@ -108,7 +107,8 @@ export function monsterRoom() {
       await sleep(1800); if (left(run)) return;
       monsterTurn();
     });
-    say(petName(), (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`);
+    say(petName(), (prefix ? prefix + " " : "") + `Wybierz czar i karty, które razem dają ${N}.`,
+      (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`);
   }
 
   function monsterTurn() {

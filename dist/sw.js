@@ -1,6 +1,6 @@
 // Offline cache. The game page is fetched fresh when online (so updates arrive)
 // and served from the cache when there is no network.
-const CACHE = "mapa-przygod-0.3.0";
+const CACHE = "mapa-przygod-0.3.1";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

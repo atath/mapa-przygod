@@ -34,6 +34,7 @@ export function say(who, text, spoken) { sayHTML(who, esc(text), spoken != null 
 export function sayHTML(who, html, spoken) {
   const oldErr = document.getElementById("sayErr"); if (oldErr) oldErr.remove();
   $("who").textContent = who || ""; $("txt").innerHTML = html;
+  $("txt").classList.toggle("long", $("txt").textContent.length > 110);
   lastSay = spoken != null ? spoken : $("txt").textContent; speak(lastSay);
 }
 export function wireSay() { $("sayBtn").addEventListener("click", () => speak(lastSay, true)); }

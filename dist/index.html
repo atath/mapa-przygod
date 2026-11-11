@@ -155,6 +155,8 @@ h2 { font-size: 1.6rem; }
   display: grid; justify-items: center; align-content: center; gap: 2px; font-weight: 800; box-shadow: 0 5px 0 var(--wood-dark);
 }
 .spell img { width: 44px; height: 44px; }
+.spell small { display: inline-flex; align-items: center; gap: 2px; font-size: .78rem; font-weight: 800; color: var(--muted); }
+.spell small img { width: 20px; height: 20px; }
 .spell[aria-pressed="true"] { background: var(--gold); color: #3a2a00; transform: translateY(-4px); }
 .book { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 16px; font-weight: 800; color: var(--muted); font-size: .95rem; }
 .book span { display: inline-flex; align-items: center; gap: 4px; }
@@ -268,6 +270,104 @@ h2 { font-size: 1.6rem; }
 .land.locked { filter: grayscale(.85); opacity: .75; }
 .land.locked b::after { content: " 🔒"; }
 .land:active:not(.locked) { transform: translateY(4px); box-shadow: 0 1px 0 var(--wood-dark); }
+
+/* ---------- expedition rooms fit one screen ----------
+   The controls keep their size and the scene gets whatever height is left, so the board,
+   the dialog and the buttons are visible together on any phone or tablet. */
+body.room { padding-block: 8px; }
+body.room main { height: calc(100vh - 16px); height: calc(100dvh - 16px); grid-template-rows: auto minmax(110px, 1fr) auto auto; gap: 8px; }
+body.room #sc { min-height: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+body.room #sc canvas { width: auto; height: auto; max-width: 100%; max-height: 100%; }
+body.room .hud { row-gap: 4px; }
+body.room .trail span { width: 30px; height: 30px; }
+body.room .trail img { width: 22px; height: 22px; }
+body.room .runes { min-height: 28px; }
+body.room .runes b { height: 28px; width: 26px; }
+body.room .dialog { min-height: auto; padding: 8px 10px; gap: 8px; }
+body.room .dialog .txt { min-height: calc(1.3em * 2); max-height: calc(1.3em * 4); overflow-y: auto; font-size: 1.1rem; line-height: 1.3; }
+body.room .dialog .txt.long { font-size: 1rem; }
+body.room .dialog .who { font-size: 1rem; }
+body.room .dialog .say { width: 40px; height: 40px; }
+body.room .ctl { gap: 8px; }
+.dialog .txt.long { font-size: 1.1rem; }
+
+/* short screens (most phones, tablets lying down): slimmer controls */
+@media (max-height: 900px) {
+  body.room .pad .btn { min-height: 54px; font-size: 1.7rem; }
+  body.room .times .btn, body.room .run .btn { min-height: 48px; }
+  body.room .program { min-height: 58px; padding: 6px; padding-top: 10px; }
+  body.room .blk { width: 42px; height: 42px; font-size: 1.4rem; }
+  body.room .card { min-height: 62px; font-size: 2.2rem; }
+  body.room .cards { gap: 6px; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); }
+  body.room .sum { font-size: 1.5rem; }
+  body.room .times { grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 8px; }
+  body.room .times .wide { grid-column: auto; font-size: .8rem; line-height: 1.1; padding: 4px; }
+  body.room .runes em { display: none; }
+  body.room .spell { min-height: 58px; }
+  body.room .spell img { width: 30px; height: 30px; }
+  body.room .foe .power { padding: 2px 12px; }
+  body.room .foe .power b { font-size: 2.1rem; }
+  body.room .book { font-size: .8rem; gap: 2px 10px; }
+  body.room .book img { width: 20px; height: 20px; }
+  body.room .opts { gap: 8px; }
+  body.room .opts .btn { min-height: 56px; }
+  body.room .btn.num { font-size: 2rem; }
+  body.room .btn.main { min-height: 52px; }
+  body.room .clock { width: min(150px, 40vw); }
+  body.room .clock.big { width: min(170px, 46vw); }
+  body.room .task { gap: 4px; margin: 0 0 6px; }
+  body.room .task-q { font-size: 1.05rem; }
+  body.room .clues { padding: 6px 10px 6px 28px; font-size: .95rem; }
+  body.room .seq { font-size: 1.6rem; }
+}
+
+/* very short screens (small phones): every pixel goes to the board */
+@media (max-height: 700px) {
+  body.room .runes:has(em) { display: none; }
+  body.room .hud .trail { display: none; } /* the runes stay: they are needed for the chest */
+  body.room .icon-btn { width: 40px; height: 40px; }
+  body.room .hearts img, body.room .coins img { width: 22px; height: 22px; }
+  body.room .trail span { width: 28px; height: 28px; }
+  body.room .dialog .txt { max-height: calc(1.3em * 3); font-size: 1rem; }
+  body.room .dialog .txt.long { font-size: .95rem; }
+  body.room .pad .btn { min-height: 46px; }
+  body.room .times .btn, body.room .run .btn, body.room .btn.main { min-height: 44px; }
+  body.room .program { min-height: 50px; }
+  body.room .blk { width: 38px; height: 38px; }
+  body.room .limit { font-size: .85rem; line-height: 1.1; }
+}
+
+.castsum { display: none; font-family: var(--font-body); font-weight: 900; }
+@media (max-height: 700px) {
+  body.room main { grid-template-rows: auto minmax(90px, 1fr) auto auto; }
+  body.room .sum { display: none; }
+  body.room .castsum { display: inline; }
+  body.room .spell { min-height: 46px; grid-template-columns: auto auto; column-gap: 4px; align-items: center; padding: 2px 4px; font-size: .9rem; }
+  body.room .spell small { grid-column: 1 / -1; justify-self: center; }
+  body.room .foe .power { font-size: .9rem; }
+  body.room .foe .power img { width: 28px; height: 28px; }
+}
+
+/* landscape tablets and phones: scene on the left, conversation and controls on the right */
+@media (orientation: landscape) and (min-width: 700px) {
+  body.room main { max-width: 1200px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "hud hud" "sc dlg" "sc ctl"; column-gap: 16px; }
+  body.room .hud { grid-area: hud; flex-wrap: nowrap; }
+  body.room .hud .trail { width: auto; flex: 1; }
+  body.room .hud .runes { width: auto; }
+  body.room #sc { grid-area: sc; align-items: flex-start; }
+  body.room .dialog { grid-area: dlg; }
+  body.room #ctl { grid-area: ctl; min-height: 0; overflow-y: auto; align-content: start; }
+}
+
+/* camp: the scene never pushes the expedition button off a phone screen; side by side when lying down */
+body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-height: 42dvh; margin: 0 auto; }
+@media (orientation: landscape) and (min-width: 700px) {
+  body.campview main { max-width: 1200px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr); column-gap: 16px; row-gap: 0; align-content: start; }
+  body.campview main > * { grid-column: 2; margin-bottom: 14px; }
+  body.campview main > #sc { grid-column: 1; grid-row: 1 / span 30; align-self: start; position: sticky; top: 8px; }
+  body.campview #sc canvas { max-height: calc(100dvh - 24px); }
+  body.campview h1 { font-size: 2rem; }
+}
 
 </style>
 </head>
@@ -2754,8 +2854,7 @@ h2 { font-size: 1.6rem; }
       if (window.__LW_TEST) Object.assign(window.__LW_TEST, { T: N, el });
       $("ctl").innerHTML = `
       <div class="foe"><span class="power"><img src="${EICON[el]}" width="40" height="40" alt="">${esc(mon.name)} \xB7 moc <b>${N}</b></span></div>
-      <div class="book" aria-label="Ksi\u0119ga czar\xF3w">${Object.keys(ELEM).map((k) => `<span><img src="${EICON[k]}" alt="">${ELEM[k].name} pokonuje<img src="${EICON[ELEM[k].beats]}" alt=""></span>`).join("")}</div>
-      <div class="spells" id="spells">${Object.keys(ELEM).map((k) => `<button class="spell" data-s="${k}" aria-pressed="false"><img src="${EICON[k]}" alt="">${ELEM[k].name}</button>`).join("")}</div>
+      <div class="spells" id="spells">${Object.keys(ELEM).map((k) => `<button class="spell" data-s="${k}" aria-pressed="false" aria-label="${ELEM[k].name}, pokonuje: ${ELEM[ELEM[k].beats].name}"><img src="${EICON[k]}" alt="">${ELEM[k].name}<small>pokonuje <img src="${EICON[ELEM[k].beats]}" alt=""></small></button>`).join("")}</div>
       <div class="cards" id="cards">${hand.map((v, i) => `<button class="card" data-i="${i}" aria-pressed="false" aria-label="karta ${v}">${v}</button>`).join("")}</div>
       <div class="sum" id="sum" aria-live="polite"></div>
       <button class="btn main" id="cast" disabled>\u2728 Rzu\u0107 czar</button>`;
@@ -2763,7 +2862,7 @@ h2 { font-size: 1.6rem; }
         const v = [...sel].map((i) => hand[i]);
         $("sum").textContent = v.length ? `${v.join(" + ")} = ${v.reduce((a, b) => a + b, 0)}` : "";
         $("cast").disabled = !v.length || !spell;
-        $("cast").textContent = !spell ? "Wybierz czar" : !v.length ? "Wybierz karty" : "\u2728 Rzu\u0107 czar";
+        $("cast").innerHTML = !spell ? "Wybierz czar" : !v.length ? "Wybierz karty" : `\u2728 Rzu\u0107 czar<span class="castsum">: ${v.join(" + ")} = ${v.reduce((a, b) => a + b, 0)}</span>`;
       };
       upd();
       app.querySelectorAll(".spell").forEach((b) => b.addEventListener("click", () => {
@@ -2814,7 +2913,11 @@ h2 { font-size: 1.6rem; }
         if (left(run)) return;
         monsterTurn();
       });
-      say(petName(), (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`);
+      say(
+        petName(),
+        (prefix ? prefix + " " : "") + `Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`,
+        (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`
+      );
     }
     function monsterTurn() {
       const q = attackQ();
@@ -3372,7 +3475,8 @@ h2 { font-size: 1.6rem; }
     }
     const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
     const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadz\u0105"} ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Monety licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `${T.key === "mountains" ? "Szlak si\u0119 rozwidla" : "Las si\u0119 rozwidla"}. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
-    say(petName(), intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : ""));
+    const short = `${first ? "U\u0142\xF3\u017C strza\u0142ki do wyj\u015Bcia i zbierz monety." : "Dok\u0105d idziemy?"} Wyj\u015Bcia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}`;
+    say(petName(), short, intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : ""));
   }
 
   // src/polish-rooms.js
@@ -4060,7 +4164,8 @@ h2 { font-size: 1.6rem; }
   function startTrip(landKey) {
     const key = typeof landKey === "string" && lands()[landKey] && GS.G.lands.includes(landKey) ? landKey : "forest";
     const lv = L(), pw = pick(PASSWORDS.filter((p) => p.w.length >= lv.pass[0] && p.w.length <= lv.pass[1]));
-    const rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
+    let rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
+    if (window.__LW_TEST && window.__LW_TEST.rooms) rooms = window.__LW_TEST.rooms.slice();
     const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
     order.forEach((idx, k) => runes[Math.floor(k * spots / order.length)].push(pw.w[idx]));
     const maxHp = 3 + wellHearts(GS.G.camp);
@@ -4508,6 +4613,7 @@ h2 { font-size: 1.6rem; }
     if (oldErr) oldErr.remove();
     $("who").textContent = who || "";
     $("txt").innerHTML = html;
+    $("txt").classList.toggle("long", $("txt").textContent.length > 110);
     lastSay = spoken != null ? spoken : $("txt").textContent;
     speak(lastSay);
   }
@@ -5487,6 +5593,11 @@ h2 { font-size: 1.6rem; }
   }
 
   // src/main.js
+  var appEl = document.getElementById("app");
+  new MutationObserver(() => {
+    document.body.classList.toggle("room", !!appEl.querySelector(":scope > #ctl"));
+    document.body.classList.toggle("campview", !!appEl.querySelector(":scope > #tripBtn"));
+  }).observe(appEl, { childList: true });
   boot();
   if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener("load", () => {
