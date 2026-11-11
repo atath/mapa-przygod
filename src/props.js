@@ -1,6 +1,4 @@
-import { L } from "./content.js";
 import { MON_DEFS, MON_FRAMES } from "./monsters.js";
-import { S } from "./scene.js";
 import { P, sprite, url } from "./sprites.js";
 import { mulberry } from "./util.js";
 

@@ -1,6 +1,5 @@
 import { L } from "./content.js";
-import { fire } from "./props.js";
-import { S, draw, light } from "./scene.js";
+import { light } from "./scene.js";
 import { P, sprite } from "./sprites.js";
 
 /* ---------- Monster bodies (32 × 32), recoloured per element ---------- */

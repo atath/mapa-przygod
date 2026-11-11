@@ -223,6 +223,17 @@ h2 { font-size: 1.6rem; }
 .btn.danger { color: var(--bad); }
 .sub.small { font-size: .95rem; }
 
+/* camp building */
+.item.build { gap: 6px; }
+.item.build small { font-weight: 700; color: var(--muted); font-size: .85rem; line-height: 1.25; }
+.item.build small.eff { color: var(--fg); }
+.item.build[aria-disabled="true"] { opacity: .7; }
+.ask { background: var(--surface); border: 3px solid var(--gold); border-radius: 14px; padding: 12px; display: grid; gap: 12px; }
+.decor-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface); border: 2px dashed var(--line); border-radius: 12px; padding: 8px; }
+.decor-chip { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--line); border-radius: 10px; background: var(--soft); padding: 4px 8px; font-weight: 800; }
+.decor-chip img { width: 32px; height: 32px; image-rendering: pixelated; }
+.decor-chip[aria-pressed="true"] { border-color: var(--leaf); background: color-mix(in srgb, var(--leaf) 20%, var(--surface)); }
+
 </style>
 </head>
 <body>
@@ -233,6 +244,104 @@ h2 { font-size: 1.6rem; }
 (() => {
   // src/state.js
   var GS = { DB: null, G: null, RUN: null, scene: null, HERO: null };
+
+  // src/camp-data.js
+  var BUILDINGS = {
+    house: {
+      name: "Dom",
+      cost: [20, 50, 100],
+      levels: ["Namiot", "Sza\u0142as", "Chatka", "Domek na drzewie"],
+      effect: (l) => l ? `+${l} ${l === 1 ? "moneta" : "monety"} w ka\u017Cdej skrzyni` : "Tu \u015Bpicie po wyprawie",
+      tile: [0, 1],
+      size: 2
+    },
+    well: {
+      name: "Studnia",
+      cost: [15, 35, 70],
+      levels: ["", "Studnia", "Studnia z daszkiem", "Studnia z wiadrem"],
+      effect: (l) => `+${l} ${l === 1 ? "serduszko" : "serduszka"} na wyprawie`,
+      tile: [6, 1],
+      size: 1
+    },
+    garden: {
+      name: "Ogr\xF3dek",
+      cost: [10, 30, 60],
+      levels: ["", "Jedna grz\u0105dka", "Dwie grz\u0105dki", "Trzy grz\u0105dki"],
+      effect: (l) => `${l} ${l === 1 ? "grz\u0105dka" : "grz\u0105dki"}: ro\u015Bliny rosn\u0105 po ka\u017Cdej wyprawie, plon daje 3 monety`,
+      tile: [5, 4],
+      size: 1
+    },
+    library: {
+      name: "Biblioteczka",
+      cost: [25, 50, 90],
+      levels: ["", "Skrzynka z ksi\u0105\u017Ckami", "P\xF3\u0142ka z daszkiem", "Biblioteczka z latarenk\u0105"],
+      effect: (l) => `${l} ${l === 1 ? "podpowied\u017A" : "podpowiedzi"} na wypraw\u0119 (drzwi, drogowskazy, skrzynia)`,
+      tile: [3, 1],
+      size: 1
+    },
+    pen: {
+      name: "Zagroda",
+      cost: [20, 40, 80],
+      levels: ["", "Ma\u0142a zagroda", "\u015Arednia zagroda", "Du\u017Ca zagroda"],
+      effect: (l) => `${[0, 2, 4, 9][l]} ${l === 1 ? "zwierzaki zostaj\u0105" : "zwierzak\xF3w zostaje"} w obozie`,
+      tile: [0, 3],
+      size: 2
+    }
+  };
+  var BUILD_ORDER = ["house", "well", "garden", "library", "pen"];
+  var DECOR = {
+    flowers: { name: "Kwiaty", price: 5 },
+    mushroom: { name: "Grzybek", price: 5 },
+    fence: { name: "P\u0142otek", price: 8 },
+    bench: { name: "\u0141awka", price: 10 },
+    lantern: { name: "Lampion", price: 12 },
+    flag: { name: "Flaga", price: 15 },
+    runestone: { name: "Kamie\u0144 z run\u0105", price: 15 },
+    snowman: { name: "Ba\u0142wanek", price: 20 }
+  };
+  var PLANTS = ["carrot", "pumpkin", "strawberry"];
+  var PLANT_NAME = { carrot: "marchewka", pumpkin: "dynia", strawberry: "truskawka" };
+  var RIPE = 3;
+  var CAMP_COLS = 8;
+  var CAMP_ROWS = 5;
+  var FIRE_TILE = [3, 3];
+  var HERO_TILES = [[2, 3], [4, 3]];
+  function defaultCamp() {
+    return { b: { house: 0, well: 0, garden: 0, library: 0, pen: 0 }, inv: {}, decor: [], beds: [] };
+  }
+  function normalizeCamp(c) {
+    const d = defaultCamp();
+    if (!c || typeof c !== "object") return d;
+    for (const k of BUILD_ORDER) d.b[k] = Math.max(0, Math.min(3, (c.b && c.b[k]) | 0));
+    if (c.inv && typeof c.inv === "object") {
+      for (const k in c.inv) if (DECOR[k]) d.inv[k] = Math.max(0, c.inv[k] | 0);
+    }
+    if (Array.isArray(c.decor)) d.decor = c.decor.filter((x) => x && DECOR[x.k] && Number.isInteger(x.c) && Number.isInteger(x.r));
+    if (Array.isArray(c.beds)) d.beds = c.beds.filter((x) => x && PLANTS.includes(x.p)).map((x) => ({ p: x.p, s: Math.max(0, Math.min(RIPE, x.s | 0)) }));
+    while (d.beds.length < d.b.garden) d.beds.push({ p: PLANTS[d.beds.length % PLANTS.length], s: 0 });
+    return d;
+  }
+  function blockedTiles() {
+    const set = /* @__PURE__ */ new Set();
+    for (const k of BUILD_ORDER) {
+      const B = BUILDINGS[k], [c, r] = B.tile;
+      if (k === "garden") {
+        for (let i = 0; i < 3; i++) set.add(`${c + i},${r}`);
+        continue;
+      }
+      for (let dc = 0; dc < B.size; dc++) for (let dr = 0; dr < B.size; dr++) set.add(`${c + dc},${r + dr}`);
+    }
+    set.add(FIRE_TILE.join(","));
+    HERO_TILES.forEach((t) => set.add(t.join(",")));
+    for (let c = 0; c < CAMP_COLS; c++) set.add(`${c},0`);
+    return set;
+  }
+  var wellHearts = (camp2) => camp2.b.well;
+  var houseBonus = (camp2) => camp2.b.house;
+  var libraryHints = (camp2) => camp2.b.library;
+  function growGarden(camp2) {
+    for (const b of camp2.beds) if (b.s < RIPE) b.s++;
+  }
 
   // src/save.js
   var KEY = "lesna-wyprawa";
@@ -258,7 +367,8 @@ h2 { font-size: 1.6rem; }
       trips: s.trips | 0,
       fights: s.fights | 0,
       voice: s.voice !== false,
-      sound: s.sound !== false
+      sound: s.sound !== false,
+      camp: normalizeCamp(s.camp)
     };
   }
   var blankProfile = () => normalizeProfile({}, newId());
@@ -507,217 +617,6 @@ h2 { font-size: 1.6rem; }
     }
   };
 
-  // src/content.js
-  var WORDS = [
-    ["kot", "\u{1F431}"],
-    ["pies", "\u{1F436}"],
-    ["dom", "\u{1F3E0}"],
-    ["las", "\u{1F332}"],
-    ["ser", "\u{1F9C0}"],
-    ["sok", "\u{1F9C3}"],
-    ["lis", "\u{1F98A}"],
-    ["ko\u0144", "\u{1F434}"],
-    ["mi\u015B", "\u{1F9F8}"],
-    ["but", "\u{1F45F}"],
-    ["nos", "\u{1F443}"],
-    ["tort", "\u{1F382}"],
-    ["mysz", "\u{1F42D}"],
-    ["ryba", "\u{1F41F}"],
-    ["sowa", "\u{1F989}"],
-    ["\u017Caba", "\u{1F438}"],
-    ["auto", "\u{1F697}"],
-    ["balon", "\u{1F388}"],
-    ["lody", "\u{1F366}"],
-    ["kura", "\u{1F414}"],
-    ["krowa", "\u{1F42E}"],
-    ["rower", "\u{1F6B2}"],
-    ["zegar", "\u23F0"],
-    ["banan", "\u{1F34C}"],
-    ["motyl", "\u{1F98B}"],
-    ["owca", "\u{1F411}"],
-    ["arbuz", "\u{1F349}"],
-    ["pi\u0142ka", "\u26BD"],
-    ["jab\u0142ko", "\u{1F34E}"],
-    ["\u015Blimak", "\u{1F40C}"],
-    ["gruszka", "\u{1F350}"],
-    ["samolot", "\u2708\uFE0F"],
-    ["pomidor", "\u{1F345}"],
-    ["rakieta", "\u{1F680}"],
-    ["kapelusz", "\u{1F3A9}"]
-  ].map(([w, e]) => ({ w, e }));
-  var LV = {
-    1: { name: "\u0141atwy", showPath: true, loops: false, limitExtra: null, maxSeg: 3, hp: [6, 15], three: 0, cards: 4, word: [4, 5], spoken: true, signs: 3, phrase: false, exits: 2, pass: [4, 5], picPass: true },
-    2: { name: "\u015Aredni", showPath: false, loops: true, limitExtra: 1, maxSeg: 3, hp: [10, 18], three: 0.4, cards: 5, word: [5, 6], spoken: true, signs: 4, phrase: false, exits: 3, pass: [5, 6], picPass: false },
-    3: { name: "Trudny", slide: true, showPath: false, loops: true, limitExtra: 0, maxSeg: 4, hp: [12, 24], three: 0.7, cards: 5, word: [5, 8], spoken: false, signs: 4, phrase: true, exits: 3, pass: [6, 7], picPass: false }
-  };
-  var L = () => LV[GS.G.level];
-
-  // src/fx.js
-  var fx = $("fx");
-  var fctx = fx.getContext("2d");
-  var FW = 0;
-  var FH = 0;
-  var parts = [];
-  var pq = [];
-  var frun = false;
-  function fresize() {
-    const d = window.devicePixelRatio || 1;
-    FW = innerWidth;
-    FH = innerHeight;
-    fx.width = FW * d;
-    fx.height = FH * d;
-    fctx.setTransform(d, 0, 0, d, 0, 0);
-  }
-  addEventListener("resize", fresize);
-  fresize();
-  function padd(p) {
-    pq.push(Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: 0.3, drag: 0.99, rot: 0, vr: 0, life: 0, max: 400, a: 1 }, p));
-    if (!frun) {
-      frun = true;
-      requestAnimationFrame(ftick);
-    }
-  }
-  function ftick() {
-    fctx.clearRect(0, 0, FW, FH);
-    if (pq.length) {
-      parts = parts.concat(pq);
-      pq = [];
-    }
-    const alive = [];
-    for (const p of parts) {
-      if (p.update) p.update(p);
-      p.vy += p.g;
-      p.vx *= p.drag;
-      p.vy *= p.drag;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.rot += p.vr;
-      p.life++;
-      if (p.fade) p.a = Math.max(0, 1 - p.life / p.max);
-      fctx.save();
-      fctx.globalAlpha = p.a;
-      fctx.translate(p.x, p.y);
-      fctx.rotate(p.rot);
-      p.draw(p);
-      fctx.restore();
-      const dead = p.life >= p.max || p.y > FH + 100 || p.done && p.done(p);
-      if (dead) {
-        if (p.onDead) p.onDead(p);
-      } else alive.push(p);
-    }
-    parts = alive;
-    if (parts.length || pq.length) requestAnimationFrame(ftick);
-    else {
-      frun = false;
-      fctx.clearRect(0, 0, FW, FH);
-    }
-  }
-  var PAL = ["#ff5d73", "#ffc93c", "#2f7de1", "#1fbf7a", "#a66bff", "#ff9f40", "#22c7d6"];
-  function px(sz, c) {
-    return () => {
-      fctx.fillStyle = c;
-      fctx.fillRect(-sz / 2, -sz / 2, sz, sz);
-    };
-  }
-  function burst(el, n = 26, colors = ["#ffd93c", "#ffe98a", "#ff9f40", "#ffffff"]) {
-    if (reduced() || !el) return;
-    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    for (let i = 0; i < n; i++) {
-      const a = rand(0, Math.PI * 2), s = rand(3, 9);
-      padd({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.15, drag: 0.95, max: 60, fade: true, draw: px(ri(4, 8), pick(colors)) });
-    }
-  }
-  var BIG = {
-    confetti() {
-      for (let i = 0; i < 160; i++) {
-        const L2 = i % 2 === 0;
-        padd({ x: L2 ? 0 : FW, y: FH * 0.7, vx: (L2 ? 1 : -1) * rand(4, 13), vy: -rand(10, 20), g: 0.35, vr: rand(-0.3, 0.3), draw: px(ri(6, 11), pick(PAL)) });
-      }
-    },
-    fireworks() {
-      for (let k = 0; k < 5; k++) setTimeout(() => {
-        const tx = rand(FW * 0.15, FW * 0.85), ty = rand(FH * 0.12, FH * 0.4), g = 0.25, col = pick(PAL);
-        padd({
-          x: tx,
-          y: FH,
-          vy: -Math.sqrt(2 * g * (FH - ty)),
-          g,
-          drag: 1,
-          done: (p) => p.vy >= 0,
-          draw: px(5, "#fff6c9"),
-          onDead(p) {
-            for (let i = 0; i < 56; i++) {
-              const a = i / 56 * Math.PI * 2, s = rand(2, 6.5);
-              padd({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.06, drag: 0.97, max: rand(60, 100), fade: true, draw: px(5, col) });
-            }
-          }
-        });
-      }, k * 380);
-    },
-    coins() {
-      const img = SPR.coin;
-      for (let i = 0; i < 45; i++) {
-        const s = rand(28, 44);
-        padd({
-          x: rand(0, FW),
-          y: -rand(20, FH * 0.6),
-          vx: rand(-1, 1),
-          vy: rand(1, 4),
-          g: 0.3,
-          max: 600,
-          b: 0,
-          update(p) {
-            if (p.y > FH - 20 && p.vy > 0 && p.b < 2) {
-              p.vy *= -0.55;
-              p.b++;
-            }
-          },
-          draw() {
-            fctx.imageSmoothingEnabled = false;
-            fctx.drawImage(img, -s / 2, -s / 2, s, s);
-          }
-        });
-      }
-    },
-    hearts() {
-      const img = SPR.heart;
-      for (let i = 0; i < 30; i++) setTimeout(() => {
-        const s = rand(28, 48), ph = rand(0, 6);
-        padd({ x: FW / 2 + rand(-160, 160), y: FH * 0.8, vx: rand(-1.5, 1.5), vy: -rand(3, 6), g: -0.02, max: 200, fade: true, update(p) {
-          p.x += Math.sin(p.life / 12 + ph) * 1.3;
-        }, draw() {
-          fctx.imageSmoothingEnabled = false;
-          fctx.drawImage(img, -s / 2, -s / 2, s, s);
-        } });
-      }, i * 40);
-    },
-    stars() {
-      const img = SPR.star;
-      for (let i = 0; i < 40; i++) {
-        const s = rand(24, 44);
-        padd({ x: rand(0, FW), y: -rand(20, FH * 0.7), vy: rand(2, 4), g: 0.04, vr: rand(-0.08, 0.08), max: 700, draw() {
-          fctx.imageSmoothingEnabled = false;
-          fctx.drawImage(img, -s / 2, -s / 2, s, s);
-        } });
-      }
-    }
-  };
-  var bag = [];
-  function bigEffect() {
-    if (reduced()) return;
-    if (!bag.length) bag = shuffle(Object.keys(BIG));
-    BIG[bag.pop()]();
-  }
-  function praise(text) {
-    const box = $("praise");
-    box.innerHTML = `<div class="big">${esc(text)}</div>`;
-    box.animate(
-      reduced() ? [{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }] : [{ transform: "scale(0)", opacity: 0 }, { transform: "scale(1.2)", opacity: 1, offset: 0.2 }, { transform: "scale(1)", offset: 0.3 }, { transform: "scale(1)", opacity: 1, offset: 0.8 }, { transform: "translateY(-40px)", opacity: 0 }],
-      { duration: 1700, easing: "ease-out", fill: "forwards" }
-    );
-  }
-  var PRAISE = ["Brawo!", "Super!", "Hurra!", "Ekstra!", "Wow!", "Bomba!", "Genialnie!"];
-
   // src/sprites.js
   function scale2x(rows) {
     const h = rows.length, w = rows[0].length, out = [];
@@ -848,6 +747,384 @@ h2 { font-size: 1.6rem; }
     const n = parseInt(hex.slice(1), 16);
     const ch = (v) => Math.round(v + (255 - v) * f).toString(16).padStart(2, "0");
     return "#" + ch(n >> 16 & 255) + ch(n >> 8 & 255) + ch(n & 255);
+  }
+
+  // src/camp-art.js
+  var paint = (w, h, pal, fn) => {
+    const g = P(w, h);
+    fn(g);
+    return sprite(g.rows(), pal);
+  };
+  var HOUSE = [
+    // 0: tent
+    paint(32, 32, { R: "#e8533c", r: "#b03826", W: "#fff1d6", K: "#3a2414", T: "#7a4b2a", M: "#6fbf4c" }, (g) => {
+      g.poly([[16, 4], [30, 29], [2, 29]], "R");
+      for (const x of [9, 16, 23]) g.line(16, 5, x, 29, "W");
+      g.poly([[16, 12], [21, 29], [11, 29]], "K");
+      g.poly([[16, 12], [18.5, 29], [16, 29]], "r");
+      g.line(16, 4, 16, 1, "T");
+      g.poly([[16, 1], [21, 2.5], [16, 4]], "M");
+      g.ell(16, 30, 15, 1.4, "r");
+    }),
+    // 1: lean-to of branches and leaves
+    paint(32, 32, { T: "#8a5a34", t: "#5c371e", L: "#4fb34a", l: "#8fdc6e", D: "#2f7d3a", K: "#3a2414" }, (g) => {
+      g.line(4, 30, 16, 6, "T", 2);
+      g.line(28, 30, 16, 6, "T", 2);
+      g.line(16, 6, 16, 30, "t");
+      g.poly([[16, 5], [29, 28], [3, 28]], "D");
+      for (const [x, y] of [[16, 9], [12, 15], [20, 15], [8, 22], [16, 21], [24, 22], [12, 27], [20, 27]]) g.ell(x, y, 3.6, 2.6, "L", "D");
+      for (const [x, y] of [[15, 8], [11, 14], [19, 20], [7, 21], [23, 26]]) g.ell(x, y, 1.4, 0.9, "l");
+      g.poly([[16, 17], [20.5, 29], [11.5, 29]], "K");
+      g.line(2, 30, 30, 30, "t");
+    }),
+    // 2: log cabin
+    paint(32, 32, { T: "#b07440", t: "#7a4b2a", R: "#d9533c", r: "#a23a28", Y: "#ffe58a", K: "#3a2414", S: "#9aa3ad", W: "#fff6d0" }, (g) => {
+      g.rect(22, 3, 4, 8, "S");
+      g.rect(22, 3, 4, 1, "K");
+      g.rect(4, 15, 24, 15, "T");
+      for (const y of [17, 20, 23, 26, 29]) g.line(4, y, 27, y, "t");
+      g.poly([[16, 3], [31, 16], [1, 16]], "R");
+      for (const y of [7, 10, 13]) g.line(16 - (y - 3) * 1.1, y, 16 + (y - 3) * 1.1, y, "r");
+      g.rect(13, 21, 6, 9, "K");
+      g.rect(14, 22, 4, 8, "t");
+      g.px(17, 26, "Y");
+      g.rect(6, 19, 5, 5, "K");
+      g.rect(7, 20, 3, 3, "Y");
+      g.rect(21, 19, 5, 5, "K");
+      g.rect(22, 20, 3, 3, "Y");
+      g.px(7, 20, "W");
+      g.px(22, 20, "W");
+    }),
+    // 3: tree house (taller: 32 × 44)
+    paint(32, 44, { L: "#4fb34a", l: "#8fdc6e", D: "#2f7d3a", T: "#8a5a34", t: "#5c371e", B: "#b07440", R: "#d9533c", r: "#a23a28", Y: "#ffe58a", K: "#3a2414" }, (g) => {
+      g.ell(16, 12, 15, 11, "D");
+      g.ell(8, 14, 7, 6, "L");
+      g.ell(24, 14, 7, 6, "L");
+      g.ell(16, 7, 9, 6, "L");
+      for (const [x, y] of [[11, 5], [21, 8], [5, 12], [26, 12]]) g.ell(x, y, 2.4, 1.4, "l");
+      g.rect(13, 22, 6, 21, "T");
+      g.line(15, 23, 15, 42, "t");
+      g.ell(16, 43, 7, 1.2, "T");
+      g.rect(5, 20, 22, 2, "B");
+      g.rect(5, 22, 22, 1, "t");
+      g.rect(8, 12, 16, 8, "B");
+      g.poly([[16, 6], [26, 13], [6, 13]], "R");
+      g.line(8, 11, 24, 11, "r");
+      g.rect(10, 14, 4, 4, "K");
+      g.rect(11, 15, 2, 2, "Y");
+      g.rect(18, 14, 4, 6, "K");
+      g.rect(19, 15, 2, 5, "t");
+      for (let y = 24; y < 42; y += 3) g.line(21, y, 24, y, "B");
+      g.line(21, 22, 21, 42, "t");
+      g.line(24, 22, 24, 42, "t");
+      g.line(3, 18, 5, 20, "t");
+      g.line(29, 18, 27, 20, "t");
+    })
+  ];
+  var WELL = [
+    null,
+    paint(32, 32, { S: "#9aa3ad", s: "#6f7882", A: "#d6dde5", B: "#3d9bff", b: "#1f6fc4" }, (g) => {
+      g.ell(16, 22, 11, 7, "S");
+      g.ell(16, 20, 8, 3.6, "b");
+      g.ell(16, 20.4, 6.6, 2.6, "B");
+      for (const x of [7, 12, 17, 22]) g.line(x, 24, x + 2, 28, "s");
+      g.line(8, 18, 12, 16, "A");
+    }),
+    paint(32, 32, { S: "#9aa3ad", s: "#6f7882", A: "#d6dde5", B: "#3d9bff", b: "#1f6fc4", T: "#8a5a34", R: "#d9533c", r: "#a23a28" }, (g) => {
+      g.rect(6, 6, 2, 17, "T");
+      g.rect(24, 6, 2, 17, "T");
+      g.poly([[16, 0], [31, 8], [1, 8]], "R");
+      g.line(4, 7, 28, 7, "r");
+      g.ell(16, 24, 11, 6.4, "S");
+      g.ell(16, 22, 8, 3.2, "b");
+      g.ell(16, 22.4, 6.6, 2.4, "B");
+      for (const x of [7, 12, 17, 22]) g.line(x, 26, x + 2, 29, "s");
+      g.line(8, 13, 24, 13, "T");
+    }),
+    paint(32, 32, { S: "#9aa3ad", s: "#6f7882", B: "#3d9bff", b: "#1f6fc4", T: "#8a5a34", R: "#d9533c", r: "#a23a28", Y: "#ffcf3a", P: "#ff8fc8", G: "#3f9b4a", K: "#4a4f58" }, (g) => {
+      g.rect(6, 6, 2, 17, "T");
+      g.rect(24, 6, 2, 17, "T");
+      g.poly([[16, 0], [31, 8], [1, 8]], "R");
+      g.line(4, 7, 28, 7, "r");
+      g.line(8, 13, 24, 13, "T");
+      g.line(16, 13, 16, 16, "K");
+      g.rect(14, 16, 5, 4, "T");
+      g.rect(14, 16, 5, 1, "K");
+      g.ell(16, 24, 11, 6.4, "S");
+      g.ell(16, 22.6, 8, 3, "b");
+      g.ell(16, 23, 6.6, 2.2, "B");
+      for (const x of [7, 12, 17, 22]) g.line(x, 26, x + 2, 29, "s");
+      for (const [x, c] of [[3, "P"], [29, "Y"], [27, "P"]]) {
+        g.line(x, 31, x, 27, "G");
+        g.ell(x, 26.5, 1.4, 1.4, c);
+      }
+    })
+  ];
+  var LIBRARY = [
+    null,
+    paint(32, 32, { T: "#b07440", t: "#7a4b2a", R: "#e8533c", B: "#3d7be0", G: "#3dbd6a", Y: "#ffcf3a", M: "#8a4fd8" }, (g) => {
+      g.rect(7, 16, 18, 13, "T");
+      g.rect(9, 18, 14, 9, "t");
+      [["R", 9], ["B", 11], ["Y", 13], ["G", 15], ["M", 17], ["R", 19], ["B", 21]].forEach(([c, x], i) => g.rect(x, 19 + i % 2, 2, 8 - i % 2, c));
+      g.line(6, 29, 26, 29, "t");
+    }),
+    paint(32, 32, { T: "#b07440", t: "#7a4b2a", R: "#e8533c", r: "#a23a28", B: "#3d7be0", G: "#3dbd6a", Y: "#ffcf3a", M: "#8a4fd8" }, (g) => {
+      g.rect(14, 24, 4, 7, "T");
+      g.poly([[16, 3], [29, 11], [3, 11]], "R");
+      g.line(5, 10, 27, 10, "r");
+      g.rect(6, 11, 20, 14, "T");
+      g.rect(8, 12, 16, 5, "t");
+      g.rect(8, 18, 16, 5, "t");
+      [["R", 8], ["B", 10], ["Y", 12], ["G", 14], ["M", 16], ["R", 18], ["B", 20], ["Y", 22]].forEach(([c, x], i) => {
+        g.rect(x, 13 + i % 2, 2, 4 - i % 2, c);
+        g.rect(x, 19 + (i + 1) % 2, 2, 4 - (i + 1) % 2, c);
+      });
+    }),
+    paint(32, 32, { T: "#b07440", t: "#7a4b2a", R: "#3d7be0", r: "#28539c", B: "#e8533c", G: "#3dbd6a", Y: "#ffcf3a", M: "#8a4fd8", L: "#ffe58a", K: "#4a4f58" }, (g) => {
+      g.rect(14, 24, 4, 7, "T");
+      g.poly([[16, 3], [29, 11], [3, 11]], "R");
+      g.line(5, 10, 27, 10, "r");
+      g.rect(6, 11, 20, 14, "T");
+      g.rect(8, 12, 16, 5, "t");
+      g.rect(8, 18, 16, 5, "t");
+      [["B", 8], ["R", 10], ["Y", 12], ["G", 14], ["M", 16], ["B", 18], ["R", 20], ["Y", 22]].forEach(([c, x], i) => {
+        g.rect(x, 13 + i % 2, 2, 4 - i % 2, c);
+        g.rect(x, 19 + (i + 1) % 2, 2, 4 - (i + 1) % 2, c);
+      });
+      g.line(27, 11, 29, 14, "K");
+      g.rect(28, 14, 3, 4, "K");
+      g.rect(28.5, 15, 2, 2, "L");
+    })
+  ];
+  var leaf = (g, s) => {
+    if (s === 0) {
+      g.ell(16, 26, 3, 1.4, "d");
+      g.px(16, 25, "G");
+      return;
+    }
+    if (s === 1) {
+      g.line(16, 26, 16, 22, "G");
+      g.ell(14, 21.6, 2, 1, "G");
+      g.ell(18, 21, 2, 1, "G");
+      return;
+    }
+    g.line(16, 26, 16, 16, "G");
+    g.ell(12.5, 19, 3.4, 1.6, "G");
+    g.ell(19.5, 17, 3.4, 1.6, "G");
+    g.ell(14, 14, 2.6, 1.4, "g");
+  };
+  var PLANT_PAL = { G: "#3f9b4a", g: "#6fcf5a", d: "#8a5a34", O: "#ff8a2f", o: "#d9621a", Y: "#ffcf3a", R: "#e8442c", r: "#a8261a", W: "#fff6c9" };
+  var PLANT_SPR = {
+    carrot: [0, 1, 2, 3].map((s) => paint(32, 32, PLANT_PAL, (g) => {
+      if (s < 3) return leaf(g, s);
+      for (const dx of [-3, 0, 3]) g.line(16, 18, 16 + dx, 9, "G", 2);
+      g.poly([[12, 18], [20, 18], [16, 30]], "O");
+      g.line(14, 21, 17, 21, "o");
+      g.line(15, 25, 17, 25, "o");
+    })),
+    pumpkin: [0, 1, 2, 3].map((s) => paint(32, 32, PLANT_PAL, (g) => {
+      if (s < 3) return leaf(g, s);
+      g.ell(10, 16, 4, 2, "G");
+      g.ell(16, 23, 9, 6.5, "O");
+      for (const x of [12, 16, 20]) g.line(x, 18, x, 28, "o");
+      g.rect(15, 15, 3, 3, "d");
+      g.px(11, 20, "W");
+    })),
+    strawberry: [0, 1, 2, 3].map((s) => paint(32, 32, PLANT_PAL, (g) => {
+      if (s < 3) return leaf(g, s);
+      g.ell(16, 14, 6, 2.4, "G");
+      g.poly([[10, 16], [22, 16], [16, 29]], "R");
+      g.ell(16, 18, 6, 3, "R");
+      for (const [x, y] of [[13, 18], [17, 19], [15, 22], [18, 23], [16, 26], [12, 21]]) g.px(x, y, "Y");
+      g.px(12, 17, "W");
+    }))
+  };
+  var DECOR_SPR = {
+    flowers: paint(32, 32, { G: "#3f9b4a", P: "#ff8fc8", Y: "#ffcf3a", B: "#7ab8ff", W: "#ffffff" }, (g) => {
+      for (const [x, h, c] of [[9, 9, "P"], [14, 13, "Y"], [19, 10, "B"], [24, 12, "P"], [12, 6, "W"]]) {
+        g.line(x, 30, x, 30 - h, "G");
+        g.ell(x, 29 - h, 2.2, 2.2, c);
+        g.px(x, 29 - h, "Y");
+      }
+      g.ell(10, 25, 2, 1, "G");
+      g.ell(22, 24, 2, 1, "G");
+    }),
+    mushroom: paint(32, 32, { R: "#e2445c", W: "#ffffff", S: "#f6dcb8", G: "#3f9b4a" }, (g) => {
+      g.rect(13, 21, 6, 9, "S");
+      g.ell(16, 20, 9, 6, "R", false, 0, 21);
+      g.ell(12, 17, 1.6, 1.4, "W");
+      g.ell(19, 16, 2, 1.6, "W");
+      g.ell(22, 19, 1.2, 1.2, "W");
+      g.ell(16, 30.5, 8, 1.2, "G");
+    }),
+    fence: paint(32, 32, { T: "#b07440", t: "#7a4b2a" }, (g) => {
+      for (const x of [3, 15, 27]) {
+        g.rect(x, 14, 3, 17, "T");
+        g.poly([[x, 14], [x + 1.5, 11], [x + 3, 14]], "T");
+      }
+      g.rect(0, 18, 32, 2, "t");
+      g.rect(0, 25, 32, 2, "t");
+    }),
+    bench: paint(32, 32, { T: "#b07440", t: "#7a4b2a", K: "#4a4f58" }, (g) => {
+      g.rect(3, 13, 26, 3, "T");
+      g.rect(3, 17, 26, 3, "T");
+      g.rect(2, 21, 28, 3, "T");
+      g.rect(2, 23, 28, 1, "t");
+      g.rect(5, 24, 2, 7, "K");
+      g.rect(25, 24, 2, 7, "K");
+      g.rect(5, 12, 2, 10, "K");
+      g.rect(25, 12, 2, 10, "K");
+    }),
+    lantern: paint(32, 32, { K: "#4a4f58", k: "#2a2d33", L: "#ffe58a", l: "#ffb84a", T: "#7a4b2a" }, (g) => {
+      g.rect(15, 10, 2, 21, "T");
+      g.line(16, 10, 22, 10, "K");
+      g.line(22, 10, 22, 13, "K");
+      g.rect(19, 13, 7, 9, "K");
+      g.rect(20, 14, 5, 7, "L");
+      g.rect(21, 17, 3, 3, "l");
+      g.poly([[18.5, 13], [22.5, 10.5], [26.5, 13]], "k");
+    }),
+    flag: paint(32, 32, { T: "#7a4b2a", R: "#e8442c", Y: "#ffcf3a", B: "#3d7be0" }, (g) => {
+      g.rect(8, 3, 2, 28, "T");
+      g.ell(9, 3, 1.6, 1.6, "Y");
+      g.poly([[10, 5], [28, 8], [10, 13]], "R");
+      g.poly([[10, 13], [26, 15.5], [10, 19]], "B");
+      g.px(16, 9, "Y");
+      g.px(16, 16, "Y");
+    }),
+    runestone: paint(32, 32, { S: "#9aa3ad", s: "#6f7882", V: "#a98cff", v: "#e0d4ff", M: "#6fbf4c" }, (g) => {
+      g.ell(16, 23, 12, 7.6, "S");
+      g.ell(9, 26, 4, 3.4, "S");
+      g.line(23, 26, 26, 28, "s");
+      g.line(16, 18, 16, 27, "V");
+      g.line(16, 20, 19.5, 17.5, "V");
+      g.line(16, 23, 12.5, 20.5, "V");
+      g.px(16, 18, "v");
+      g.px(19, 18, "v");
+      g.ell(10, 17, 3.4, 1.3, "M", "S");
+      g.ell(21, 16.4, 2.2, 1, "M", "S");
+    }),
+    snowman: paint(32, 32, { W: "#ffffff", w: "#dfe8f0", K: "#2a2d33", O: "#ff8a2f", R: "#e8442c", T: "#7a4b2a" }, (g) => {
+      g.ell(16, 24, 8, 6.5, "W");
+      g.ell(16, 13, 5.6, 5, "W");
+      g.rect(11, 6, 10, 2, "K");
+      g.rect(13, 1, 6, 6, "K");
+      g.px(14, 12, "K");
+      g.px(18, 12, "K");
+      g.poly([[16, 14], [21, 15], [16, 16]], "O");
+      g.rect(11, 17, 10, 2, "R");
+      g.px(16, 22, "K");
+      g.px(16, 25, "K");
+      g.line(8, 20, 3, 15, "T");
+      g.line(24, 20, 29, 15, "T");
+    })
+  };
+
+  // src/content.js
+  var WORDS = [
+    ["kot", "\u{1F431}"],
+    ["pies", "\u{1F436}"],
+    ["dom", "\u{1F3E0}"],
+    ["las", "\u{1F332}"],
+    ["ser", "\u{1F9C0}"],
+    ["sok", "\u{1F9C3}"],
+    ["lis", "\u{1F98A}"],
+    ["ko\u0144", "\u{1F434}"],
+    ["mi\u015B", "\u{1F9F8}"],
+    ["but", "\u{1F45F}"],
+    ["nos", "\u{1F443}"],
+    ["tort", "\u{1F382}"],
+    ["mysz", "\u{1F42D}"],
+    ["ryba", "\u{1F41F}"],
+    ["sowa", "\u{1F989}"],
+    ["\u017Caba", "\u{1F438}"],
+    ["auto", "\u{1F697}"],
+    ["balon", "\u{1F388}"],
+    ["lody", "\u{1F366}"],
+    ["kura", "\u{1F414}"],
+    ["krowa", "\u{1F42E}"],
+    ["rower", "\u{1F6B2}"],
+    ["zegar", "\u23F0"],
+    ["banan", "\u{1F34C}"],
+    ["motyl", "\u{1F98B}"],
+    ["owca", "\u{1F411}"],
+    ["arbuz", "\u{1F349}"],
+    ["pi\u0142ka", "\u26BD"],
+    ["jab\u0142ko", "\u{1F34E}"],
+    ["\u015Blimak", "\u{1F40C}"],
+    ["gruszka", "\u{1F350}"],
+    ["samolot", "\u2708\uFE0F"],
+    ["pomidor", "\u{1F345}"],
+    ["rakieta", "\u{1F680}"],
+    ["kapelusz", "\u{1F3A9}"]
+  ].map(([w, e]) => ({ w, e }));
+  var LV = {
+    1: { name: "\u0141atwy", showPath: true, loops: false, limitExtra: null, maxSeg: 3, hp: [6, 15], three: 0, cards: 4, word: [4, 5], spoken: true, signs: 3, phrase: false, exits: 2, pass: [4, 5], picPass: true },
+    2: { name: "\u015Aredni", showPath: false, loops: true, limitExtra: 1, maxSeg: 3, hp: [10, 18], three: 0.4, cards: 5, word: [5, 6], spoken: true, signs: 4, phrase: false, exits: 3, pass: [5, 6], picPass: false },
+    3: { name: "Trudny", slide: true, showPath: false, loops: true, limitExtra: 0, maxSeg: 4, hp: [12, 24], three: 0.7, cards: 5, word: [5, 8], spoken: false, signs: 4, phrase: true, exits: 3, pass: [6, 7], picPass: false }
+  };
+  var L = () => LV[GS.G.level];
+
+  // src/scene.js
+  var S = 4;
+  GS.scene = null;
+  function mountCanvas(cols, rows) {
+    const c = document.createElement("canvas");
+    c.className = "pixel-canvas";
+    c.width = cols * 16 * S;
+    c.height = rows * 16 * S;
+    c.setAttribute("role", "img");
+    const x = c.getContext("2d");
+    x.imageSmoothingEnabled = false;
+    x.setTransform(S, 0, 0, S, 0, 0);
+    return { c, x, cols, rows };
+  }
+  function draw(ctx, spr, lx, ly, scale = 1, noShadow) {
+    const k = scale / (spr._res || 1), ox = Math.round((lx - k) * 2) / 2, oy = Math.round((ly - k) * 2) / 2;
+    if (spr._sh && !noShadow) {
+      const f = spr._sh, cx = ox + (f.left + f.right + 1) / 2 * k, cy = oy + (f.bottom + 0.5) * k, rx = (f.right - f.left + 1) / 2 * k * 0.85;
+      ctx.fillStyle = "rgba(25,45,15,.26)";
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, Math.max(1.5, rx * 0.28), 0, 0, 7);
+      ctx.fill();
+    }
+    ctx.drawImage(spr, ox, oy, spr.width * k, spr.height * k);
+  }
+  function light(ctx, w, h) {
+    const g = ctx.createRadialGradient(w * 0.25, -h * 0.2, 4, w * 0.4, h * 0.3, Math.max(w, h));
+    g.addColorStop(0, "rgba(255,240,190,.22)");
+    g.addColorStop(0.55, "rgba(255,240,190,0)");
+    g.addColorStop(1, "rgba(10,30,20,.22)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+  function loop(t) {
+    if (GS.scene && GS.scene.cv.c.isConnected) GS.scene.draw(t);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  function bob(t, ph = 0) {
+    return reduced() ? 0 : Math.round((Math.sin(t / 260 + ph) + 1) / 2);
+  }
+  function clearing(cv, seed, band) {
+    const { x, cols, rows } = cv, rnd = mulberry(seed);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
+    for (let i = 0; i < 6; i++) {
+      const fx_ = Math.floor(rnd() * cols * 16), fy = 24 + Math.floor(rnd() * (rows * 16 - 34));
+      draw(x, rnd() < 0.5 ? SPR.flower1 : SPR.flower2, fx_ - 8, fy - 12);
+    }
+    for (let c = -1; c < cols + 1; c++) draw(x, SPR.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
+    light(x, cols * 16, rows * 16);
+  }
+  function bakeClearing(cols, rows, seed, band) {
+    const cv = { c: document.createElement("canvas"), cols, rows };
+    cv.c.width = cols * 32;
+    cv.c.height = rows * 32;
+    cv.x = cv.c.getContext("2d");
+    cv.x.imageSmoothingEnabled = false;
+    cv.x.scale(2, 2);
+    clearing(cv, seed, band);
+    return cv.c;
   }
 
   // src/monsters.js
@@ -1345,364 +1622,171 @@ h2 { font-size: 1.6rem; }
   var DIRT = [1, 2].map((s) => tile("#d6ae68", [["#c79c55", 16], ["#e6c88a", 10], ["#a8814a", 4], ["#f0dcae", 3]], s * 31, 0));
   var ICON = { heart: url(SPR.heart), coin: url(SPR.coin), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };
 
-  // src/scene.js
-  var S = 4;
-  GS.scene = null;
-  function mountCanvas(cols, rows) {
-    const c = document.createElement("canvas");
-    c.className = "pixel-canvas";
-    c.width = cols * 16 * S;
-    c.height = rows * 16 * S;
-    c.setAttribute("role", "img");
-    const x = c.getContext("2d");
-    x.imageSmoothingEnabled = false;
-    x.setTransform(S, 0, 0, S, 0, 0);
-    return { c, x, cols, rows };
+  // src/fx.js
+  var fx = $("fx");
+  var fctx = fx.getContext("2d");
+  var FW = 0;
+  var FH = 0;
+  var parts = [];
+  var pq = [];
+  var frun = false;
+  function fresize() {
+    const d = window.devicePixelRatio || 1;
+    FW = innerWidth;
+    FH = innerHeight;
+    fx.width = FW * d;
+    fx.height = FH * d;
+    fctx.setTransform(d, 0, 0, d, 0, 0);
   }
-  function draw(ctx, spr, lx, ly, scale = 1, noShadow) {
-    const k = scale / (spr._res || 1), ox = Math.round((lx - k) * 2) / 2, oy = Math.round((ly - k) * 2) / 2;
-    if (spr._sh && !noShadow) {
-      const f = spr._sh, cx = ox + (f.left + f.right + 1) / 2 * k, cy = oy + (f.bottom + 0.5) * k, rx = (f.right - f.left + 1) / 2 * k * 0.85;
-      ctx.fillStyle = "rgba(25,45,15,.26)";
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, rx, Math.max(1.5, rx * 0.28), 0, 0, 7);
-      ctx.fill();
+  addEventListener("resize", fresize);
+  fresize();
+  function padd(p) {
+    pq.push(Object.assign({ x: 0, y: 0, vx: 0, vy: 0, g: 0.3, drag: 0.99, rot: 0, vr: 0, life: 0, max: 400, a: 1 }, p));
+    if (!frun) {
+      frun = true;
+      requestAnimationFrame(ftick);
     }
-    ctx.drawImage(spr, ox, oy, spr.width * k, spr.height * k);
   }
-  function light(ctx, w, h) {
-    const g = ctx.createRadialGradient(w * 0.25, -h * 0.2, 4, w * 0.4, h * 0.3, Math.max(w, h));
-    g.addColorStop(0, "rgba(255,240,190,.22)");
-    g.addColorStop(0.55, "rgba(255,240,190,0)");
-    g.addColorStop(1, "rgba(10,30,20,.22)");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-  }
-  function loop(t) {
-    if (GS.scene && GS.scene.cv.c.isConnected) GS.scene.draw(t);
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-  function bob(t, ph = 0) {
-    return reduced() ? 0 : Math.round((Math.sin(t / 260 + ph) + 1) / 2);
-  }
-  function clearing(cv, seed, band) {
-    const { x, cols, rows } = cv, rnd = mulberry(seed);
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
-    for (let i = 0; i < 6; i++) {
-      const fx_ = Math.floor(rnd() * cols * 16), fy = 24 + Math.floor(rnd() * (rows * 16 - 34));
-      draw(x, rnd() < 0.5 ? SPR.flower1 : SPR.flower2, fx_ - 8, fy - 12);
+  function ftick() {
+    fctx.clearRect(0, 0, FW, FH);
+    if (pq.length) {
+      parts = parts.concat(pq);
+      pq = [];
     }
-    for (let c = -1; c < cols + 1; c++) draw(x, SPR.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
-    light(x, cols * 16, rows * 16);
-  }
-  function bakeClearing(cols, rows, seed, band) {
-    const cv = { c: document.createElement("canvas"), cols, rows };
-    cv.c.width = cols * 32;
-    cv.c.height = rows * 32;
-    cv.x = cv.c.getContext("2d");
-    cv.x.imageSmoothingEnabled = false;
-    cv.x.scale(2, 2);
-    clearing(cv, seed, band);
-    return cv.c;
-  }
-
-  // src/hero.js
-  function fringe(g, part) {
-    g.ell(16, 9, 9.6, 4.8, "H");
-    for (const x of part ? [10, 13, 19, 22] : [10, 14, 18, 22]) {
-      g.px(x, 13, "S", "H");
-      g.px(x + 1, 13, "S", "H");
+    const alive = [];
+    for (const p of parts) {
+      if (p.update) p.update(p);
+      p.vy += p.g;
+      p.vx *= p.drag;
+      p.vy *= p.drag;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+      p.life++;
+      if (p.fade) p.a = Math.max(0, 1 - p.life / p.max);
+      fctx.save();
+      fctx.globalAlpha = p.a;
+      fctx.translate(p.x, p.y);
+      fctx.rotate(p.rot);
+      p.draw(p);
+      fctx.restore();
+      const dead = p.life >= p.max || p.y > FH + 100 || p.done && p.done(p);
+      if (dead) {
+        if (p.onDead) p.onDead(p);
+      } else alive.push(p);
     }
-    if (part) {
-      g.rect(15, 6, 2, 8, "S", "H");
-      g.px(15, 5, "d");
-      g.px(16, 5, "d");
+    parts = alive;
+    if (parts.length || pq.length) requestAnimationFrame(ftick);
+    else {
+      frun = false;
+      fctx.clearRect(0, 0, FW, FH);
     }
-    g.line(10, 6, 14, 4, "h");
-    g.px(19, 5, "h");
-    g.px(20, 5, "h");
   }
-  var HAIR = {
-    long: {
-      name: "D\u0142ugie",
-      back(g) {
-        g.ell(16, 13, 11.2, 10, "H");
-        g.rect(5, 13, 22, 12, "H");
-        g.ell(16, 25, 11, 2.5, "H");
-        g.line(7, 16, 6, 25, "d");
-        g.line(25, 16, 26, 25, "d");
-      },
-      front(g) {
-        fringe(g);
-        g.rect(7, 11, 2, 11, "H");
-        g.rect(23, 11, 2, 11, "H");
-        g.px(7, 21, "d");
-        g.px(24, 21, "d");
+  var PAL = ["#ff5d73", "#ffc93c", "#2f7de1", "#1fbf7a", "#a66bff", "#ff9f40", "#22c7d6"];
+  function px(sz, c) {
+    return () => {
+      fctx.fillStyle = c;
+      fctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+    };
+  }
+  function burst(el, n = 26, colors = ["#ffd93c", "#ffe98a", "#ff9f40", "#ffffff"]) {
+    if (reduced() || !el) return;
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, Math.PI * 2), s = rand(3, 9);
+      padd({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.15, drag: 0.95, max: 60, fade: true, draw: px(ri(4, 8), pick(colors)) });
+    }
+  }
+  var BIG = {
+    confetti() {
+      for (let i = 0; i < 160; i++) {
+        const L2 = i % 2 === 0;
+        padd({ x: L2 ? 0 : FW, y: FH * 0.7, vx: (L2 ? 1 : -1) * rand(4, 13), vy: -rand(10, 20), g: 0.35, vr: rand(-0.3, 0.3), draw: px(ri(6, 11), pick(PAL)) });
       }
     },
-    tails: {
-      name: "Kucyki",
-      back(g) {
-        g.ell(16, 12.5, 10.6, 9.6, "H");
-        g.ell(4.2, 19, 3.2, 6.2, "H");
-        g.ell(27.8, 19, 3.2, 6.2, "H");
-        g.line(3, 15, 4, 23, "h");
-        g.line(28, 15, 29, 23, "h");
-      },
-      front(g) {
-        fringe(g);
-        g.rect(7, 11, 2, 6, "H");
-        g.rect(23, 11, 2, 6, "H");
-        g.rect(5, 12, 3, 2, "R");
-        g.rect(24, 12, 3, 2, "R");
+    fireworks() {
+      for (let k = 0; k < 5; k++) setTimeout(() => {
+        const tx = rand(FW * 0.15, FW * 0.85), ty = rand(FH * 0.12, FH * 0.4), g = 0.25, col = pick(PAL);
+        padd({
+          x: tx,
+          y: FH,
+          vy: -Math.sqrt(2 * g * (FH - ty)),
+          g,
+          drag: 1,
+          done: (p) => p.vy >= 0,
+          draw: px(5, "#fff6c9"),
+          onDead(p) {
+            for (let i = 0; i < 56; i++) {
+              const a = i / 56 * Math.PI * 2, s = rand(2, 6.5);
+              padd({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, g: 0.06, drag: 0.97, max: rand(60, 100), fade: true, draw: px(5, col) });
+            }
+          }
+        });
+      }, k * 380);
+    },
+    coins() {
+      const img = SPR.coin;
+      for (let i = 0; i < 45; i++) {
+        const s = rand(28, 44);
+        padd({
+          x: rand(0, FW),
+          y: -rand(20, FH * 0.6),
+          vx: rand(-1, 1),
+          vy: rand(1, 4),
+          g: 0.3,
+          max: 600,
+          b: 0,
+          update(p) {
+            if (p.y > FH - 20 && p.vy > 0 && p.b < 2) {
+              p.vy *= -0.55;
+              p.b++;
+            }
+          },
+          draw() {
+            fctx.imageSmoothingEnabled = false;
+            fctx.drawImage(img, -s / 2, -s / 2, s, s);
+          }
+        });
       }
     },
-    short: {
-      name: "Kr\xF3tkie",
-      back(g) {
-        g.ell(16, 13, 11.2, 10, "H");
-        g.rect(5, 13, 22, 8, "H");
-        g.ell(16, 21, 11, 2, "H");
-      },
-      front(g) {
-        g.poly([[6.5, 12], [9, 5], [16, 3.5], [25, 6], [25.5, 14], [21, 9], [14, 11], [9, 13]], "H");
-        g.rect(7, 12, 2, 9, "H");
-        g.rect(23, 12, 2, 9, "H");
-        g.line(11, 6, 16, 5, "h");
-        g.line(18, 9, 22, 8, "d");
-      }
+    hearts() {
+      const img = SPR.heart;
+      for (let i = 0; i < 30; i++) setTimeout(() => {
+        const s = rand(28, 48), ph = rand(0, 6);
+        padd({ x: FW / 2 + rand(-160, 160), y: FH * 0.8, vx: rand(-1.5, 1.5), vy: -rand(3, 6), g: -0.02, max: 200, fade: true, update(p) {
+          p.x += Math.sin(p.life / 12 + ph) * 1.3;
+        }, draw() {
+          fctx.imageSmoothingEnabled = false;
+          fctx.drawImage(img, -s / 2, -s / 2, s, s);
+        } });
+      }, i * 40);
     },
-    bun: {
-      name: "Kok",
-      back(g) {
-        g.ell(16, 12.5, 10.2, 9.6, "H");
-        g.ell(16, 3.6, 4.6, 3.6, "H");
-        g.px(14, 2, "h");
-        g.px(15, 1, "h");
-        g.rect(12, 6, 8, 1, "R");
-      },
-      front(g) {
-        fringe(g, true);
-        g.rect(7, 11, 2, 5, "H");
-        g.rect(23, 11, 2, 5, "H");
+    stars() {
+      const img = SPR.star;
+      for (let i = 0; i < 40; i++) {
+        const s = rand(24, 44);
+        padd({ x: rand(0, FW), y: -rand(20, FH * 0.7), vy: rand(2, 4), g: 0.04, vr: rand(-0.08, 0.08), max: 700, draw() {
+          fctx.imageSmoothingEnabled = false;
+          fctx.drawImage(img, -s / 2, -s / 2, s, s);
+        } });
       }
     }
   };
-  Object.assign(HAIR, {
-    bshort: {
-      name: "Kr\xF3tkie",
-      gender: "boy",
-      back(g) {
-        g.ell(16, 12, 10.4, 8.8, "H");
-      },
-      front(g) {
-        g.ell(16, 8.6, 9.6, 4.8, "H");
-        for (const x of [11, 15, 19]) g.px(x, 13, "S", "H");
-        g.rect(7, 11, 2, 4, "H");
-        g.rect(23, 11, 2, 4, "H");
-        g.line(11, 6, 15, 4, "h");
-      }
-    },
-    spiky: {
-      name: "Je\u017Cyk",
-      gender: "boy",
-      back(g) {
-        g.ell(16, 12, 10.2, 8.6, "H");
-        for (const p of [[[6.5, 10], [7, 3], [11, 7]], [[9.5, 7], [12, 0.5], [15, 5.5]], [[13.5, 5.5], [16.5, 0], [19, 5.5]], [[17.5, 5.5], [21, 0.5], [23, 7]], [[21.5, 7], [25.5, 3], [25.5, 10.5]]]) g.poly(p, "H");
-        g.line(12, 3, 13, 1, "h");
-        g.line(16, 3, 16, 1, "h");
-        g.line(20, 3, 21, 1, "h");
-      },
-      front(g) {
-        g.ell(16, 8.4, 9.4, 3.8, "H");
-        g.poly([[9, 9], [11, 13.5], [13, 9]], "H");
-        g.poly([[13.5, 9], [15.5, 13.5], [17.5, 9]], "H");
-        g.poly([[18, 9], [20.5, 13.5], [22.5, 9]], "H");
-        g.rect(7, 11, 2, 3, "H");
-        g.rect(23, 11, 2, 3, "H");
-      }
-    },
-    side: {
-      name: "Zaczesane",
-      gender: "boy",
-      back(g) {
-        g.ell(16, 12, 10.4, 8.8, "H");
-      },
-      front(g) {
-        g.poly([[7, 12.5], [8, 6], [14, 3.5], [24, 5], [25, 11], [20, 9.5], [14, 11], [10, 13]], "H");
-        g.rect(7, 11, 2, 4, "H");
-        g.rect(23, 10, 2, 5, "H");
-        g.line(10, 6, 16, 4, "h");
-        g.line(18, 8, 22, 7, "d");
-      }
-    },
-    curly: {
-      name: "Kr\u0119cone",
-      gender: "boy",
-      back(g) {
-        g.ell(16, 12, 10.8, 9.2, "H");
-        for (const [x, y] of [[7, 8], [10, 4.5], [14, 3], [18, 3], [22, 4.5], [25, 8], [6, 12], [26, 12]]) g.ell(x, y, 2.8, 2.8, "H");
-      },
-      front(g) {
-        for (const [x, y] of [[9.5, 9.5], [13, 8.6], [16.5, 8.4], [20, 8.6], [23, 9.6]]) g.ell(x, y, 2.4, 2.6, "H");
-        for (const [x, y] of [[9, 8], [16, 7], [22, 8], [12, 4], [19, 3], [8, 11]]) g.px(x, y, "h");
-        g.rect(7, 11, 2, 3, "H");
-        g.rect(23, 11, 2, 3, "H");
-      }
-    }
-  });
-  var HATS = {
-    none: { name: "Bez czapki", price: 0, draw() {
-    } },
-    flower: { name: "Kwiatek", price: 10, draw(g) {
-      for (const [x, y] of [[23, 8], [27, 8], [25, 6], [25, 10]]) g.ell(x, y, 1.7, 1.7, "P");
-      g.ell(25, 8, 1.2, 1.2, "Y");
-      g.px(26, 7, "W");
-    } },
-    band: { name: "Opaska z gwiazdk\u0105", price: 12, draw(g) {
-      g.rect(6, 8, 20, 2, "G");
-      g.rect(6, 8, 20, 1, "g", "G");
-      for (const [x, y] of [[16, 6], [15, 7], [16, 7], [17, 7], [14, 8], [15, 8], [16, 8], [17, 8], [18, 8], [15, 9], [17, 9]]) g.px(x, y, "Y");
-    } },
-    ears: { name: "Kocie uszka", price: 20, draw(g) {
-      g.poly([[6.5, 10], [8.5, 0], [14, 5.5]], "H");
-      g.poly([[25.5, 10], [23.5, 0], [18, 5.5]], "H");
-      g.poly([[8.3, 7.5], [9.2, 2.6], [12, 5.6]], "P");
-      g.poly([[23.7, 7.5], [22.8, 2.6], [20, 5.6]], "P");
-    } },
-    beanie: { name: "Czapka zimowa", price: 25, draw(g) {
-      g.ell(16, 9.5, 10.8, 8.5, "Q", false, 0, 8);
-      g.rect(6, 4, 20, 1, "q", "Q");
-      g.rect(6, 6, 20, 1, "q", "Q");
-      g.rect(5, 8, 22, 3, "W");
-      g.rect(5, 10, 22, 1, "w", "W");
-      g.ell(16, 1.6, 2.6, 2, "W");
-    } },
-    crown: { name: "Korona", price: 30, draw(g) {
-      g.rect(9, 4, 14, 3, "Y");
-      g.poly([[9, 4.5], [9, 0], [12.5, 4.5]], "Y");
-      g.poly([[13.5, 4.5], [16, 0], [18.5, 4.5]], "Y");
-      g.poly([[23, 4.5], [23, 0], [19.5, 4.5]], "Y");
-      g.rect(9, 6, 14, 1, "y");
-      g.px(12, 5, "R");
-      g.px(16, 5, "Q");
-      g.px(19, 5, "R");
-      g.px(16, 1, "W");
-    } },
-    knight: { name: "He\u0142m rycerki", nameM: "He\u0142m rycerza", price: 35, draw(g) {
-      g.ell(16, 11, 11.3, 9.5, "A", false, 0, 11);
-      g.rect(5, 10, 3, 9, "A");
-      g.rect(24, 10, 3, 9, "A");
-      g.rect(15, 2, 2, 9, "a");
-      for (const [x, y] of [[6, 12], [6, 16], [25, 12], [25, 16], [10, 9], [21, 9]]) g.px(x, y, "a");
-      g.ell(16, 1.4, 3.4, 2.1, "R");
-      g.px(14, 0, "r");
-      g.line(9, 5, 12, 3, "W");
-    } },
-    wizard: { name: "Kapelusz czarodziejki", nameM: "Kapelusz czarodzieja", price: 40, draw(g) {
-      g.poly([[17, -4], [24.5, 9], [7.5, 9]], "M");
-      g.ell(16, 9.5, 12.8, 2.2, "M");
-      g.rect(9, 7, 14, 1, "Y", "M");
-      for (const [x, y] of [[15, 2], [14, 3], [15, 3], [16, 3], [15, 4]]) g.px(x, y, "Y");
-      g.px(19, 5, "W");
-      g.line(10, 10, 22, 10, "n", 1, "M");
-    } }
-  };
-  var SKINS = ["#f5d0b5", "#e8b48f", "#c68a5e", "#8d5a3b"];
-  var HAIRC = ["#3b2a20", "#8a5a2b", "#e8c14f", "#d9622b", "#1c1c24", "#e86fb0"];
-  var OUTFITS = ["#e2445c", "#3d7be0", "#8a4fd8", "#2fa36b", "#f0a33a", "#ff8fc8"];
-  function heroSprite(h) {
-    const g = P(32, 36);
-    if (!HAIR[h.hair]) h = Object.assign({}, h, { hair: h.gender === "boy" ? "bshort" : "tails" });
-    HAIR[h.hair].back(g);
-    g.ell(7.6, 15.5, 1.3, 1.9, "S");
-    g.ell(24.4, 15.5, 1.3, 1.9, "S");
-    g.ell(16, 14.5, 8.6, 7.6, "S");
-    g.rect(14, 21, 4, 2, "s");
-    const boy = h.gender === "boy";
-    if (boy) {
-      g.poly([[11, 22], [21, 22], [22.6, 28.5], [9.4, 28.5]], "O");
-      g.poly([[19, 23], [21, 22], [22.6, 28.5], [20.5, 28.5]], "o");
-      g.poly([[13.5, 22], [16, 24.6], [18.5, 22]], "q");
-      g.px(16, 26, "q");
-      g.rect(10, 27, 12, 4, "J");
-      g.rect(10, 27, 12, 1, "j");
-      g.rect(16, 28, 1, 3, "j");
-      g.ell(9.4, 24.6, 2.5, 2.8, "O");
-      g.ell(22.6, 24.6, 2.5, 2.8, "o");
-      g.ell(9, 28.2, 1.7, 2, "S");
-      g.ell(23, 28.2, 1.7, 2, "S");
-    } else {
-      g.poly([[11.5, 22], [20.5, 22], [24.2, 31], [7.8, 31]], "O");
-      g.poly([[19, 23], [20.5, 22], [24.2, 31], [21, 31]], "o");
-      g.rect(8, 30, 16, 1, "q", "Oo");
-      g.poly([[12, 22], [16, 25.5], [20, 22]], "q");
-      g.px(16, 27, "q");
-      g.px(16, 29, "q");
-      g.ell(9.4, 25, 2.5, 3.6, "O");
-      g.ell(22.6, 25, 2.5, 3.6, "o");
-      g.ell(9, 29.3, 1.8, 1.8, "S");
-      g.ell(23, 29.3, 1.8, 1.8, "S");
-    }
-    g.rect(12, 31, 3, 3, "S");
-    g.rect(17, 31, 3, 3, "S");
-    g.ell(13, 34.2, 3, 1.9, "B");
-    g.ell(19, 34.2, 3, 1.9, "B");
-    g.px(12, 33, "b");
-    g.px(18, 33, "b");
-    HAIR[h.hair].front(g);
-    g.rect(11, 15, 3, 4, "K");
-    g.rect(18, 15, 3, 4, "K");
-    g.rect(11, 17, 3, 2, "E");
-    g.rect(18, 17, 3, 2, "E");
-    g.px(11, 15, "W");
-    g.px(18, 15, "W");
-    g.px(13, 18, "W");
-    g.px(20, 18, "W");
-    if (!boy) {
-      g.px(10, 15, "K");
-      g.px(21, 15, "K");
-    }
-    g.rect(8, 19, 2, 1, "P");
-    g.rect(22, 19, 2, 1, "P");
-    g.px(14, 19, "m");
-    g.px(17, 19, "m");
-    g.px(15, 20, "m");
-    g.px(16, 20, "m");
-    if (h.hat && HATS[h.hat]) HATS[h.hat].draw(g);
-    return sprite(g.rows(), {
-      S: h.skin,
-      s: darken(h.skin, 0.86),
-      K: "#2a1d2e",
-      W: "#ffffff",
-      E: "#6b4a2b",
-      P: "#ff9aa8",
-      m: "#b04050",
-      O: h.outfit,
-      o: darken(h.outfit, 0.8),
-      q: "#fff4e0",
-      J: "#3d5a8c",
-      j: "#2a3f66",
-      B: "#5a3a2a",
-      b: "#8a5a3e",
-      H: h.hairColor,
-      h: lighten(h.hairColor, 0.3),
-      d: darken(h.hairColor, 0.7),
-      Y: "#ffd93c",
-      y: "#d99a16",
-      R: "#e2445c",
-      r: "#a52a3c",
-      M: "#8a4fd8",
-      n: "#5e3a94",
-      G: "#3dbd6a",
-      g: "#2f9a55",
-      Q: "#2bb3a8",
-      A: "#c3cbd6",
-      a: "#7d8794",
-      w: "#dde6ee"
-    });
+  var bag = [];
+  function bigEffect() {
+    if (reduced()) return;
+    if (!bag.length) bag = shuffle(Object.keys(BIG));
+    BIG[bag.pop()]();
   }
+  function praise(text) {
+    const box = $("praise");
+    box.innerHTML = `<div class="big">${esc(text)}</div>`;
+    box.animate(
+      reduced() ? [{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }] : [{ transform: "scale(0)", opacity: 0 }, { transform: "scale(1.2)", opacity: 1, offset: 0.2 }, { transform: "scale(1)", offset: 0.3 }, { transform: "scale(1)", opacity: 1, offset: 0.8 }, { transform: "translateY(-40px)", opacity: 0 }],
+      { duration: 1700, easing: "ease-out", fill: "forwards" }
+    );
+  }
+  var PRAISE = ["Brawo!", "Super!", "Hurra!", "Ekstra!", "Wow!", "Bomba!", "Genialnie!"];
 
   // src/pets.js
   var PETS = {
@@ -1996,7 +2080,7 @@ h2 { font-size: 1.6rem; }
     say(petName(), `Skrzynia jest zamkni\u0119ta na has\u0142o! U\u0142\xF3\u017C je ze zdobytych run. ${riddle()}`, `Skrzynia jest zamkni\u0119ta na has\u0142o. U\u0142\xF3\u017C je ze zdobytych run. Zagadka: ${pw.r}`);
     $("ctl").innerHTML = `<div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>
-    ${picShown ? "" : `<button class="btn small" id="hintBtn">Podpowied\u017A</button>`}`;
+    <div class="row">${picShown ? "" : `<button class="btn small" id="hintBtn">Podpowied\u017A</button>`}${libHintHTML()}</div>`;
     if ($("hintBtn")) $("hintBtn").addEventListener("click", () => {
       picShown = true;
       $("hintBtn").remove();
@@ -2004,6 +2088,11 @@ h2 { font-size: 1.6rem; }
     });
     let pos = 0;
     const slots = app.querySelectorAll(".slot");
+    wireLibHint(() => {
+      const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]);
+      if (!t) return false;
+      t.click();
+    });
     app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", () => {
       if (pos >= letters.length || b.classList.contains("used")) return;
       if (b.dataset.l === letters[pos]) {
@@ -2029,10 +2118,11 @@ h2 { font-size: 1.6rem; }
     }));
     function openChest() {
       st.open = true;
-      const bonus = 5 + GS.G.level * 2;
+      const house = houseBonus(GS.G.camp), bonus = 5 + GS.G.level * 2 + house;
       GS.RUN.coins += bonus;
       GS.G.coins += GS.RUN.coins;
       GS.G.trips++;
+      growGarden(GS.G.camp);
       save();
       speak(pw.w);
       snd.fanfare();
@@ -2040,7 +2130,7 @@ h2 { font-size: 1.6rem; }
       bigEffect();
       setTimeout(bigEffect, 700);
       $("coinN").textContent = GS.G.coins;
-      setTimeout(() => say(heroName(), esc(`Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}.`)), 900);
+      setTimeout(() => say(heroName(), esc(`Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}`)), 900);
       $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
       $("campBtn").addEventListener("click", () => {
         GS.RUN = null;
@@ -2796,9 +2886,15 @@ h2 { font-size: 1.6rem; }
     if (lv.spoken) say(petName(), esc(`Zaczarowane drzwi! Otworzy je s\u0142owo z obrazka: \u201E${x.w}\u201D. U\u0142\xF3\u017C je z run.`), `Zaczarowane drzwi! Otworzy je s\u0142owo ${x.w}. U\u0142\xF3\u017C je z liter, po kolei.`);
     else say(petName(), "Zaczarowane drzwi! Otworzy je nazwa tego, co widzisz na obrazku. U\u0142\xF3\u017C j\u0105 z run. Uwaga, niekt\xF3re runy s\u0105 fa\u0142szywe!");
     $("ctl").innerHTML = `<div class="hint-pic" aria-hidden="true">${x.e}</div><div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
-    <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>`;
+    <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>${libHintHTML()}`;
     let pos = 0, misses = 0;
     const slots = app.querySelectorAll(".slot");
+    wireLibHint(() => {
+      const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]);
+      if (!t) return false;
+      t.click();
+      say(petName(), esc(`Biblioteczka podpowiada: \u201E${letters[pos - 1]}\u201D.`));
+    });
     app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", async () => {
       if (pos >= letters.length || b.classList.contains("used")) return;
       if (b.dataset.l === letters[pos]) {
@@ -2883,8 +2979,17 @@ h2 { font-size: 1.6rem; }
       `Rozdro\u017Ce! Musimy doj\u015B\u0107 tam, gdzie jest <span class="pic">${target.e}</span>. Drogowskazy s\u0105 podobne \u2014 czytaj bardzo uwa\u017Cnie, litera po literze!`,
       "Rozdro\u017Ce! Sp\xF3jrz na obrazek. Drogowskazy s\u0105 do siebie podobne, wi\u0119c czytaj bardzo uwa\u017Cnie, litera po literze."
     );
-    $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;
+    $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>${libHintHTML()}`;
     let done = false;
+    wireLibHint(() => {
+      const wrong = [...app.querySelectorAll("[data-w]")].filter((b2) => !b2.disabled && b2.dataset.w !== target.w);
+      if (done || !wrong.length) return false;
+      const b = wrong[0];
+      b.classList.add("wrong");
+      b.disabled = true;
+      snd.letter();
+      say(petName(), esc(`Biblioteczka m\xF3wi: \u201E${b.dataset.w}\u201D to nie ta droga.`), `Biblioteczka m\xF3wi: ${b.dataset.w} to nie ta droga.`);
+    });
     app.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", async () => {
       if (done || b.disabled) return;
       if (b.dataset.w === target.w) {
@@ -2937,7 +3042,8 @@ h2 { font-size: 1.6rem; }
     const rooms = ["path", null, "path", null, "path", null, "chest"], spots = 6;
     const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
     order.forEach((idx, k) => runes[Math.floor(k * spots / order.length)].push(pw.w[idx]));
-    GS.RUN = { rooms, i: 0, hp: 3, maxHp: 3, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [] };
+    const maxHp = 3 + wellHearts(GS.G.camp);
+    GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
     room();
   }
   function roomShell() {
@@ -3008,6 +3114,316 @@ h2 { font-size: 1.6rem; }
     say(petName(), `Ojej, ${heroName()} si\u0119 ${gw("zm\u0119czy\u0142a", "zm\u0119czy\u0142")}. Odpoczywamy chwilk\u0119\u2026 Ju\u017C lepiej! ${lost ? gw("Zgubi\u0142y\u015Bmy ", "Zgubili\u015Bmy ") + lost + " monety. " : ""}Spr\xF3bujmy jeszcze raz.`);
     return true;
   }
+  function libHintHTML() {
+    return GS.RUN.hints > 0 ? `<button class="btn small hint" id="libHint">\u{1F4D6} Podpowied\u017A z biblioteczki (${GS.RUN.hints})</button>` : "";
+  }
+  function wireLibHint(use) {
+    const b = document.getElementById("libHint");
+    if (!b) return;
+    b.addEventListener("click", () => {
+      if (GS.RUN.hints <= 0 || use() === false) return;
+      GS.RUN.hints--;
+      if (GS.RUN.hints > 0) b.textContent = `\u{1F4D6} Podpowied\u017A z biblioteczki (${GS.RUN.hints})`;
+      else b.remove();
+    });
+  }
+
+  // src/hero.js
+  function fringe(g, part) {
+    g.ell(16, 9, 9.6, 4.8, "H");
+    for (const x of part ? [10, 13, 19, 22] : [10, 14, 18, 22]) {
+      g.px(x, 13, "S", "H");
+      g.px(x + 1, 13, "S", "H");
+    }
+    if (part) {
+      g.rect(15, 6, 2, 8, "S", "H");
+      g.px(15, 5, "d");
+      g.px(16, 5, "d");
+    }
+    g.line(10, 6, 14, 4, "h");
+    g.px(19, 5, "h");
+    g.px(20, 5, "h");
+  }
+  var HAIR = {
+    long: {
+      name: "D\u0142ugie",
+      back(g) {
+        g.ell(16, 13, 11.2, 10, "H");
+        g.rect(5, 13, 22, 12, "H");
+        g.ell(16, 25, 11, 2.5, "H");
+        g.line(7, 16, 6, 25, "d");
+        g.line(25, 16, 26, 25, "d");
+      },
+      front(g) {
+        fringe(g);
+        g.rect(7, 11, 2, 11, "H");
+        g.rect(23, 11, 2, 11, "H");
+        g.px(7, 21, "d");
+        g.px(24, 21, "d");
+      }
+    },
+    tails: {
+      name: "Kucyki",
+      back(g) {
+        g.ell(16, 12.5, 10.6, 9.6, "H");
+        g.ell(4.2, 19, 3.2, 6.2, "H");
+        g.ell(27.8, 19, 3.2, 6.2, "H");
+        g.line(3, 15, 4, 23, "h");
+        g.line(28, 15, 29, 23, "h");
+      },
+      front(g) {
+        fringe(g);
+        g.rect(7, 11, 2, 6, "H");
+        g.rect(23, 11, 2, 6, "H");
+        g.rect(5, 12, 3, 2, "R");
+        g.rect(24, 12, 3, 2, "R");
+      }
+    },
+    short: {
+      name: "Kr\xF3tkie",
+      back(g) {
+        g.ell(16, 13, 11.2, 10, "H");
+        g.rect(5, 13, 22, 8, "H");
+        g.ell(16, 21, 11, 2, "H");
+      },
+      front(g) {
+        g.poly([[6.5, 12], [9, 5], [16, 3.5], [25, 6], [25.5, 14], [21, 9], [14, 11], [9, 13]], "H");
+        g.rect(7, 12, 2, 9, "H");
+        g.rect(23, 12, 2, 9, "H");
+        g.line(11, 6, 16, 5, "h");
+        g.line(18, 9, 22, 8, "d");
+      }
+    },
+    bun: {
+      name: "Kok",
+      back(g) {
+        g.ell(16, 12.5, 10.2, 9.6, "H");
+        g.ell(16, 3.6, 4.6, 3.6, "H");
+        g.px(14, 2, "h");
+        g.px(15, 1, "h");
+        g.rect(12, 6, 8, 1, "R");
+      },
+      front(g) {
+        fringe(g, true);
+        g.rect(7, 11, 2, 5, "H");
+        g.rect(23, 11, 2, 5, "H");
+      }
+    }
+  };
+  Object.assign(HAIR, {
+    bshort: {
+      name: "Kr\xF3tkie",
+      gender: "boy",
+      back(g) {
+        g.ell(16, 12, 10.4, 8.8, "H");
+      },
+      front(g) {
+        g.ell(16, 8.6, 9.6, 4.8, "H");
+        for (const x of [11, 15, 19]) g.px(x, 13, "S", "H");
+        g.rect(7, 11, 2, 4, "H");
+        g.rect(23, 11, 2, 4, "H");
+        g.line(11, 6, 15, 4, "h");
+      }
+    },
+    spiky: {
+      name: "Je\u017Cyk",
+      gender: "boy",
+      back(g) {
+        g.ell(16, 12, 10.2, 8.6, "H");
+        for (const p of [[[6.5, 10], [7, 3], [11, 7]], [[9.5, 7], [12, 0.5], [15, 5.5]], [[13.5, 5.5], [16.5, 0], [19, 5.5]], [[17.5, 5.5], [21, 0.5], [23, 7]], [[21.5, 7], [25.5, 3], [25.5, 10.5]]]) g.poly(p, "H");
+        g.line(12, 3, 13, 1, "h");
+        g.line(16, 3, 16, 1, "h");
+        g.line(20, 3, 21, 1, "h");
+      },
+      front(g) {
+        g.ell(16, 8.4, 9.4, 3.8, "H");
+        g.poly([[9, 9], [11, 13.5], [13, 9]], "H");
+        g.poly([[13.5, 9], [15.5, 13.5], [17.5, 9]], "H");
+        g.poly([[18, 9], [20.5, 13.5], [22.5, 9]], "H");
+        g.rect(7, 11, 2, 3, "H");
+        g.rect(23, 11, 2, 3, "H");
+      }
+    },
+    side: {
+      name: "Zaczesane",
+      gender: "boy",
+      back(g) {
+        g.ell(16, 12, 10.4, 8.8, "H");
+      },
+      front(g) {
+        g.poly([[7, 12.5], [8, 6], [14, 3.5], [24, 5], [25, 11], [20, 9.5], [14, 11], [10, 13]], "H");
+        g.rect(7, 11, 2, 4, "H");
+        g.rect(23, 10, 2, 5, "H");
+        g.line(10, 6, 16, 4, "h");
+        g.line(18, 8, 22, 7, "d");
+      }
+    },
+    curly: {
+      name: "Kr\u0119cone",
+      gender: "boy",
+      back(g) {
+        g.ell(16, 12, 10.8, 9.2, "H");
+        for (const [x, y] of [[7, 8], [10, 4.5], [14, 3], [18, 3], [22, 4.5], [25, 8], [6, 12], [26, 12]]) g.ell(x, y, 2.8, 2.8, "H");
+      },
+      front(g) {
+        for (const [x, y] of [[9.5, 9.5], [13, 8.6], [16.5, 8.4], [20, 8.6], [23, 9.6]]) g.ell(x, y, 2.4, 2.6, "H");
+        for (const [x, y] of [[9, 8], [16, 7], [22, 8], [12, 4], [19, 3], [8, 11]]) g.px(x, y, "h");
+        g.rect(7, 11, 2, 3, "H");
+        g.rect(23, 11, 2, 3, "H");
+      }
+    }
+  });
+  var HATS = {
+    none: { name: "Bez czapki", price: 0, draw() {
+    } },
+    flower: { name: "Kwiatek", price: 10, draw(g) {
+      for (const [x, y] of [[23, 8], [27, 8], [25, 6], [25, 10]]) g.ell(x, y, 1.7, 1.7, "P");
+      g.ell(25, 8, 1.2, 1.2, "Y");
+      g.px(26, 7, "W");
+    } },
+    band: { name: "Opaska z gwiazdk\u0105", price: 12, draw(g) {
+      g.rect(6, 8, 20, 2, "G");
+      g.rect(6, 8, 20, 1, "g", "G");
+      for (const [x, y] of [[16, 6], [15, 7], [16, 7], [17, 7], [14, 8], [15, 8], [16, 8], [17, 8], [18, 8], [15, 9], [17, 9]]) g.px(x, y, "Y");
+    } },
+    ears: { name: "Kocie uszka", price: 20, draw(g) {
+      g.poly([[6.5, 10], [8.5, 0], [14, 5.5]], "H");
+      g.poly([[25.5, 10], [23.5, 0], [18, 5.5]], "H");
+      g.poly([[8.3, 7.5], [9.2, 2.6], [12, 5.6]], "P");
+      g.poly([[23.7, 7.5], [22.8, 2.6], [20, 5.6]], "P");
+    } },
+    beanie: { name: "Czapka zimowa", price: 25, draw(g) {
+      g.ell(16, 9.5, 10.8, 8.5, "Q", false, 0, 8);
+      g.rect(6, 4, 20, 1, "q", "Q");
+      g.rect(6, 6, 20, 1, "q", "Q");
+      g.rect(5, 8, 22, 3, "W");
+      g.rect(5, 10, 22, 1, "w", "W");
+      g.ell(16, 1.6, 2.6, 2, "W");
+    } },
+    crown: { name: "Korona", price: 30, draw(g) {
+      g.rect(9, 4, 14, 3, "Y");
+      g.poly([[9, 4.5], [9, 0], [12.5, 4.5]], "Y");
+      g.poly([[13.5, 4.5], [16, 0], [18.5, 4.5]], "Y");
+      g.poly([[23, 4.5], [23, 0], [19.5, 4.5]], "Y");
+      g.rect(9, 6, 14, 1, "y");
+      g.px(12, 5, "R");
+      g.px(16, 5, "Q");
+      g.px(19, 5, "R");
+      g.px(16, 1, "W");
+    } },
+    knight: { name: "He\u0142m rycerki", nameM: "He\u0142m rycerza", price: 35, draw(g) {
+      g.ell(16, 11, 11.3, 9.5, "A", false, 0, 11);
+      g.rect(5, 10, 3, 9, "A");
+      g.rect(24, 10, 3, 9, "A");
+      g.rect(15, 2, 2, 9, "a");
+      for (const [x, y] of [[6, 12], [6, 16], [25, 12], [25, 16], [10, 9], [21, 9]]) g.px(x, y, "a");
+      g.ell(16, 1.4, 3.4, 2.1, "R");
+      g.px(14, 0, "r");
+      g.line(9, 5, 12, 3, "W");
+    } },
+    wizard: { name: "Kapelusz czarodziejki", nameM: "Kapelusz czarodzieja", price: 40, draw(g) {
+      g.poly([[17, -4], [24.5, 9], [7.5, 9]], "M");
+      g.ell(16, 9.5, 12.8, 2.2, "M");
+      g.rect(9, 7, 14, 1, "Y", "M");
+      for (const [x, y] of [[15, 2], [14, 3], [15, 3], [16, 3], [15, 4]]) g.px(x, y, "Y");
+      g.px(19, 5, "W");
+      g.line(10, 10, 22, 10, "n", 1, "M");
+    } }
+  };
+  var SKINS = ["#f5d0b5", "#e8b48f", "#c68a5e", "#8d5a3b"];
+  var HAIRC = ["#3b2a20", "#8a5a2b", "#e8c14f", "#d9622b", "#1c1c24", "#e86fb0"];
+  var OUTFITS = ["#e2445c", "#3d7be0", "#8a4fd8", "#2fa36b", "#f0a33a", "#ff8fc8"];
+  function heroSprite(h) {
+    const g = P(32, 36);
+    if (!HAIR[h.hair]) h = Object.assign({}, h, { hair: h.gender === "boy" ? "bshort" : "tails" });
+    HAIR[h.hair].back(g);
+    g.ell(7.6, 15.5, 1.3, 1.9, "S");
+    g.ell(24.4, 15.5, 1.3, 1.9, "S");
+    g.ell(16, 14.5, 8.6, 7.6, "S");
+    g.rect(14, 21, 4, 2, "s");
+    const boy = h.gender === "boy";
+    if (boy) {
+      g.poly([[11, 22], [21, 22], [22.6, 28.5], [9.4, 28.5]], "O");
+      g.poly([[19, 23], [21, 22], [22.6, 28.5], [20.5, 28.5]], "o");
+      g.poly([[13.5, 22], [16, 24.6], [18.5, 22]], "q");
+      g.px(16, 26, "q");
+      g.rect(10, 27, 12, 4, "J");
+      g.rect(10, 27, 12, 1, "j");
+      g.rect(16, 28, 1, 3, "j");
+      g.ell(9.4, 24.6, 2.5, 2.8, "O");
+      g.ell(22.6, 24.6, 2.5, 2.8, "o");
+      g.ell(9, 28.2, 1.7, 2, "S");
+      g.ell(23, 28.2, 1.7, 2, "S");
+    } else {
+      g.poly([[11.5, 22], [20.5, 22], [24.2, 31], [7.8, 31]], "O");
+      g.poly([[19, 23], [20.5, 22], [24.2, 31], [21, 31]], "o");
+      g.rect(8, 30, 16, 1, "q", "Oo");
+      g.poly([[12, 22], [16, 25.5], [20, 22]], "q");
+      g.px(16, 27, "q");
+      g.px(16, 29, "q");
+      g.ell(9.4, 25, 2.5, 3.6, "O");
+      g.ell(22.6, 25, 2.5, 3.6, "o");
+      g.ell(9, 29.3, 1.8, 1.8, "S");
+      g.ell(23, 29.3, 1.8, 1.8, "S");
+    }
+    g.rect(12, 31, 3, 3, "S");
+    g.rect(17, 31, 3, 3, "S");
+    g.ell(13, 34.2, 3, 1.9, "B");
+    g.ell(19, 34.2, 3, 1.9, "B");
+    g.px(12, 33, "b");
+    g.px(18, 33, "b");
+    HAIR[h.hair].front(g);
+    g.rect(11, 15, 3, 4, "K");
+    g.rect(18, 15, 3, 4, "K");
+    g.rect(11, 17, 3, 2, "E");
+    g.rect(18, 17, 3, 2, "E");
+    g.px(11, 15, "W");
+    g.px(18, 15, "W");
+    g.px(13, 18, "W");
+    g.px(20, 18, "W");
+    if (!boy) {
+      g.px(10, 15, "K");
+      g.px(21, 15, "K");
+    }
+    g.rect(8, 19, 2, 1, "P");
+    g.rect(22, 19, 2, 1, "P");
+    g.px(14, 19, "m");
+    g.px(17, 19, "m");
+    g.px(15, 20, "m");
+    g.px(16, 20, "m");
+    if (h.hat && HATS[h.hat]) HATS[h.hat].draw(g);
+    return sprite(g.rows(), {
+      S: h.skin,
+      s: darken(h.skin, 0.86),
+      K: "#2a1d2e",
+      W: "#ffffff",
+      E: "#6b4a2b",
+      P: "#ff9aa8",
+      m: "#b04050",
+      O: h.outfit,
+      o: darken(h.outfit, 0.8),
+      q: "#fff4e0",
+      J: "#3d5a8c",
+      j: "#2a3f66",
+      B: "#5a3a2a",
+      b: "#8a5a3e",
+      H: h.hairColor,
+      h: lighten(h.hairColor, 0.3),
+      d: darken(h.hairColor, 0.7),
+      Y: "#ffd93c",
+      y: "#d99a16",
+      R: "#e2445c",
+      r: "#a52a3c",
+      M: "#8a4fd8",
+      n: "#5e3a94",
+      G: "#3dbd6a",
+      g: "#2f9a55",
+      Q: "#2bb3a8",
+      A: "#c3cbd6",
+      a: "#7d8794",
+      w: "#dde6ee"
+    });
+  }
 
   // src/shell.js
   function hudHTML(run) {
@@ -3057,6 +3473,144 @@ h2 { font-size: 1.6rem; }
   GS.HERO = null;
   function rebuildHero() {
     GS.HERO = heroSprite(GS.G.hero);
+  }
+
+  // src/build.js
+  var coinsWord = (n) => n === 1 ? "moneta" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "monety" : "monet";
+  function preview(k, lvl) {
+    if (k === "house") return HOUSE[lvl];
+    if (k === "well") return WELL[lvl];
+    if (k === "library") return LIBRARY[lvl];
+    if (k === "garden") return PLANT_SPR.pumpkin[3];
+    return PETSPR.dog;
+  }
+  function buildScreen() {
+    GS.scene = null;
+    const C = GS.G.camp;
+    let tab = "build", asking = null;
+    app.innerHTML = `${hudHTML(null)}<h1>Budowa obozu</h1>${dialogHTML()}
+    <div class="ask" id="ask" hidden></div>
+    <div class="tabs"><button class="choice" id="tabB" aria-pressed="true">Budynki</button><button class="choice" id="tabD" aria-pressed="false">Ozdoby</button></div>
+    <div class="shop" id="list"></div>
+    <button class="btn" id="backBtn">Wr\xF3\u0107 do obozu</button>`;
+    wireHud(camp);
+    wireSay();
+    function render() {
+      $("tabB").setAttribute("aria-pressed", String(tab === "build"));
+      $("tabD").setAttribute("aria-pressed", String(tab === "decor"));
+      if (tab === "build") {
+        $("list").innerHTML = BUILD_ORDER.map((k) => {
+          const B = BUILDINGS[k], l = C.b[k], max = l >= 3, next = max ? l : l + 1;
+          return `<button class="item build" data-k="${k}" ${max ? 'aria-disabled="true"' : ""}>
+          <img src="${url(preview(k, Math.max(1, next) && (k === "house" ? next : Math.max(1, next))))}" alt="">
+          <span>${esc(B.name)}</span>
+          <small>${l ? `Teraz: ${esc(B.levels[l])}` : k === "house" ? `Teraz: ${esc(B.levels[0])}` : "Jeszcze nie ma"}</small>
+          <small class="eff">${max ? esc(B.effect(l)) : `${esc(B.levels[next])}: ${esc(B.effect(next))}`}</small>
+          <span class="price">${max ? "Gotowe \u2713" : `<img src="${ICON.coin}" alt="">${B.cost[l]}`}</span></button>`;
+        }).join("");
+      } else {
+        $("list").innerHTML = Object.keys(DECOR).map((k) => `<button class="item build" data-k="${k}">
+          <img src="${url(DECOR_SPR[k])}" alt=""><span>${esc(DECOR[k].name)}</span>
+          <small>W plecaku: ${C.inv[k] || 0}, w obozie: ${C.decor.filter((d) => d.k === k).length}</small>
+          <span class="price"><img src="${ICON.coin}" alt="">${DECOR[k].price}</span></button>`).join("");
+      }
+      $("list").querySelectorAll(".item").forEach((b) => b.addEventListener("click", () => choose(b)));
+    }
+    function choose(btn) {
+      if (asking) return;
+      const k = btn.dataset.k;
+      let price, label, apply;
+      if (tab === "build") {
+        const B = BUILDINGS[k], l = C.b[k];
+        if (l >= 3) {
+          say(petName(), `${B.name} jest ju\u017C w pe\u0142ni rozbudowany.`);
+          return;
+        }
+        price = B.cost[l];
+        label = `${B.levels[l + 1]}`;
+        apply = () => {
+          C.b[k] = l + 1;
+          if (k === "garden") while (C.beds.length < C.b.garden) C.beds.push({ p: PLANTS[ri(0, PLANTS.length - 1)], s: 0 });
+          return `Zbudowane: ${B.levels[l + 1]}! ${B.effect(l + 1)}.`;
+        };
+      } else {
+        price = DECOR[k].price;
+        label = DECOR[k].name;
+        apply = () => {
+          C.inv[k] = (C.inv[k] || 0) + 1;
+          return `${DECOR[k].name} w plecaku! Ustawisz j\u0105 w obozie przyciskiem \u201EUstaw ozdoby\u201D.`;
+        };
+      }
+      if (GS.G.coins < price) {
+        btn.classList.remove("shake");
+        void btn.offsetWidth;
+        btn.classList.add("shake");
+        snd.bad();
+        say(petName(), `Potrzebujemy ${price} ${coinsWord(price)}, a mamy ${GS.G.coins}. Brakuje ${price - GS.G.coins}. Ruszajmy na wypraw\u0119!`);
+        return;
+      }
+      ask(price, label, apply, btn);
+    }
+    function ask(price, label, apply, btn) {
+      const have = GS.G.coins, ans = have - price;
+      const opts = /* @__PURE__ */ new Set([ans]);
+      while (opts.size < 3) {
+        const v = ans + ri(-3, 3);
+        if (v >= 0) opts.add(v);
+      }
+      asking = true;
+      $("ask").hidden = false;
+      $("ask").innerHTML = `<div class="sum">${have} \u2212 ${price} = ?</div><div class="opts">${shuffle([...opts]).map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>
+      <button class="btn small" id="askCancel">Jednak nie kupuj\u0119</button>`;
+      say(
+        petName(),
+        esc(`Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to 1 moneta rabatu!`),
+        `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to jedna moneta rabatu.`
+      );
+      $("ask").scrollIntoView({ block: "nearest" });
+      $("askCancel").addEventListener("click", () => {
+        asking = null;
+        $("ask").hidden = true;
+        say(petName(), "Dobrze, zostawiamy monety na p\xF3\u017Aniej.");
+      });
+      $("ask").querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => {
+        if (!asking) return;
+        const ok = +b.dataset.v === ans;
+        b.classList.add(ok ? "right" : "wrong");
+        const paid = ok ? price - 1 : price;
+        GS.G.coins -= paid;
+        const done = apply();
+        save();
+        ok ? snd.ok() : snd.coin();
+        burst(btn, 30);
+        $("coinN").textContent = GS.G.coins;
+        say(petName(), esc((ok ? `Brawo, zostanie ${ans}! Z rabatem p\u0142acimy ${paid}. ` : `Zostanie ${ans}. P\u0142acimy ${paid}. `) + done));
+        setTimeout(() => {
+          asking = null;
+          $("ask").hidden = true;
+          render();
+        }, 900);
+      }));
+    }
+    $("tabB").addEventListener("click", () => {
+      if (!asking) {
+        tab = "build";
+        render();
+      }
+    });
+    $("tabD").addEventListener("click", () => {
+      if (!asking) {
+        tab = "decor";
+        render();
+      }
+    });
+    $("backBtn").addEventListener("click", camp);
+    render();
+    say(petName(), esc(`Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Ka\u017Cdy budynek pomaga na wyprawach.`));
+    try {
+      window.scrollTo({ top: 0 });
+    } catch (e) {
+    }
   }
 
   // src/creator.js
@@ -3396,7 +3950,7 @@ h2 { font-size: 1.6rem; }
       draw(cv.x, PETSPR[GS.G.hero.pet], 40, 8 - bob(t, 2), 1.25);
     } };
     let tab = "hats";
-    const coinsWord = (n) => n === 1 ? "monet\u0119" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "monety" : "monet";
+    const coinsWord2 = (n) => n === 1 ? "monet\u0119" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "monety" : "monet";
     function noMoney(b, price) {
       b.classList.remove("shake");
       void b.offsetWidth;
@@ -3461,32 +4015,143 @@ h2 { font-size: 1.6rem; }
       say(petName(), "Tu odblokujesz nowych przyjaci\xF3\u0142 na wyprawy. Najrzadszy jest jednoro\u017Cec!");
     });
     render();
-    say(petName(), `Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Kup czapk\u0119 albo odblokuj nowego zwierzaka!`);
+    say(petName(), `Masz ${GS.G.coins} ${coinsWord2(GS.G.coins)}. Kup czapk\u0119 albo odblokuj nowego zwierzaka!`);
     $("backBtn").addEventListener("click", camp);
   }
 
   // src/camp.js
+  var PEN_SIZE = [0, 2, 4, 9];
   function camp() {
     GS.scene = null;
+    const C = GS.G.camp;
     app.innerHTML = `${hudHTML(null)}<h1>Ob\xF3z</h1><div id="sc"></div>${dialogHTML()}
+    <div class="decor-bar" id="decorBar" hidden></div>
     <button class="btn main" id="tripBtn">Wyprawa do lasu</button>
+    <div class="row"><button class="btn small gold" id="buildBtn">Budowa obozu</button><button class="btn small" id="editBtn">Ustaw ozdoby</button></div>
     <div class="row"><button class="btn small" id="shopBtn">Sklep: czapki i zwierzaki</button><button class="btn small" id="lookBtn">Zmie\u0144 wygl\u0105d</button><button class="btn small" id="playersBtn">Gracze</button></div>
     ${parentHTML()}`;
     wireHud(camp);
     wireSay();
-    const cv = mountCanvas(8, 4);
+    const cv = mountCanvas(CAMP_COLS, CAMP_ROWS);
     $("sc").appendChild(cv.c);
-    const bg = bakeClearing(8, 4, 11);
+    cv.c.setAttribute("aria-label", "Ob\xF3z");
+    const bg = bakeClearing(CAMP_COLS, CAMP_ROWS, 11);
+    const blocked = blockedTiles();
+    let editing = false, placing = null;
+    const penPets = GS.G.pets.filter((p) => p !== GS.G.hero.pet).slice(0, PEN_SIZE[C.b.pen]);
     GS.scene = { cv, draw(t) {
       const x = cv.x;
       x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
-      draw(x, Math.floor(t / 180) % 2 ? SPR.fireA : SPR.fireB, 56, 30, 1.25);
-      draw(x, GS.HERO, 28, 18 - bob(t), 1.5);
-      draw(x, PETSPR[GS.G.hero.pet], 88, 36 - bob(t, 2), 1.25);
+      if (editing) {
+        for (let r = 1; r < CAMP_ROWS; r++) for (let c = 0; c < CAMP_COLS; c++) if (!blocked.has(`${c},${r}`)) {
+          const taken = C.decor.some((d) => d.c === c && d.r === r);
+          x.strokeStyle = taken ? "rgba(255,255,255,.75)" : "rgba(255,240,150,.85)";
+          x.lineWidth = 0.75;
+          x.strokeRect(c * 16 + 1, r * 16 + 1, 14, 14);
+        }
+      }
+      const H = HOUSE[C.b.house];
+      draw(x, H, 0, 48 - H.height + 1, 2);
+      if (C.b.pen) {
+        const X = 1, Y = 49, W = 30, H2 = 30;
+        x.fillStyle = "#7a4b2a";
+        x.fillRect(X, Y, W, 1.2);
+        x.fillRect(X, Y + H2 - 1.2, W, 1.2);
+        x.fillRect(X, Y, 1.2, H2);
+        x.fillRect(X + W - 1.2, Y, 1.2, H2);
+        x.fillStyle = "#b07440";
+        for (let i = 0; i <= 5; i++) {
+          x.fillRect(X + i * W / 5 - 0.6, Y - 1.5, 1.4, 3.5);
+          x.fillRect(X + i * W / 5 - 0.6, Y + H2 - 2, 1.4, 3.5);
+        }
+        penPets.forEach((k, i) => {
+          const ph = i * 1.7, wx = reduced() ? 0 : Math.sin(t / 1400 + ph) * 4;
+          draw(x, PETSPR[k], 3 + i % 3 * 8 + wx, 52 + Math.floor(i / 3) * 8 - bob(t, ph), 0.55);
+        });
+      }
+      if (C.b.library) draw(x, LIBRARY[C.b.library], 47, 11, 1.3);
+      if (C.b.well) draw(x, WELL[C.b.well], 94, 11, 1.3);
+      C.beds.forEach((b, i) => {
+        const bx = (5 + i) * 16, by = 4 * 16;
+        x.fillStyle = "#8a5a34";
+        x.fillRect(bx + 1, by + 9, 14, 6);
+        x.fillStyle = "#6e4626";
+        x.fillRect(bx + 1, by + 13, 14, 2);
+        draw(x, PLANT_SPR[b.p][b.s], bx, by - 2 - (b.s === RIPE ? bob(t, i) : 0), 1, true);
+        if (b.s === RIPE && !reduced() && Math.floor(t / 400 + i) % 3 === 0) {
+          x.fillStyle = "#fff6c9";
+          x.fillRect(bx + 12, by + 1, 1.5, 1.5);
+        }
+      });
+      C.decor.forEach((d) => draw(x, DECOR_SPR[d.k], d.c * 16, d.r * 16 - 2, 1));
+      draw(x, Math.floor(t / 180) % 2 ? SPR.fireA : SPR.fireB, FIRE_TILE[0] * 16 - 2, FIRE_TILE[1] * 16 - 4, 1.25);
+      draw(x, GS.HERO, 30, 38 - bob(t), 1.3);
+      draw(x, PETSPR[GS.G.hero.pet], 66, 48 - bob(t, 2), 1.05);
     } };
+    cv.c.addEventListener("click", (e) => {
+      const r0 = cv.c.getBoundingClientRect(), b = 4;
+      const lx = (e.clientX - r0.left - b) / (r0.width - 2 * b) * CAMP_COLS * 16, ly = (e.clientY - r0.top - b) / (r0.height - 2 * b) * CAMP_ROWS * 16;
+      const c = Math.floor(lx / 16), r = Math.floor(ly / 16);
+      if (editing) return editTap(c, r);
+      if (r === 4 && c >= 5 && c - 5 < C.beds.length) harvest(c - 5, e);
+    });
+    function harvest(i, e) {
+      const bed = C.beds[i];
+      if (bed.s < RIPE) {
+        say(petName(), esc(`Ta grz\u0105dka jeszcze ro\u015Bnie. Po ${RIPE - bed.s === 1 ? "nast\u0119pnej wyprawie" : `${RIPE - bed.s} wyprawach`} b\u0119dzie plon.`));
+        return;
+      }
+      const got = PLANT_NAME[bed.p];
+      GS.G.coins += 3;
+      bed.p = pick(PLANTS);
+      bed.s = 0;
+      save();
+      snd.coin();
+      burst(cv.c, 18);
+      $("coinN").textContent = GS.G.coins;
+      say(heroName(), esc(`Zebrane: ${got}! +3 monety. Posia\u0142am nowe nasionko.`.replace("Posia\u0142am", gw("Posia\u0142am", "Posia\u0142em"))));
+    }
+    function renderBar() {
+      const inv = Object.keys(C.inv).filter((k) => C.inv[k] > 0);
+      $("decorBar").hidden = !editing;
+      $("decorBar").innerHTML = (inv.length ? inv.map((k) => `<button class="decor-chip" data-k="${k}" aria-pressed="${placing === k}"><img src="${url(DECOR_SPR[k])}" alt="">${esc(DECOR[k].name)} <b>\xD7${C.inv[k]}</b></button>`).join("") : `<span class="note muted">Nie masz ozd\xF3b w plecaku. Kupisz je w \u201EBudowie obozu\u201D.</span>`) + `<span class="note muted">${placing ? "Dotknij wolnego pola w obozie." : C.decor.length ? "Wybierz ozdob\u0119 albo dotknij ustawionej, \u017Ceby j\u0105 zabra\u0107." : "Wybierz ozdob\u0119."}</span>`;
+      $("decorBar").querySelectorAll(".decor-chip").forEach((b) => b.addEventListener("click", () => {
+        placing = placing === b.dataset.k ? null : b.dataset.k;
+        snd.letter();
+        renderBar();
+      }));
+    }
+    function editTap(c, r) {
+      if (c < 0 || r < 1 || c >= CAMP_COLS || r >= CAMP_ROWS || blocked.has(`${c},${r}`)) {
+        if (placing) say(petName(), "Tam nic nie postawimy. Wybierz pole z \u017C\xF3\u0142t\u0105 ramk\u0105.");
+        return;
+      }
+      const at = C.decor.findIndex((d) => d.c === c && d.r === r);
+      if (at >= 0) {
+        const d = C.decor.splice(at, 1)[0];
+        C.inv[d.k] = (C.inv[d.k] || 0) + 1;
+        snd.letter();
+      } else if (placing && C.inv[placing] > 0) {
+        C.decor.push({ k: placing, c, r });
+        C.inv[placing]--;
+        if (!C.inv[placing]) placing = null;
+        snd.coin();
+      } else return;
+      save();
+      renderBar();
+    }
+    $("editBtn").addEventListener("click", () => {
+      editing = !editing;
+      placing = null;
+      $("editBtn").textContent = editing ? "Gotowe" : "Ustaw ozdoby";
+      renderBar();
+      if (editing) say(petName(), "Urz\u0105dzamy ob\xF3z! Wybierz ozdob\u0119 i dotknij pola z \u017C\xF3\u0142t\u0105 ramk\u0105.");
+    });
+    const ripe = C.beds.filter((b) => b.s === RIPE).length;
     const lines = [`Cze\u015B\u0107, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygod\u0119?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wypraw\u0119?`];
-    say(petName(), esc(GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Pomo\u017Cesz mi?`));
+    say(petName(), esc(ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`));
     $("tripBtn").addEventListener("click", startTrip);
+    $("buildBtn").addEventListener("click", buildScreen);
     $("shopBtn").addEventListener("click", shop);
     $("lookBtn").addEventListener("click", () => creator(true));
     $("playersBtn").addEventListener("click", whoPlays);

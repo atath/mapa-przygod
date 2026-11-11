@@ -1,4 +1,5 @@
 import { GS } from "./state.js";
+import { normalizeCamp } from "./camp-data.js";
 
 /* ================== Save ==================
    Version 2 keeps every player profile and the parent settings under one key.
@@ -24,7 +25,8 @@ export function normalizeProfile(s, id) {
     hero: s.hero || null, coins: s.coins | 0, owned: Array.isArray(s.owned) ? s.owned.slice() : ["none"],
     pets, petNames,
     level: [1, 2, 3].includes(s.level) ? s.level : 1, trips: s.trips | 0, fights: s.fights | 0,
-    voice: s.voice !== false, sound: s.sound !== false
+    voice: s.voice !== false, sound: s.sound !== false,
+    camp: normalizeCamp(s.camp)
   };
 }
 export const blankProfile = () => normalizeProfile({}, newId());

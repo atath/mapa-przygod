@@ -1,6 +1,5 @@
 import { L } from "./content.js";
 import { SPR } from "./props.js";
-import { draw } from "./scene.js";
 import { $, esc, pick, rand, reduced, ri, shuffle } from "./util.js";
 
 /* ================== Effects (canvas particles) ================== */

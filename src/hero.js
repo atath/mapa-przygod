@@ -1,4 +1,3 @@
-import { S, draw } from "./scene.js";
 import { P, lighten, sprite } from "./sprites.js";
 import { darken } from "./util.js";
 

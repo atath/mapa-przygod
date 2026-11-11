@@ -8,6 +8,7 @@ import { SPR } from "./props.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle } from "./util.js";
+import { libHintHTML, wireLibHint } from "./expedition.js";
 
 /* ---------- Door room (Polish: build word) ---------- */
 export function doorRoom() {
@@ -29,8 +30,9 @@ export function doorRoom() {
   if (lv.spoken) say(petName(), esc(`Zaczarowane drzwi! Otworzy je słowo z obrazka: „${x.w}”. Ułóż je z run.`), `Zaczarowane drzwi! Otworzy je słowo ${x.w}. Ułóż je z liter, po kolei.`);
   else say(petName(), "Zaczarowane drzwi! Otworzy je nazwa tego, co widzisz na obrazku. Ułóż ją z run. Uwaga, niektóre runy są fałszywe!");
   $("ctl").innerHTML = `<div class="hint-pic" aria-hidden="true">${x.e}</div><div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
-    <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>`;
+    <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>${libHintHTML()}`;
   let pos = 0, misses = 0; const slots = app.querySelectorAll(".slot");
+  wireLibHint(() => { const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]); if (!t) return false; t.click(); say(petName(), esc(`Biblioteczka podpowiada: „${letters[pos - 1]}”.`)); });
   app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", async () => {
     if (pos >= letters.length || b.classList.contains("used")) return;
     if (b.dataset.l === letters[pos]) {
@@ -88,8 +90,14 @@ export function signRoom() {
   } };
   say(petName(), `Rozdroże! Musimy dojść tam, gdzie jest <span class="pic">${target.e}</span>. Drogowskazy są podobne — czytaj bardzo uważnie, litera po literze!`,
     "Rozdroże! Spójrz na obrazek. Drogowskazy są do siebie podobne, więc czytaj bardzo uważnie, litera po literze.");
-  $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;
+  $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>${libHintHTML()}`;
   let done = false;
+  wireLibHint(() => {
+    const wrong = [...app.querySelectorAll("[data-w]")].filter((b) => !b.disabled && b.dataset.w !== target.w);
+    if (done || !wrong.length) return false;
+    const b = wrong[0]; b.classList.add("wrong"); b.disabled = true; snd.letter();
+    say(petName(), esc(`Biblioteczka mówi: „${b.dataset.w}” to nie ta droga.`), `Biblioteczka mówi: ${b.dataset.w} to nie ta droga.`);
+  });
   app.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", async () => {
     if (done || b.disabled) return;
     if (b.dataset.w === target.w) {

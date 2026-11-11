@@ -10,6 +10,7 @@ import { doorRoom, signRoom } from "./polish-rooms.js";
 import { ICON } from "./props.js";
 import { dialogHTML, gw, heroName, hudHTML, petName, say, wireHud, wireSay } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle, sleep } from "./util.js";
+import { libraryHints, wellHearts } from "./camp-data.js";
 
 /* ================== Expedition ================== */
 export const PASSWORDS = [
@@ -28,7 +29,8 @@ export function startTrip() {
   // spread the password letters over the 6 rooms, in random order
   const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
   order.forEach((idx, k) => runes[Math.floor((k * spots) / order.length)].push(pw.w[idx]));
-  GS.RUN = { rooms, i: 0, hp: 3, maxHp: 3, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [] };
+  const maxHp = 3 + wellHearts(GS.G.camp);
+  GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
   room();
 }
 export function roomShell() {
@@ -70,4 +72,18 @@ export async function hurt() {
   const lost = Math.min(2, GS.RUN.coins); GS.RUN.coins -= lost; GS.RUN.hp = GS.RUN.maxHp; updHud();
   say(petName(), `Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " monety. " : ""}Spróbujmy jeszcze raz.`);
   return true;
+}
+
+/* ---------- Library hints: the camp library gives a few per expedition ---------- */
+export function libHintHTML() {
+  return GS.RUN.hints > 0 ? `<button class="btn small hint" id="libHint">📖 Podpowiedź z biblioteczki (${GS.RUN.hints})</button>` : "";
+}
+// use() performs the hint and returns false when there was nothing to help with
+export function wireLibHint(use) {
+  const b = document.getElementById("libHint"); if (!b) return;
+  b.addEventListener("click", () => {
+    if (GS.RUN.hints <= 0 || use() === false) return;
+    GS.RUN.hints--;
+    if (GS.RUN.hints > 0) b.textContent = `📖 Podpowiedź z biblioteczki (${GS.RUN.hints})`; else b.remove();
+  });
 }

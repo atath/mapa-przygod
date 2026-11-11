@@ -1,4 +1,3 @@
-import { S, draw } from "./scene.js";
 import { P, sprite } from "./sprites.js";
 
 /* ---------- Companions (32 × 32) ---------- */

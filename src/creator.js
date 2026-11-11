@@ -6,7 +6,7 @@ import { PETS, PETSPR } from "./pets.js";
 import { addProfile, blankProfile, profiles, save } from "./save.js";
 import { whoPlays } from "./profiles.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
-import { petName, rebuildHero } from "./shell.js";
+import { rebuildHero } from "./shell.js";
 import { url } from "./sprites.js";
 import { $, app, esc } from "./util.js";
 

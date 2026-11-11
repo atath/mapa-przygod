@@ -1,4 +1,3 @@
-import { px } from "./fx.js";
 
 /* ================== Sprites ================== */
 export const OUT = "#2a1d2e";

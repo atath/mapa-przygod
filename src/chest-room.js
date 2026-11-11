@@ -10,6 +10,8 @@ import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, shuffle } from "./util.js";
+import { growGarden, houseBonus } from "./camp-data.js";
+import { libHintHTML, wireLibHint } from "./expedition.js";
 
 /* ---------- Chest (password from collected runes) ---------- */
 export function chestRoom() {
@@ -30,9 +32,10 @@ export function chestRoom() {
   say(petName(), `Skrzynia jest zamknięta na hasło! Ułóż je ze zdobytych run. ${riddle()}`, `Skrzynia jest zamknięta na hasło. Ułóż je ze zdobytych run. Zagadka: ${pw.r}`);
   $("ctl").innerHTML = `<div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>
-    ${picShown ? "" : `<button class="btn small" id="hintBtn">Podpowiedź</button>`}`;
+    <div class="row">${picShown ? "" : `<button class="btn small" id="hintBtn">Podpowiedź</button>`}${libHintHTML()}</div>`;
   if ($("hintBtn")) $("hintBtn").addEventListener("click", () => { picShown = true; $("hintBtn").remove(); say(petName(), `${riddle()}`, `Zagadka: ${pw.r}. Spójrz na obrazek.`); });
   let pos = 0; const slots = app.querySelectorAll(".slot");
+  wireLibHint(() => { const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]); if (!t) return false; t.click(); });
   app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", () => {
     if (pos >= letters.length || b.classList.contains("used")) return;
     if (b.dataset.l === letters[pos]) {
@@ -46,11 +49,11 @@ export function chestRoom() {
     }
   }));
   function openChest() {
-    st.open = true; const bonus = 5 + GS.G.level * 2; GS.RUN.coins += bonus;
-    GS.G.coins += GS.RUN.coins; GS.G.trips++; save();
+    st.open = true; const house = houseBonus(GS.G.camp), bonus = 5 + GS.G.level * 2 + house; GS.RUN.coins += bonus;
+    GS.G.coins += GS.RUN.coins; GS.G.trips++; growGarden(GS.G.camp); save();
     speak(pw.w); snd.fanfare(); praise(pw.w.toUpperCase() + "!"); bigEffect(); setTimeout(bigEffect, 700);
     $("coinN").textContent = GS.G.coins;
-    setTimeout(() => say(heroName(), esc(`Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}.`)), 900);
+    setTimeout(() => say(heroName(), esc(`Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}`)), 900);
     $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Następna wyprawa</button>`;
     $("campBtn").addEventListener("click", () => { GS.RUN = null; camp(); });
     $("againBtn").addEventListener("click", startTrip);
