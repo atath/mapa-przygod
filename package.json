@@ -1,0 +1,19 @@
+{
+  "name": "mapa-przygod",
+  "version": "0.2.0",
+  "description": "Gra edukacyjna dla dzieci",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node build.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@fontsource/nunito": "^5.1.0",
+    "@fontsource/pixelify-sans": "^5.1.0",
+    "esbuild": "^0.24.0"
+  },
+  "type": "module"
+}
