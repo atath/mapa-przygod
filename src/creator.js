@@ -28,7 +28,7 @@ export function creator(fromCamp, newPlayer) {
       <div class="field"><span>Skóra</span><div class="choices" id="skCh">${SKINS.map((c) => `<button class="swatch" data-v="${c}" style="background:${c}" aria-label="odcień ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>Ubranie</span><div class="choices" id="ouCh">${OUTFITS.map((c) => `<button class="swatch" data-v="${c}" style="background:${c}" aria-label="kolor ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>Zwierzak</span><div class="choices" id="petCh">${GS.G.pets.map((k) => `<button class="choice" data-v="${k}"><img src="${url(PETSPR[k])}" alt="">${PETS[k].name}</button>`).join("")}</div>
-        <span style="font-weight:600;color:var(--muted);font-size:.95rem">Kolejne zwierzaki odblokujesz w sklepie za monety z wypraw.</span></div>
+        <span style="font-weight:700;color:var(--muted);font-size:.95rem">Kolejne zwierzaki odblokujesz w sklepie za monety z wypraw.</span></div>
       <label class="field"><span>Imię zwierzaka</span><input type="text" id="petIn" maxlength="14" autocomplete="off" value="${esc(GS.G.petNames[h.pet] || "")}" placeholder=""></label>
     </div>
     <button class="btn main" id="goBtn">${fromCamp ? "Gotowe" : "Ruszamy!"}</button>${isNew && profiles().length ? `<button class="btn" id="cancelBtn">Wróć</button>` : ""}`;

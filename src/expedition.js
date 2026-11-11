@@ -54,23 +54,29 @@ export function room() {
   const t = GS.RUN.rooms[GS.RUN.i];
   ({ path: pathRoom, monster: monsterRoom, door: doorRoom, sign: signRoom, chest: chestRoom })[t]();
 }
+// Rooms wait on animations. If the child went back to camp (or started a new trip) meanwhile,
+// the old room must not touch the new screen: every await is followed by this check.
+export const left = (run) => GS.RUN !== run || !run;
 export async function nextRoom() {
-  const got = GS.RUN.runes[GS.RUN.i] || [];
+  const run = GS.RUN; if (!run) return;
+  const got = run.runes[run.i] || [];
   if (got.length) {
-    await sleep(1300);
+    await sleep(1300); if (left(run)) return;
     GS.RUN.got = GS.RUN.got.concat(got); updHud(); snd.letter();
     say(petName(), esc(`Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ").toUpperCase()}! Przyda się do hasła skrzyni.`), `Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ")}. Przyda się do hasła skrzyni.`);
     const r = app.querySelector(".runes"); if (r) burst(r, 18);
     await sleep(1900);
   } else await sleep(900);
+  if (left(run)) return;
   GS.RUN.i++; room();
 }
 export async function hurt() {
+  const run = GS.RUN; if (!run) return true;
   GS.RUN.hp--; updHud(); snd.bad();
   if (GS.RUN.hp > 0) return false;
-  await sleep(700);
+  await sleep(700); if (left(run)) return true;
   const lost = Math.min(2, GS.RUN.coins); GS.RUN.coins -= lost; GS.RUN.hp = GS.RUN.maxHp; updHud();
-  say(petName(), `Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " monety. " : ""}Spróbujmy jeszcze raz.`);
+  say(petName(), esc(`Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " " + (lost === 1 ? "monetę" : "monety") + ". " : ""}Spróbujmy jeszcze raz.`));
   return true;
 }
 

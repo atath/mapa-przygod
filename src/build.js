@@ -41,7 +41,7 @@ export function buildScreen() {
       $("list").innerHTML = BUILD_ORDER.map((k) => {
         const B = BUILDINGS[k], l = C.b[k], max = l >= 3, next = max ? l : l + 1;
         return `<button class="item build" data-k="${k}" ${max ? 'aria-disabled="true"' : ""}>
-          <img src="${url(preview(k, Math.max(1, next) && (k === "house" ? next : Math.max(1, next))))}" alt="">
+          <img src="${url(preview(k, next))}" alt="">
           <span>${esc(B.name)}</span>
           <small>${l ? `Teraz: ${esc(B.levels[l])}` : k === "house" ? `Teraz: ${esc(B.levels[0])}` : "Jeszcze nie ma"}</small>
           <small class="eff">${max ? esc(B.effect(l)) : `${esc(B.levels[next])}: ${esc(B.effect(next))}`}</small>

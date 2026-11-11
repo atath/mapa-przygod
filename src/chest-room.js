@@ -2,7 +2,7 @@ import { GS } from "./state.js";
 import { snd, speak } from "./audio.js";
 import { camp } from "./camp.js";
 import { L } from "./content.js";
-import { roomShell, startTrip } from "./expedition.js";
+import { libHintHTML, roomShell, startTrip, wireLibHint } from "./expedition.js";
 import { bigEffect, praise } from "./fx.js";
 import { PETSPR } from "./pets.js";
 import { SPR } from "./props.js";
@@ -11,7 +11,6 @@ import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, shuffle } from "./util.js";
 import { growGarden, houseBonus } from "./camp-data.js";
-import { libHintHTML, wireLibHint } from "./expedition.js";
 
 /* ---------- Chest (password from collected runes) ---------- */
 export function chestRoom() {
@@ -53,7 +52,7 @@ export function chestRoom() {
     GS.G.coins += GS.RUN.coins; GS.G.trips++; growGarden(GS.G.camp); save();
     speak(pw.w); snd.fanfare(); praise(pw.w.toUpperCase() + "!"); bigEffect(); setTimeout(bigEffect, 700);
     $("coinN").textContent = GS.G.coins;
-    setTimeout(() => say(heroName(), esc(`Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}`)), 900);
+    setTimeout(() => cv.c.isConnected && say(heroName(), esc(`Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}`)), 900);
     $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Następna wyprawa</button>`;
     $("campBtn").addEventListener("click", () => { GS.RUN = null; camp(); });
     $("againBtn").addEventListener("click", startTrip);

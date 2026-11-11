@@ -194,7 +194,7 @@ h2 { font-size: 1.6rem; }
 .mini-coins img { width: 22px; height: 22px; image-rendering: pixelated; }
 .savebox { display: grid; gap: 10px; padding: 10px; border-radius: 10px; background: var(--soft); }
 .savebox textarea { font: 600 .85rem/1.35 ui-monospace, "SF Mono", Menlo, monospace; width: 100%; border: 2px solid var(--line); border-radius: 8px; padding: 8px; background: var(--surface); color: var(--fg); resize: vertical; }
-.note.muted { font-weight: 600; color: var(--muted); }
+.note.muted { font-weight: 700; color: var(--muted); }
 .btn.danger { color: var(--bad); }
 .sub.small { font-size: .95rem; }
 
@@ -208,3 +208,9 @@ h2 { font-size: 1.6rem; }
 .decor-chip { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--line); border-radius: 10px; background: var(--soft); padding: 4px 8px; font-weight: 800; }
 .decor-chip img { width: 32px; height: 32px; image-rendering: pixelated; }
 .decor-chip[aria-pressed="true"] { border-color: var(--leaf); background: color-mix(in srgb, var(--leaf) 20%, var(--surface)); }
+
+/* another tab saved newer progress */
+.stale { position: fixed; inset: 0; z-index: 50; background: rgba(42,29,46,.55); display: grid; place-items: center; padding: 16px; }
+.stale .panel { max-width: 420px; }
+.stale h2 { font-size: 1.5rem; color: var(--leaf); }
+.stale p { margin: 0; }

@@ -60,7 +60,15 @@ export const HATS = {
 export const SKINS = ["#f5d0b5", "#e8b48f", "#c68a5e", "#8d5a3b"];
 export const HAIRC = ["#3b2a20", "#8a5a2b", "#e8c14f", "#d9622b", "#1c1c24", "#e86fb0"];
 export const OUTFITS = ["#e2445c", "#3d7be0", "#8a4fd8", "#2fa36b", "#f0a33a", "#ff8fc8"];
+const HERO_CACHE = new Map();
+const LOOK = ["gender", "hair", "hairColor", "skin", "outfit", "hat"];
 export function heroSprite(h) {
+  const key = LOOK.map((k) => h[k]).join("|");
+  let c = HERO_CACHE.get(key);
+  if (!c) { if (HERO_CACHE.size > 80) HERO_CACHE.clear(); c = buildHero(h); HERO_CACHE.set(key, c); }
+  return c;
+}
+function buildHero(h) {
   const g = P(32, 36);
   if (!HAIR[h.hair]) h = Object.assign({}, h, { hair: h.gender === "boy" ? "bshort" : "tails" });
   HAIR[h.hair].back(g);

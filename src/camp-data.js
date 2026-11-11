@@ -64,8 +64,13 @@ export function normalizeCamp(c) {
   if (!c || typeof c !== "object") return d;
   for (const k of BUILD_ORDER) d.b[k] = Math.max(0, Math.min(3, (c.b && c.b[k]) | 0));
   if (c.inv && typeof c.inv === "object") for (const k in c.inv) if (DECOR[k]) d.inv[k] = Math.max(0, c.inv[k] | 0);
-  if (Array.isArray(c.decor)) d.decor = c.decor.filter((x) => x && DECOR[x.k] && Number.isInteger(x.c) && Number.isInteger(x.r));
+  if (Array.isArray(c.decor)) {
+    const used = new Set();
+    d.decor = c.decor.filter((x) => x && DECOR[x.k] && Number.isInteger(x.c) && Number.isInteger(x.r) && x.c >= 0 && x.c < CAMP_COLS && x.r >= 1 && x.r < CAMP_ROWS && !used.has(x.c + "," + x.r) && used.add(x.c + "," + x.r))
+      .map((x) => ({ k: x.k, c: x.c, r: x.r }));
+  }
   if (Array.isArray(c.beds)) d.beds = c.beds.filter((x) => x && PLANTS.includes(x.p)).map((x) => ({ p: x.p, s: Math.max(0, Math.min(RIPE, x.s | 0)) }));
+  d.beds = d.beds.slice(0, d.b.garden);
   while (d.beds.length < d.b.garden) d.beds.push({ p: PLANTS[d.beds.length % PLANTS.length], s: 0 });
   return d;
 }

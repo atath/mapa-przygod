@@ -1,7 +1,7 @@
 import { GS } from "./state.js";
 import { snd } from "./audio.js";
 import { L } from "./content.js";
-import { hurt, nextRoom, roomShell, updHud } from "./expedition.js";
+import { hurt, left, nextRoom, roomShell, updHud } from "./expedition.js";
 import { PAL, PRAISE, burst } from "./fx.js";
 import { MON_DEFS } from "./monsters.js";
 import { PETSPR } from "./pets.js";
@@ -18,6 +18,7 @@ export function monsterRoom() {
   const E = ELEM[el], adjGen = E.adj.slice(0, -1) + "ego", counter = counterOf(el);
   const cv = mountCanvas(8, 4); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", "Potwór na polanie");
   const bg = bakeClearing(8, 4, GS.RUN.seed + GS.RUN.i);
+  const run = GS.RUN;
   const st = { mhp: maxHp, shake: 0, gone: 0, swing: 0, proj: null, shield: 0, flash: 0 };
   GS.scene = { cv, draw(t) {
     const x = cv.x; x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
@@ -88,6 +89,7 @@ export function monsterRoom() {
       if (busy || !spell || !sel.size) return; busy = true;
       const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter;
       await swing(); await fly(ELEM[spell].icon, 44, 96, 30);
+      if (left(run)) return;
       if (okSum && okEl) {
         snd.hit(); shake(); st.mhp--; burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
         if (st.mhp <= 0) return defeat();
@@ -100,7 +102,7 @@ export function monsterRoom() {
         if (!okSum && !okEl) msg += " I sprawdź czar w księdze.";
         say(mon.name, esc("Hi hi! " + msg));
       }
-      await sleep(1800);
+      await sleep(1800); if (left(run)) return;
       monsterTurn();
     });
     say(petName(), esc((prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`));
@@ -119,12 +121,12 @@ export function monsterRoom() {
       if (ok) {
         st.shield = 1; snd.letter(); await fly(E.icon, 92, 40, 30); snd.ok();
         say(heroName(), esc(`Tarcza! Odpowiedź ${q.ans} jest dobra. Atak odbity!`));
-        await sleep(1300); st.shield = 0;
+        await sleep(1300); st.shield = 0; if (left(run)) return;
       } else {
         await fly(E.icon, 92, 36, 30); st.flash = 1; setTimeout(() => (st.flash = 0), 600);
-        const fainted = await hurt();
+        const fainted = await hurt(); if (left(run)) return;
         if (!fainted) say(petName(), esc(`Ała! Dobra odpowiedź to ${q.ans}. Następnym razem się uda!`));
-        await sleep(1800);
+        await sleep(1800); if (left(run)) return;
       }
       playerTurn();
     }));
@@ -133,6 +135,7 @@ export function monsterRoom() {
   async function defeat() {
     snd.poof(); burst(cv.c, 40, PAL);
     await anim(600, (p) => { st.gone = p; });
+    if (left(run)) return;
     const loot = ri(2, 3) + (GS.G.level - 1); GS.RUN.coins += loot; GS.RUN.beaten++; GS.G.fights++; save(); updHud(); snd.coin();
     say(heroName(), esc(`${pick(PRAISE)} ${mon.name} uciekł i zostawił ${loot} monety!`));
     nextRoom();

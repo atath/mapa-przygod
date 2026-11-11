@@ -25,7 +25,11 @@ export function light(ctx, w, h) {
   g.addColorStop(0, "rgba(255,240,190,.22)"); g.addColorStop(0.55, "rgba(255,240,190,0)"); g.addColorStop(1, "rgba(10,30,20,.22)");
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
 }
-export function loop(t) { if (GS.scene && GS.scene.cv.c.isConnected) GS.scene.draw(t); requestAnimationFrame(loop); }
+let lastFrame = 0;
+export function loop(t) {
+  if (t - lastFrame >= 31 && GS.scene && GS.scene.cv.c.isConnected) { lastFrame = t; GS.scene.draw(t); }
+  requestAnimationFrame(loop);
+}
 requestAnimationFrame(loop);
 export function bob(t, ph = 0) { return reduced() ? 0 : Math.round((Math.sin(t / 260 + ph) + 1) / 2); }
 

@@ -53,7 +53,8 @@ export function sprite(rows0, pal, outline = true, texture = false) {
   }
   return c;
 }
-export const url = (c) => c.toDataURL();
+const URLS = new WeakMap();
+export const url = (c) => { let u = URLS.get(c); if (!u) { u = c.toDataURL(); URLS.set(c, u); } return u; };
 
 /* ---------- Pixel brush: shapes snapped to a 32px grid ---------- */
 export function P(w = 32, h = 32) {

@@ -1,14 +1,13 @@
 import { GS } from "./state.js";
 import { snd, speak } from "./audio.js";
 import { L, WORDS } from "./content.js";
-import { hurt, nextRoom, roomShell, updHud } from "./expedition.js";
+import { hurt, left, libHintHTML, nextRoom, roomShell, updHud, wireLibHint } from "./expedition.js";
 import { PRAISE, burst } from "./fx.js";
 import { PETSPR } from "./pets.js";
 import { SPR } from "./props.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle } from "./util.js";
-import { libHintHTML, wireLibHint } from "./expedition.js";
 
 /* ---------- Door room (Polish: build word) ---------- */
 export function doorRoom() {
@@ -32,14 +31,20 @@ export function doorRoom() {
   $("ctl").innerHTML = `<div class="hint-pic" aria-hidden="true">${x.e}</div><div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>${libHintHTML()}`;
   let pos = 0, misses = 0; const slots = app.querySelectorAll(".slot");
-  wireLibHint(() => { const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]); if (!t) return false; t.click(); say(petName(), esc(`Biblioteczka podpowiada: „${letters[pos - 1]}”.`)); });
+  wireLibHint(() => {
+    const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]); if (!t) return false;
+    const l = letters[pos]; t.click();
+    if (pos < letters.length) say(petName(), esc(`Biblioteczka podpowiada: „${l}”.`)); // the last rune opens the door — let it speak the word
+  });
   app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", async () => {
     if (pos >= letters.length || b.classList.contains("used")) return;
     if (b.dataset.l === letters[pos]) {
       slots[pos].textContent = letters[pos]; slots[pos].classList.add("filled"); b.classList.add("used"); pos++; st.glow = pos; snd.letter();
       if (pos === letters.length) {
         snd.door(); burst(app.querySelector(".slots"), 30); speak(x.w);
+        const run = GS.RUN;
         await new Promise((res) => { const t0 = performance.now(); function f(n) { st.open = Math.min(1, (n - t0) / 700); if (st.open < 1) requestAnimationFrame(f); else res(); } requestAnimationFrame(f); });
+        if (left(run)) return;
         GS.RUN.coins += GS.G.level; updHud(); snd.coin();
         say(heroName(), esc(`${pick(PRAISE)} „${x.w}” otworzyło drzwi!`)); nextRoom();
       }
@@ -106,7 +111,7 @@ export function signRoom() {
       say(heroName(), esc(`${pick(PRAISE)} „${target.w}” — to nasza droga.`)); nextRoom();
     } else {
       b.classList.add("wrong"); b.disabled = true; b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
-      const fainted = await hurt();
+      const run = GS.RUN, fainted = await hurt(); if (left(run)) return;
       if (!fainted) say(petName(), esc(`Tu jest napisane „${b.dataset.w}”. To nie to! Szukamy dalej.`), `Tu jest napisane ${b.dataset.w}. To nie to. Szukamy dalej.`);
     }
   }));

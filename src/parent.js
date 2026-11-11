@@ -1,10 +1,12 @@
 import { GS } from "./state.js";
 import { LV } from "./content.js";
-import { exportText, importText, profiles, removeProfile, save } from "./save.js";
+import { exportText, importText, profiles, removeProfile, save, saveFailed, undoInfo, undoLast } from "./save.js";
+import { sha256js } from "./sha256.js";
 import { $, esc } from "./util.js";
 
 /* ================== Parent panel (behind the PIN) ================== */
 export async function sha256(t) {
+  if (!(window.crypto && crypto.subtle)) return sha256js(t); // http:// on a home network has no crypto.subtle
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t));
   return Array.from(new Uint8Array(b)).map((v) => v.toString(16).padStart(2, "0")).join("");
 }
@@ -12,7 +14,7 @@ export const validPin = (p) => /^\d{4,8}$/.test(p);
 let pinFails = 0, pinLock = 0;
 
 export function parentHTML() {
-  const name = esc((GS.G && GS.G.hero && GS.G.hero.name) || "gracza");
+  const name = esc((GS.G && GS.G.hero && GS.G.hero.name) || "gracza"), undo = undoInfo();
   return `<button class="parent-toggle" id="parentBtn">Dla rodzica 🔒</button>
     <form class="panel" id="pinForm" hidden novalidate>
       <label class="field"><span>PIN rodzica</span><input type="password" id="pin" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8"></label>
@@ -51,6 +53,10 @@ export function parentHTML() {
         <div class="row"><button class="btn small danger" id="deleteBtn">Usuń gracza: ${name}</button></div>
       </div>
 
+      ${undo ? `<div class="field"><span>Cofnij</span>
+        <p class="note muted">Zapis sprzed ostatniego wczytania kopii albo usunięcia gracza (${esc(new Date(undo.at).toLocaleString("pl-PL"))}).</p>
+        <div class="row"><button class="btn small" id="undoBtn">Przywróć poprzedni zapis</button></div></div>` : ""}
+      ${saveFailed ? `<p class="note err">Uwaga: przeglądarka nie pozwala zapisać postępów (tryb prywatny albo brak miejsca). Zrób kopię zapisu.</p>` : ""}
       <div class="row"><button class="btn small" id="lockBtn">Zamknij panel</button></div>
       <p class="note" id="panelMsg" role="status"></p>
     </div>`;
@@ -124,7 +130,11 @@ export function wireParent(onLeave) {
   let armedDel = false;
   $("deleteBtn").addEventListener("click", (e) => {
     if (!armedDel) { armedDel = true; const t = e.target.textContent; e.target.textContent = "Na pewno? Postępy znikną. Kliknij jeszcze raz"; setTimeout(() => { armedDel = false; e.target.textContent = t; }, 5000); return; }
-    removeProfile(GS.G.id); onLeave("deleted");
+    removeProfile(GS.G.id, true); onLeave("deleted");
+  });
+  if ($("undoBtn")) $("undoBtn").addEventListener("click", (e) => {
+    if (!e.target.dataset.armed) { e.target.dataset.armed = "1"; e.target.textContent = "Obecne postępy zastąpi poprzedni zapis. Kliknij jeszcze raz"; return; }
+    if (undoLast()) { msg("Przywrócono poprzedni zapis."); setTimeout(() => onLeave("imported"), 900); } else msg("Nie ma czego przywrócić.", false);
   });
   $("lockBtn").addEventListener("click", lock);
 }

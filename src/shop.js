@@ -23,7 +23,7 @@ export function shop() {
   GS.scene = { cv, draw(t) { cv.x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2); draw(cv.x, GS.HERO, 12, 0 - bob(t), 1.5); draw(cv.x, PETSPR[GS.G.hero.pet], 40, 8 - bob(t, 2), 1.25); } };
   let tab = "hats";
   const coinsWord = (n) => n === 1 ? "monetę" : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? "monety" : "monet";
-  function noMoney(b, price) { b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); snd.bad(); say(petName(), `Potrzebujemy ${price} monet, a mamy ${GS.G.coins}. Brakuje ${price - GS.G.coins}. Ruszajmy na wyprawę!`); }
+  function noMoney(b, price) { b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); snd.bad(); say(petName(), `Potrzebujemy ${price} ${price === 1 ? "monety" : "monet"}, a mamy ${GS.G.coins}. Brakuje ${price - GS.G.coins}. Ruszajmy na wyprawę!`); }
   function render() {
     $("tabHats").setAttribute("aria-pressed", String(tab === "hats")); $("tabPets").setAttribute("aria-pressed", String(tab === "pets"));
     if (tab === "hats") {
@@ -50,7 +50,7 @@ export function shop() {
         const it = PETS[k];
         if (!GS.G.pets.includes(k)) { if (GS.G.coins < it.price) return noMoney(b, it.price); GS.G.coins -= it.price; GS.G.pets.push(k); snd.fanfare(); burst(b, 40); }
         else snd.letter();
-        GS.G.hero.pet = k; say(petName(), `Cześć, ${heroName()}! Jestem ${petName()}. Idę z tobą na wyprawę!`);
+        GS.G.hero.pet = k; say(petName(), esc(`Cześć, ${heroName()}! Jestem ${petName()}. Idę z tobą na wyprawę!`));
       }
       save(); rebuildHero(); $("coinN").textContent = GS.G.coins; render();
     }));

@@ -8,7 +8,7 @@ const FONTS = [
   ["Pixelify Sans", 700, "@fontsource/pixelify-sans/files/pixelify-sans-latin-ext-700-normal.woff2"],
   ["Pixelify Sans", 500, "@fontsource/pixelify-sans/files/pixelify-sans-latin-500-normal.woff2"],
   ["Pixelify Sans", 700, "@fontsource/pixelify-sans/files/pixelify-sans-latin-700-normal.woff2"],
-  ...[600, 700, 800, 900].flatMap((w) => [
+  ...[700, 800, 900].flatMap((w) => [
     ["Nunito", w, `@fontsource/nunito/files/nunito-latin-ext-${w}-normal.woff2`],
     ["Nunito", w, `@fontsource/nunito/files/nunito-latin-${w}-normal.woff2`],
   ]),

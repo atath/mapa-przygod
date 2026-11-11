@@ -1,7 +1,7 @@
 import { GS } from "./state.js";
 import { snd } from "./audio.js";
 import { L } from "./content.js";
-import { ROOM_NAME, hurt, nextRoom, roomShell, updHud } from "./expedition.js";
+import { ROOM_NAME, hurt, left, nextRoom, roomShell, updHud } from "./expedition.js";
 import { burst } from "./fx.js";
 import { MON_FRAMES } from "./monsters.js";
 import { PETSPR } from "./pets.js";
@@ -83,6 +83,7 @@ export function genMap(lv, types) {
     M.need = need;
     return placeCoins(M, open, exitKeys, start, lv);
   }
+  if (!best) return genMap(lv, types); // practically never: 400 unusable random layouts in a row
   const { M, open, exitKeys, start } = best;
   return placeCoins(M, open, exitKeys, start, lv);
 }
@@ -145,7 +146,7 @@ export function hedge(ctx, x0, y0, w, h, seed) {
 }
 export function pathRoom() {
   roomShell();
-  const lv = L(), first = GS.RUN.i === 0;
+  const lv = L(), run = GS.RUN, first = run.i === 0;
   const types = shuffle(["monster", "door", "sign"]).slice(0, lv.exits);
   const M = genMap(lv, types); if (window.__LW_TEST) { window.__LW_TEST.M = M; window.__LW_TEST.need = M.need; window.__LW_TEST.needAll = M.needAll; }
   const limit = lv.limitExtra == null ? Math.max(20, M.needAll + 4) : Math.max(Math.max(...M.need), M.needAll) + lv.limitExtra;
@@ -253,6 +254,7 @@ export function pathRoom() {
       }
       const prev = cell.slice(); cell = [stp.r, stp.c]; snd.step();
       await Promise.all([tween(hero, stp.c * 16, stp.r * 16, reduced() ? 120 : 300, true), tween(pet, prev[1] * 16 - 2, prev[0] * 16 + 4, reduced() ? 120 : 300)]);
+      if (left(run)) return;
       if (coins.delete(stp.r + "," + stp.c)) { picked.push(stp.r + "," + stp.c); snd.coin(); }
       reached = M.exits.find((e) => e.cell[0] === stp.r && e.cell[1] === stp.c);
       if (reached) { result = "win"; break; }
@@ -269,7 +271,7 @@ export function pathRoom() {
     fails++; tries++;
     const msg = result === "tree" ? "Bum! Drzewo na drodze." : result === "rock" ? "Ups, kamień!" : result === "edge" ? "Tam nie ma przejścia." : `Nie ${gw("doszłyśmy", "doszliśmy")} jeszcze do żadnego wyjścia.`;
     const back = picked.length ? " Monety wróciły na miejsce — liczą się dopiero, gdy dojdziesz do wyjścia." : "";
-    await sleep(500);
+    await sleep(500); if (left(run)) return;
     crash = false; cell = M.start.slice(); hero.x = 0; hero.y = M.start[0] * 16; pet.x = 0; pet.y = hero.y + 6;
     if (tries >= maxTries) return guide();
     say(petName(), esc(msg + back + (isFinite(maxTries) ? ` ${leftWord(maxTries - tries)} ${maxTries - tries} ${triesWord(maxTries - tries)}.` : " Popraw strzałki i spróbuj jeszcze raz.")));
@@ -278,7 +280,7 @@ export function pathRoom() {
   });
   // level 3: after the last failed try the companion leads the way out — no coins this time
   async function guide() {
-    const fainted = await hurt();
+    const fainted = await hurt(); if (left(run)) return;
     if (!fainted) say(petName(), "Skończyły się próby. Pokażę ci drogę, ale tym razem bez monet.");
     const key = (r, c) => r + "," + c, prev = new Map([[key(...M.start), null]]), q = [M.start.slice()], exitSet = new Set(M.exits.map((e) => e.cell + ""));
     let end = null;
@@ -291,8 +293,8 @@ export function pathRoom() {
       }
     }
     const path = []; for (let k = end; k && k !== key(...M.start); k = prev.get(k)) path.unshift(k.split(",").map(Number));
-    await sleep(1200);
-    for (const [r, c] of path) { const p0 = cell.slice(); cell = [r, c]; snd.step(); await Promise.all([tween(hero, c * 16, r * 16, 260, true), tween(pet, p0[1] * 16 - 2, p0[0] * 16 + 4, 260)]); }
+    await sleep(1200); if (left(run)) return;
+    for (const [r, c] of path) { const p0 = cell.slice(); cell = [r, c]; snd.step(); await Promise.all([tween(hero, c * 16, r * 16, 260, true), tween(pet, p0[1] * 16 - 2, p0[0] * 16 + 4, 260)]); if (left(run)) return; }
     const ex = M.exits.find((e) => e.cell[0] === cell[0] && e.cell[1] === cell[1]);
     GS.RUN.rooms[GS.RUN.i + 1] = ex.type;
     say(petName(), esc(`Jesteśmy przy wyjściu. Idziemy: ${ROOM_NAME[ex.type]}.`));
