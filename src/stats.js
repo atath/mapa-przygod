@@ -14,7 +14,10 @@ export const SKILLS = {
   "math.buy": "Odejmowanie przy zakupach",
   "logic.spell": "Dobór czaru do potwora",
   "polish.word": "Układanie słowa z liter", "polish.read": "Czytanie drogowskazów", "polish.password": "Hasło do skrzyni",
-  "code.path": "Ścieżka ze strzałek"
+  "code.path": "Ścieżka ze strzałek",
+  "logic.who": "Łączenie wskazówek: kto to zrobił", "logic.seq": "Co dalej w ciągu", "logic.odd": "Co nie pasuje", "logic.if": "Jeśli… to…",
+  "time.read": "Odczytywanie zegara", "time.set": "Ustawianie zegara", "time.elapsed": "O której się skończy",
+  "time.howlong": "Ile co trwa", "time.longer": "Co trwa dłużej", "time.feel": "Wyczucie sekund"
 };
 
 export const emptyStats = () => ({ answers: [], trips: [], days: {} });

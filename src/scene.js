@@ -1,5 +1,5 @@
 import { GS } from "./state.js";
-import { DIRT, GRASS, SPR } from "./props.js";
+import { land } from "./lands.js";
 import { mulberry, reduced } from "./util.js";
 
 /* ================== Scene renderer ================== */
@@ -34,15 +34,15 @@ requestAnimationFrame(loop);
 export function bob(t, ph = 0) { return reduced() ? 0 : Math.round((Math.sin(t / 260 + ph) + 1) / 2); }
 
 // generic clearing: tree line on top, grass, optional dirt band
-export function clearing(cv, seed, band) {
+export function clearing(cv, seed, band, T = land()) {
   const { x, cols, rows } = cv, rnd = mulberry(seed);
-  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
-  for (let i = 0; i < 6; i++) { const fx_ = Math.floor(rnd() * cols * 16), fy = 24 + Math.floor(rnd() * (rows * 16 - 34)); draw(x, rnd() < 0.5 ? SPR.flower1 : SPR.flower2, fx_ - 8, fy - 12); }
-  for (let c = -1; c < cols + 1; c++) draw(x, SPR.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? T.lane[(r + c) % 2] : T.ground[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
+  for (let i = 0; i < 6; i++) { const fx_ = Math.floor(rnd() * cols * 16), fy = 24 + Math.floor(rnd() * (rows * 16 - 34)); draw(x, rnd() < 0.5 ? T.flowers[0] : T.flowers[1], fx_ - 8, fy - 12); }
+  for (let c = -1; c < cols + 1; c++) draw(x, T.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
   light(x, cols * 16, rows * 16);
 }
-export function bakeClearing(cols, rows, seed, band) {
+export function bakeClearing(cols, rows, seed, band, T) {
   const cv = { c: document.createElement("canvas"), cols, rows };
   cv.c.width = cols * 32; cv.c.height = rows * 32; cv.x = cv.c.getContext("2d"); cv.x.imageSmoothingEnabled = false; cv.x.scale(2, 2);
-  clearing(cv, seed, band); return cv.c;
+  clearing(cv, seed, band, T); return cv.c;
 }

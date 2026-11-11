@@ -1,16 +1,23 @@
 // Whole expeditions on every level, the level-3 try limit, and leaving a trip halfway.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { serve, open, startWith, oneProfile, playRoom, setLevel, text, readDB, label } from "./helpers.mjs";
+import { serve, open, startWith, oneProfile, playRoom, setLevel, text, readDB, label, go, PATH_LABELS } from "./helpers.mjs";
 
 let srv; before(async () => { srv = await serve(); }); after(() => srv.close());
 
-for (const level of [1, 2, 3]) {
-  test(`level ${level}: a full expedition, all coins collectable within the limit`, { timeout: 240000 }, async () => {
+for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
+  test(`${land}, level ${level}: a full expedition, all coins collectable within the limit`, { timeout: 300000 }, async () => {
     const o = await open();
     try {
-      await startWith(o.p, srv.url, oneProfile({ level, coins: 10 }));
-      await o.p.click("#tripBtn");
+      // forest: a new player one trip short of the mountains; mountains: a player who has them
+      const locked = land === "forest";
+      await startWith(o.p, srv.url, oneProfile({ level, coins: 10, trips: locked ? 7 : 20, lands: locked ? ["forest"] : ["forest", "mountains"] }));
+      if (locked) {
+        await o.p.click("#tripBtn");
+        assert.ok(await o.p.$('.land.locked[data-land="mountains"]'), "the mountains should still be locked");
+        await o.p.click('[data-land="mountains"]', { force: true }); assert.ok(await o.p.$(".lands"), "a locked land must not start a trip");
+        await o.p.click('[data-land="forest"]'); await o.p.waitForSelector("#sc canvas");
+      } else await go(o.p, land);
       const rooms = [];
       for (let i = 0; i < 12; i++) {
         await o.p.waitForSelector("#sc canvas");
@@ -26,12 +33,20 @@ for (const level of [1, 2, 3]) {
       }
       assert.equal(rooms.at(-1).kind, "chest", "the expedition never reached the chest");
       assert.equal(rooms.filter((r) => r.kind === "path").length, 3);
+      assert.equal(rooms.at(-2).kind, "logic", "the chest guardian's riddles come right before the chest");
+      const tasks = rooms.filter((r, i) => i % 2 === 1 && i < 6).map((r) => r.kind);
+      if (land === "forest") assert.ok(tasks.every((k) => ["monster", "door", "sign"].includes(k)), String(tasks));
+      else assert.ok(tasks.every((k) => ["monster", "door", "sign", "clock", "time"].includes(k)), String(tasks));
       const db = await readDB(o.p);
-      assert.equal(db.profiles.p1.trips, 1);
+      assert.equal(db.profiles.p1.trips, locked ? 8 : 21);
+      if (locked) {
+        assert.deepEqual(db.profiles.p1.lands, ["forest", "mountains"], "8 trips should open the mountains");
+        await o.p.waitForFunction(() => /Odkryliśmy nową krainę: Góry Zegarowe/.test(document.getElementById("txt").textContent), null, { timeout: 5000 });
+      }
       assert.ok(db.profiles.p1.coins > 10, "coins were not added to the save");
       // measurements for stage 3: every room left an answer, the trip and the play time were counted
       const st = db.profiles.p1.stats, kinds = new Set(st.answers.map((a) => a.k)), seen = new Set(rooms.map((r) => r.kind));
-      const expect = ["code.path", "polish.password"].concat(seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
+      const expect = ["code.path", "polish.password", "logic.who"].concat(seen.has("clock") ? ["time.read", "time.set", "time.elapsed"] : [], seen.has("time") ? ["time.howlong", "time.longer", "time.feel"] : [],seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
       for (const k of expect) assert.ok(kinds.has(k), `no answer recorded for ${k}`);
       assert.equal(st.answers.filter((a) => a.k === "code.path").length, 3, "one path answer per path room");
       assert.ok(st.answers.every((a) => a.ms >= 0 && a.t > 0));
@@ -47,7 +62,7 @@ test("level 3: three failed tries cost a heart, then the companion leads the way
   const o = await open(); const p = o.p;
   try {
     await startWith(p, srv.url, oneProfile({ level: 3 }));
-    await p.click("#tripBtn"); await p.waitForSelector("#goBtn");
+    await go(p); await p.waitForSelector("#goBtn");
     const coins0 = await text(p, "#coinN");
     for (let i = 0; i < 3; i++) {
       await p.click('[data-d="right"]'); await p.click("#goBtn"); // one step never reaches an exit on the far edge
@@ -68,7 +83,7 @@ test("going back to camp mid-animation does not move the next expedition", { tim
   const o = await open(); const p = o.p;
   try {
     await startWith(p, srv.url, oneProfile({ level: 1 }));
-    await p.click("#tripBtn"); await p.waitForSelector("#goBtn");
+    await go(p); await p.waitForSelector("#goBtn");
     const plan = await p.evaluate(() => { // shortest way to any exit, ignoring coins
       const M = window.__LW_TEST.M, D = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] }, ex = new Set(M.exits.map((e) => e.cell + ""));
       const prev = new Map([[M.start + "", null]]), q = [M.start];
@@ -81,7 +96,7 @@ test("going back to camp mid-animation does not move the next expedition", { tim
     for (const d of plan) await p.click(`[data-d="${d}"]`);
     await p.click("#goBtn");
     await p.waitForFunction(() => /Udało się/.test(document.getElementById("txt").textContent), null, { timeout: 30000 });
-    await p.click("#quitBtn"); await p.click("#quitBtn"); await p.click("#tripBtn");
+    await p.click("#quitBtn"); await p.click("#quitBtn"); await go(p);
     await p.waitForTimeout(4500); // longer than the old room's pending wait
     assert.equal(await label(p), "Leśna ścieżka");
     assert.equal(await p.$eval(".trail span.now", (e) => [...e.parentNode.querySelectorAll("span")].indexOf(e)), 0);
@@ -96,7 +111,7 @@ test("the same seed gives the same expedition (so failures can be replayed)", { 
     const o = await open({ seed });
     try {
       await startWith(o.p, srv.url, oneProfile({ level: 2 }));
-      await o.p.click("#tripBtn"); await o.p.waitForSelector("#goBtn");
+      await go(o.p); await o.p.waitForSelector("#goBtn");
       return await o.p.evaluate(() => { const M = window.__LW_TEST.M; return JSON.stringify({ start: M.start, exits: M.exits, blocks: [...M.blocks], coins: [...M.coins] }); });
     } finally { await o.close(); }
   };
@@ -111,7 +126,7 @@ test("phone width: camp and path room fit without sideways scrolling", { timeout
     await startWith(p, srv.url, oneProfile({ level: 3 }));
     const wide = () => p.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     assert.equal(await wide(), false, "camp is wider than the phone");
-    await p.click("#tripBtn"); await p.waitForSelector("#goBtn");
+    await go(p); await p.waitForSelector("#goBtn");
     for (let i = 0; i < 8; i++) await p.click('[data-d="up"]');
     assert.equal(await wide(), false, "path room is wider than the phone");
     assert.deepEqual(o.errs, []);

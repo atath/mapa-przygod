@@ -4,7 +4,7 @@ import { buildScreen } from "./build.js";
 import { DECOR_SPR, HOUSE, LIBRARY, PLANT_SPR, WELL } from "./camp-art.js";
 import { CAMP_COLS, CAMP_ROWS, DECOR, FIRE_TILE, PLANTS, PLANT_NAME, RIPE, blockedTiles } from "./camp-data.js";
 import { creator } from "./creator.js";
-import { startTrip } from "./expedition.js";
+import { worldMap } from "./map.js";
 import { burst } from "./fx.js";
 import { parentHTML, wireParent } from "./parent.js";
 import { PETSPR } from "./pets.js";
@@ -25,7 +25,7 @@ export function camp() {
   const C = GS.G.camp;
   app.innerHTML = `${hudHTML(null)}<h1>Obóz</h1><div id="sc"></div>${dialogHTML()}
     <div class="decor-bar" id="decorBar" hidden></div>
-    <button class="btn main" id="tripBtn">Wyprawa do lasu</button>
+    <button class="btn main" id="tripBtn">Wyprawa</button>
     <div class="row"><button class="btn small gold" id="buildBtn">Budowa obozu</button><button class="btn small" id="editBtn">Ustaw ozdoby</button></div>
     <div class="row"><button class="btn small" id="shopBtn">Sklep: czapki i zwierzaki</button><button class="btn small" id="lookBtn">Zmień wygląd</button><button class="btn small" id="playersBtn">Gracze</button></div>
     ${parentHTML()}`;
@@ -115,7 +115,7 @@ export function camp() {
   const lines = [`Cześć, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygodę?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wyprawę?`];
   say(petName(), ripe ? `W ogródku coś dojrzało! Dotknij grządki, żeby zebrać plon.`
     : GS.G.trips ? pick(lines) : `Cześć, ${heroName()}! Jestem ${petName()}. W lesie są potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspaniały obóz!`);
-  $("tripBtn").addEventListener("click", startTrip);
+  $("tripBtn").addEventListener("click", worldMap);
   $("buildBtn").addEventListener("click", buildScreen);
   $("shopBtn").addEventListener("click", shop);
   $("lookBtn").addEventListener("click", () => creator(true));

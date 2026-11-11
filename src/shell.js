@@ -4,13 +4,15 @@ import { runesHTML } from "./expedition.js";
 import { heroSprite } from "./hero.js";
 import { PETS } from "./pets.js";
 import { ICON } from "./props.js";
+import { lands } from "./lands.js";
 import { save } from "./save.js";
 import { $, esc } from "./util.js";
 
 /* ================== Shell bits ================== */
 export function hudHTML(run) {
+  lands(); // makes sure the land icons (pine, clock, hourglass, owl) are in ICON
   const hearts = run ? Array.from({ length: run.maxHp }, (_, i) => `<img src="${ICON.heart}" alt="" class="${i < run.hp ? "" : "empty"}">`).join("") : "";
-  const TI = { path: "tree", monster: "heart", door: "door", sign: "sign", chest: "chest" };
+  const TI = { path: run && run.land === "mountains" ? "pine" : "tree", monster: "heart", door: "door", sign: "sign", chest: "chest", clock: "clock", time: "time", logic: "logic" };
   const trail = run ? run.rooms.map((r, i) => `${i ? "<i></i>" : ""}<span class="${i < run.i ? "done" : i === run.i ? "now" : ""}">${r ? `<img src="${ICON[TI[r]]}" alt="">` : "<b>?</b>"}</span>`).join("") : "";
   return `<div class="hud">
     ${run ? `<span class="hearts" aria-label="Serduszka: ${run.hp}">${hearts}</span>` : `<button class="icon-btn" id="homeBtn" aria-label="Obóz">⛺</button>`}

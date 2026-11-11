@@ -7,6 +7,9 @@ import { burst } from "./fx.js";
 import { monsterRoom } from "./monster-room.js";
 import { pathRoom } from "./path-room.js";
 import { doorRoom, signRoom } from "./polish-rooms.js";
+import { logicRoom } from "./logic-room.js";
+import { clockRoom, timeRoom } from "./time-rooms.js";
+import { lands } from "./lands.js";
 import { ICON } from "./props.js";
 import { dialogHTML, gw, heroName, hudHTML, petName, say, wireHud, wireSay } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle, sleep } from "./util.js";
@@ -23,16 +26,18 @@ export const PASSWORDS = [
   ["ślimak", "🐌", "Nosi swój domek na plecach."], ["wróżka", "🧚", "Ma różdżkę i spełnia życzenia."], ["rakieta", "🚀", "Leci w kosmos, do gwiazd."],
   ["gwiazda", "⭐", "Świeci w nocy wysoko na niebie."], ["księżyc", "🌙", "Świeci w nocy. Bywa okrągły albo jak rogalik."], ["pingwin", "🐧", "Ptak w czarnym fraku. Nie lata, ale pływa."]
 ].map(([w, e, r]) => ({ w, e, r }));
-export const ROOM_NAME = { monster: "potwór", door: "zaczarowane drzwi", sign: "rozdroże" };
+export const ROOM_NAME = { monster: "potwór", door: "zaczarowane drzwi", sign: "rozdroże", clock: "wieża zegarowa", time: "kamień czasu", logic: "strażnik skrzyni" };
 GS.RUN = null;
-export function startTrip() {
+export function startTrip(landKey) {
+  const key = typeof landKey === "string" && lands()[landKey] && GS.G.lands.includes(landKey) ? landKey : "forest";
   const lv = L(), pw = pick(PASSWORDS.filter((p) => p.w.length >= lv.pass[0] && p.w.length <= lv.pass[1]));
-  const rooms = ["path", null, "path", null, "path", null, "chest"], spots = 6;
+  // three paths, each leading to a room the child picks; then the chest guardian's riddles and the chest
+  const rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
   // spread the password letters over the 6 rooms, in random order
   const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
   order.forEach((idx, k) => runes[Math.floor((k * spots) / order.length)].push(pw.w[idx]));
   const maxHp = 3 + wellHearts(GS.G.camp);
-  GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
+  GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
   tripStart(GS.RUN);
   room();
 }
@@ -55,7 +60,7 @@ export function updHud() {
 export function runesHTML() { return GS.RUN.got.length ? GS.RUN.got.map((l) => `<b>${esc(l)}</b>`).join("") : `<em>runy hasła</em>`; }
 export function room() {
   const t = GS.RUN.rooms[GS.RUN.i];
-  ({ path: pathRoom, monster: monsterRoom, door: doorRoom, sign: signRoom, chest: chestRoom })[t]();
+  ({ path: pathRoom, monster: monsterRoom, door: doorRoom, sign: signRoom, clock: clockRoom, time: timeRoom, logic: logicRoom, chest: chestRoom })[t]();
 }
 // Rooms wait on animations. If the child went back to camp (or started a new trip) meanwhile,
 // the old room must not touch the new screen: every await is followed by this check.

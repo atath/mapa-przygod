@@ -20,6 +20,7 @@ test("a version-1 save moves over with everything, PIN 66647 included, and the o
     const db = await readDB(p), pr = db.profiles[db.order[0]];
     assert.deepEqual([pr.hero.name, pr.coins, pr.owned, pr.pets, pr.petNames, pr.level, pr.trips], ["Ola", 47, ["none", "crown", "flower"], ["cat", "dog", "owl"], { owl: "Pipa" }, 2, 9]);
     assert.ok(await p.evaluate(() => localStorage.getItem("lesna-wyprawa")), "the version-1 key was removed");
+    assert.deepEqual(pr.lands, ["forest", "mountains"], "a player from before the lands gets the mountains at once");
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }
 });
@@ -40,6 +41,7 @@ test("fresh install asks for a PIN first, then the character", { timeout: 60000 
     await p.fill("#nameIn", "Staś"); await p.click("#goBtn"); await p.waitForSelector("#tripBtn");
     assert.equal(await text(p, "h1"), "Obóz");
     assert.ok(await openPanel(p, "4321"));
+    const fresh = await readDB(p); assert.deepEqual(fresh.profiles[fresh.active].lands, ["forest"], "a new player starts with the forest only");
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }
 });

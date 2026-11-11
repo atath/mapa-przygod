@@ -26,10 +26,11 @@ Testy grają w prawdziwą grę w przeglądarce Chromium:
 
 | Plik | Co sprawdza |
 | --- | --- |
-| `tests/expedition.test.mjs` | Pełne wyprawy na poziomach 1–3, czy da się zebrać wszystkie monety w limicie klocków, limit prób na poziomie 3, wyjście z wyprawy w trakcie animacji, szerokość telefonu |
+| `tests/expedition.test.mjs` | Pełne wyprawy w lesie i w górach na poziomach 1–3, odblokowanie gór, czy da się zebrać wszystkie monety w limicie klocków, limit prób na poziomie 3, wyjście z wyprawy w trakcie animacji, szerokość telefonu |
 | `tests/save.test.mjs` | Przeniesienie zapisu z pierwszej wersji, PIN, gracze, kopia zapisu, cofanie, uszkodzone pliki, dwie otwarte karty |
 | `tests/camp.test.mjs` | Budowa z pytaniem o odejmowanie, ozdoby, ogródek, sklep, działanie budynków na wyprawie |
 | `tests/offline.test.mjs` | Gra bez internetu, otwarcie pliku z dysku, brak zapytań poza grę |
+| `tests/puzzles.test.mjs` | Zagadki logiczne i zadania z zegarem, sprawdzane tysiące razy bez przeglądarki: jedno rozwiązanie, żadna wskazówka nie wystarcza sama, polskie nazwy godzin |
 | `tests/unit.test.mjs` | SHA-256 dla PIN-u, nazwy kluczy zapisu, wersja w pamięci offline |
 
 Każdy test kończy się błędem, gdy na stronie wystąpi jakikolwiek nieobsłużony wyjątek.

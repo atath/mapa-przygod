@@ -1,7 +1,7 @@
 // Camp: building with the subtraction question, decorations, garden harvest, shop, effects on expeditions.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { serve, open, startWith, oneProfile, text, readDB } from "./helpers.mjs";
+import { serve, open, startWith, oneProfile, text, readDB, go } from "./helpers.mjs";
 
 let srv; before(async () => { srv = await serve(); }); after(() => srv.close());
 
@@ -41,7 +41,7 @@ test("building: right answer gives 1 coin off, a wrong one still buys; effects r
     assert.equal(await p.$eval("#ask", (e) => e.hidden), true, "a purchase without enough coins was offered");
     assert.match(await text(p, "#txt"), /Brakuje/);
 
-    await p.click("#backBtn"); await p.click("#tripBtn"); await p.waitForSelector(".hearts");
+    await p.click("#backBtn"); await go(p); await p.waitForSelector(".hearts");
     assert.equal(await p.$$eval(".hearts img", (x) => x.length), 5, "well level 2 should give 3 + 2 hearts");
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }

@@ -108,12 +108,48 @@ export function planPath(p) {
   });
 }
 
+// From camp through the world map into a land.
+export async function go(p, land = "forest") {
+  await p.click("#tripBtn"); await p.click(`[data-land="${land}"]`);
+  await p.waitForSelector("#sc canvas");
+}
+export const PATH_LABELS = ["Leśna ścieżka", "Górski szlak"];
+const leaves = (p, kind) => p.waitForFunction((k) => document.querySelector("#sc canvas")?.getAttribute("aria-label") !== k, kind, { timeout: 20000 });
+
+// Answers the multiple-choice and clock tasks of the logic and time rooms until the room is left.
+async function quizRoom(p, kind) {
+  const asked = [];
+  for (let n = 0; n < 12 && (await label(p)) === kind; n++) {
+    const ready = await p.waitForFunction((k) => {
+      const q = window.__LW_TEST.q, lb = document.querySelector("#sc canvas")?.getAttribute("aria-label");
+      return lb !== k ? "left" : q && !q.used && document.querySelector(q.kind === "set" ? "#clockOk" : q.kind === "feel" ? "#feelBtn" : "#ctl .opt") ? q.kind : false;
+    }, kind, { timeout: 20000 }).then((h) => h.jsonValue());
+    if (ready === "left") break;
+    const q = await p.evaluate(() => { const q = window.__LW_TEST.q; q.used = true; return { kind: q.kind, ans: q.ans, h: q.h, m: q.m, cur: q.cur && q.cur() }; });
+    asked.push(q.kind);
+    if (q.kind === "set") {
+      for (let i = 0; i < 12 && (await p.evaluate(() => window.__LW_TEST.q.cur().h)) !== q.h; i++) await p.click("#hFwd");
+      if ((await p.evaluate(() => window.__LW_TEST.q.cur().m)) !== q.m) await p.click("#mFlip");
+      await p.click("#clockOk");
+    } else if (q.kind === "feel") {
+      await p.click("#feelBtn"); await p.waitForTimeout(150); await p.click("#feelBtn");
+    } else {
+      const opts = await p.$$eval("#ctl .opt", (b) => b.map((x) => x.dataset.a));
+      if (!opts.includes(q.ans)) return { kind, ok: false, why: `answer ${q.ans} not offered: ${opts}` };
+      await p.click(`#ctl .opt[data-a="${q.ans}"]`);
+    }
+  }
+  await leaves(p, kind);
+  return { kind: { "Wieża zegarowa": "clock", "Kamień czasu": "time", "Strażnik skrzyni": "logic" }[kind], ok: true, asked };
+}
+
 // Plays one room of whatever kind is on screen. Returns a short record for assertions.
 const COUNTER = { fire: "water", water: "earth", earth: "fire" };
 export async function playRoom(p) {
   const H = (k) => p.evaluate((k) => window.__LW_TEST[k], k);
   const kind = await label(p);
-  if (kind === "Leśna ścieżka") {
+  if (["Wieża zegarowa", "Kamień czasu", "Strażnik skrzyni"].includes(kind)) return quizRoom(p, kind);
+  if (PATH_LABELS.includes(kind)) {
     const plan = await planPath(p);
     const before = +(await text(p, "#coinN"));
     for (const [d, n] of plan.out) {
@@ -125,7 +161,7 @@ export async function playRoom(p) {
     await p.waitForFunction(() => /Udało się|Popraw|Został/.test(document.getElementById("txt").textContent), null, { timeout: 30000 });
     const msg = await text(p, "#txt");
     const after = +(await text(p, "#coinN"));
-    await p.waitForFunction(() => document.querySelector("#sc canvas")?.getAttribute("aria-label") !== "Leśna ścieżka", null, { timeout: 15000 });
+    await leaves(p, kind);
     return { kind: "path", ok: /Udało się/.test(msg), found: plan.found, coins: after - before, expected: plan.coins, blocks: plan.out.length, limit };
   }
   if (kind === "Potwór na polanie") {

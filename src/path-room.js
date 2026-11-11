@@ -5,7 +5,8 @@ import { ROOM_NAME, hurt, left, nextRoom, roomShell, updHud } from "./expedition
 import { burst } from "./fx.js";
 import { MON_FRAMES } from "./monsters.js";
 import { PETSPR } from "./pets.js";
-import { DIRT, GRASS, SPR } from "./props.js";
+import { SPR } from "./props.js";
+import { land, msprites } from "./lands.js";
 import { bob, draw, light, mountCanvas } from "./scene.js";
 import { gw, heroName, petName, say } from "./shell.js";
 import { P } from "./sprites.js";
@@ -137,47 +138,47 @@ export function simulate(M, prog) {
   return steps;
 }
 export function hedge(ctx, x0, y0, w, h, seed) {
-  const rnd = mulberry(seed), P = 0.5;
-  ctx.fillStyle = "#2c6e36"; ctx.fillRect(x0, y0, w, h);
+  const rnd = mulberry(seed), P = 0.5, [base, a, b, hi] = land().hedge;
+  ctx.fillStyle = base; ctx.fillRect(x0, y0, w, h);
   for (let i = 0; i < (w * h) / 6; i++) {
     const cx = x0 + Math.floor(rnd() * w / P) * P, cy = y0 + Math.floor(rnd() * h / P) * P, rr = 1 + Math.floor(rnd() * 3);
-    ctx.fillStyle = rnd() < 0.5 ? "#3f9b4a" : "#357f3e";
+    ctx.fillStyle = rnd() < 0.5 ? a : b;
     for (let dy = -rr; dy <= rr; dy += P) { const hw = Math.round(Math.sqrt(rr * rr - dy * dy) / P) * P; ctx.fillRect(cx - hw, cy + dy, hw * 2 + P, P); }
-    ctx.fillStyle = "#7ccf6a"; ctx.fillRect(cx - rr / 2, cy - rr / 2, P, P);
+    ctx.fillStyle = hi; ctx.fillRect(cx - rr / 2, cy - rr / 2, P, P);
   }
 }
 export function pathRoom() {
   roomShell();
   const lv = L(), run = GS.RUN, first = run.i === 0;
-  const types = shuffle(["monster", "door", "sign"]).slice(0, lv.exits);
+  const T = land(), types = T.exits(lv.exits);
   const M = genMap(lv, types); if (window.__LW_TEST) { window.__LW_TEST.M = M; window.__LW_TEST.need = M.need; window.__LW_TEST.needAll = M.needAll; }
   const limit = lv.limitExtra == null ? Math.max(20, M.needAll + 4) : Math.max(Math.max(...M.need), M.needAll) + lv.limitExtra;
   const OY = 8, BW = (M.COLS + 1) * 16, BH = (M.ROWS + 1) * 16;
-  const cv = mountCanvas(M.COLS + 1, M.ROWS + 1); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", "Leśna ścieżka");
+  const cv = mountCanvas(M.COLS + 1, M.ROWS + 1); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", T.pathLabel);
   const bg = document.createElement("canvas"); bg.width = BW * 2; bg.height = BH * 2; const bx = bg.getContext("2d"); bx.imageSmoothingEnabled = false; bx.scale(2, 2);
   const rnd = mulberry(M.seed);
   const isExit = (r, c) => M.exits.some((e) => e.cell[0] === r && e.cell[1] === c);
   bx.save(); bx.translate(0, OY);
   for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) {
     const k = r + "," + c, openCell = !M.blocks.has(k);
-    bx.drawImage((lv.showPath && openCell) || isExit(r, c) ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
-    if (!openCell && rnd() < 0.3) draw(bx, rnd() < 0.5 ? SPR.flower1 : SPR.flower2, c * 16, r * 16);
+    bx.drawImage((lv.showPath && openCell) || isExit(r, c) ? T.lane[(r + c) % 2] : T.ground[Math.floor(rnd() * 3)], c * 16, r * 16, 16, 16);
+    if (!openCell && rnd() < 0.3) draw(bx, rnd() < 0.5 ? T.flowers[0] : T.flowers[1], c * 16, r * 16);
   }
   for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) {
     if ((r + c) % 2) { bx.fillStyle = "rgba(255,255,255,.10)"; bx.fillRect(c * 16, r * 16, 16, 16); }
     bx.fillStyle = "rgba(30,60,20,.28)"; bx.fillRect(c * 16, r * 16, 16, 1); bx.fillRect(c * 16, r * 16, 1, 16);
   }
-  for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) { const b = M.blocks.get(r + "," + c); if (b) draw(bx, SPR[b], c * 16, r * 16 - (b === "tree" ? 2 : 0)); }
+  for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) { const b = M.blocks.get(r + "," + c); if (b) draw(bx, b === "tree" ? T.tree : SPR[b], c * 16, r * 16 - (b === "tree" ? 2 : 0)); }
   // the frame: exits continue as a dirt lane beyond the board, everything else is a hedge
   for (let r = 0; r < M.ROWS; r++) {
     const X = M.COLS * 16, Y = r * 16;
-    if (M.exits.some((e) => e.cell[0] === r)) { bx.drawImage(DIRT[r % 2], X, Y, 16, 16); bx.fillStyle = "rgba(30,60,20,.28)"; bx.fillRect(X, Y, 16, 1); }
+    if (M.exits.some((e) => e.cell[0] === r)) { bx.drawImage(T.lane[r % 2], X, Y, 16, 16); bx.fillStyle = "rgba(30,60,20,.28)"; bx.fillRect(X, Y, 16, 1); }
     else hedge(bx, X, Y, 16, 16, M.seed + r);
   }
   bx.restore();
   hedge(bx, 0, 0, BW, OY, M.seed + 50); hedge(bx, 0, BH - OY, BW, OY, M.seed + 60);
   light(bx, BW, BH);
-  const EXSPR = { monster: MINI_MON, door: SPR.door, sign: SPR.sign };
+  const EXSPR = { monster: MINI_MON, door: SPR.door, sign: SPR.sign, clock: msprites().clock, time: msprites().hourglass };
   let coins = new Set(M.coins), crash = false;
   const hero = { x: 0, y: M.start[0] * 16, hop: 0 }, pet = { x: 0, y: M.start[0] * 16 + 6 };
   let cell = M.start.slice();
@@ -275,7 +276,7 @@ export function pathRoom() {
     record("code.path", false, thought, detail(false)); took = timer();
     picked.forEach((k) => coins.add(k));
     fails++; tries++;
-    const msg = result === "tree" ? "Bum! Drzewo na drodze." : result === "rock" ? "Ups, kamień!" : result === "edge" ? "Tam nie ma przejścia." : `Nie ${gw("doszłyśmy", "doszliśmy")} jeszcze do żadnego wyjścia.`;
+    const msg = result === "tree" ? T.treeHit : result === "rock" ? "Ups, kamień!" : result === "edge" ? "Tam nie ma przejścia." : `Nie ${gw("doszłyśmy", "doszliśmy")} jeszcze do żadnego wyjścia.`;
     const back = picked.length ? " Monety wróciły na miejsce — liczą się dopiero, gdy dojdziesz do wyjścia." : "";
     await sleep(500); if (left(run)) return;
     crash = false; cell = M.start.slice(); hero.x = 0; hero.y = M.start[0] * 16; pet.x = 0; pet.y = hero.y + 6;
@@ -308,8 +309,8 @@ export function pathRoom() {
   }
   const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
   const intro = first
-    ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. Z lasu prowadzą ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Monety liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
-    : `Las się rozwidla. Wyjścia: ${exitsTxt}. Dokąd idziemy?`;
+    ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadzą"} ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Monety liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
+    : `${T.key === "mountains" ? "Szlak się rozwidla" : "Las się rozwidla"}. Wyjścia: ${exitsTxt}. Dokąd idziemy?`;
   say(petName(), intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
     + (lv.slide && first ? ` Nowy klocek: „aż do przeszkody”. ${gw("Bohaterka idzie tak długo, dopóki nic jej nie zatrzyma.", "Bohater idzie tak długo, dopóki nic go nie zatrzyma.")}` : ""));
 }

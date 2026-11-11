@@ -33,6 +33,8 @@ export function normalizeProfile(s, id) {
     level: [1, 2, 3].includes(s.level) ? s.level : 1, trips: Math.max(0, s.trips | 0), fights: Math.max(0, s.fights | 0),
     voice: s.voice !== false, sound: s.sound !== false,
     camp: normalizeCamp(s.camp),
+    // players from before the lands existed already have plenty of trips behind them: the mountains are open
+    lands: Array.isArray(s.lands) ? ["forest", ...(s.lands.includes("mountains") ? ["mountains"] : [])] : s.hero ? ["forest", "mountains"] : ["forest"],
     stats: normalizeStats(s.stats)
   };
 }

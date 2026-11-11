@@ -238,6 +238,37 @@ h2 { font-size: 1.6rem; }
 .stale h2 { font-size: 1.5rem; color: var(--leaf); }
 .stale p { margin: 0; }
 
+/* ---------- logic and time tasks ---------- */
+.task { display: grid; justify-items: center; gap: 8px; margin: 4px 0 12px; text-align: center; }
+.task-q { margin: 0; font-weight: 800; font-size: 1.25rem; }
+.task .em, .opt .em { font-size: 2rem; line-height: 1; }
+.task .em.big { font-size: 3.2rem; }
+.clock { width: min(210px, 60vw); height: auto; aspect-ratio: 1; }
+.clock.big { width: min(240px, 66vw); }
+.clues { margin: 0; padding: 10px 14px 10px 34px; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; text-align: left; font-weight: 700; max-width: 100%; }
+.clues li + li { margin-top: 4px; }
+.seq { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: 2rem; line-height: 1; }
+.seq .q { display: inline-grid; place-items: center; min-width: 2.2rem; border: 3px dashed var(--wood); border-radius: 10px; font-family: var(--font-body); font-weight: 900; font-size: 1.6rem; color: var(--wood-dark); }
+.opts .opt { display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 1.1rem; line-height: 1.2; padding: 8px; }
+.opts .opt .lb { font-family: var(--font-body); font-weight: 800; }
+.opts .opt small { font-family: var(--font-body); font-size: .85rem; font-weight: 700; opacity: .8; }
+.opts.times .opt .lb { font-family: var(--font-body); font-weight: 900; font-size: 1.9rem; }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.opts.wide { grid-template-columns: 1fr; }
+.opts.wide .opt { grid-template-columns: auto 1fr; justify-items: start; text-align: left; gap: 10px; min-height: 60px; }
+.opts.spans .opt { font-size: 1.15rem; }
+.setclock { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; }
+
+/* ---------- world map ---------- */
+.lands { display: grid; gap: 14px; margin: 8px 0 16px; }
+.land { display: grid; gap: 4px; text-align: left; border: 3px solid var(--wood-dark); border-radius: 14px; background: var(--surface); padding: 10px; box-shadow: 0 5px 0 var(--wood-dark); font: inherit; color: inherit; cursor: pointer; }
+.land canvas { width: 100%; height: auto; border-radius: 8px; image-rendering: pixelated; }
+.land b { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--leaf); }
+.land span { font-weight: 700; color: var(--muted); }
+.land.locked { filter: grayscale(.85); opacity: .75; }
+.land.locked b::after { content: " 🔒"; }
+.land:active:not(.locked) { transform: translateY(4px); box-shadow: 0 1px 0 var(--wood-dark); }
+
 </style>
 </head>
 <body>
@@ -367,7 +398,17 @@ h2 { font-size: 1.6rem; }
     "polish.word": "Uk\u0142adanie s\u0142owa z liter",
     "polish.read": "Czytanie drogowskaz\xF3w",
     "polish.password": "Has\u0142o do skrzyni",
-    "code.path": "\u015Acie\u017Cka ze strza\u0142ek"
+    "code.path": "\u015Acie\u017Cka ze strza\u0142ek",
+    "logic.who": "\u0141\u0105czenie wskaz\xF3wek: kto to zrobi\u0142",
+    "logic.seq": "Co dalej w ci\u0105gu",
+    "logic.odd": "Co nie pasuje",
+    "logic.if": "Je\u015Bli\u2026 to\u2026",
+    "time.read": "Odczytywanie zegara",
+    "time.set": "Ustawianie zegara",
+    "time.elapsed": "O kt\xF3rej si\u0119 sko\u0144czy",
+    "time.howlong": "Ile co trwa",
+    "time.longer": "Co trwa d\u0142u\u017Cej",
+    "time.feel": "Wyczucie sekund"
   };
   var emptyStats = () => ({ answers: [], trips: [], days: {} });
   function normalizeStats(s) {
@@ -461,6 +502,8 @@ h2 { font-size: 1.6rem; }
       voice: s.voice !== false,
       sound: s.sound !== false,
       camp: normalizeCamp(s.camp),
+      // players from before the lands existed already have plenty of trips behind them: the mountains are open
+      lands: Array.isArray(s.lands) ? ["forest", ...s.lands.includes("mountains") ? ["mountains"] : []] : s.hero ? ["forest", "mountains"] : ["forest"],
       stats: normalizeStats(s.stats)
     };
   }
@@ -1202,9 +1245,276 @@ h2 { font-size: 1.6rem; }
   };
   var L = () => LV[GS.G.level];
 
+  // src/pets.js
+  var PETS = {
+    cat: { name: "Kotek", def: "Mruczek", pal: { C: "#f0a046", c: "#c27a2c", W: "#fff3e0", K: "#2a1d2e", P: "#ff8fa8", n: "#ffb3c6", E: "#5cc468" }, draw(g) {
+      g.line(23, 27, 28, 22, "C", 2);
+      g.line(28, 22, 27, 15, "C", 2);
+      g.ell(27, 14.6, 1.6, 1.6, "c");
+      g.ell(16, 24, 8, 6.5, "C");
+      g.line(19, 19, 21, 21, "c");
+      g.line(21, 19, 23, 22, "c");
+      g.ell(15, 24.5, 3.5, 4, "W");
+      g.ell(12, 30, 2.6, 1.6, "W");
+      g.ell(19, 30, 2.6, 1.6, "W");
+      g.ell(15.5, 14, 8.5, 7, "C");
+      g.poly([[8, 10.5], [9, 2], [14, 8]], "C");
+      g.poly([[17, 8], [22, 2], [23, 10.5]], "C");
+      g.poly([[9.5, 8.5], [10, 4.5], [12.5, 7.5]], "n");
+      g.poly([[18.5, 7.5], [21, 4.5], [21.5, 8.5]], "n");
+      g.px(15, 8, "c");
+      g.px(15, 9, "c");
+      g.px(13, 8, "c");
+      g.px(17, 8, "c");
+      g.ell(15.5, 17.6, 3.6, 2.4, "W");
+      g.rect(10, 13, 3, 3, "E");
+      g.rect(18, 13, 3, 3, "E");
+      g.rect(11, 13, 1, 3, "K");
+      g.rect(19, 13, 1, 3, "K");
+      g.px(10, 13, "W");
+      g.px(18, 13, "W");
+      g.px(15, 16, "P");
+      g.px(16, 16, "P");
+      g.px(14, 18, "c");
+      g.px(17, 18, "c");
+      g.px(15, 17, "c");
+      g.px(16, 17, "c");
+      g.line(4, 16, 9, 17, "c");
+      g.line(27, 16, 22, 17, "c");
+    } },
+    dog: { name: "Piesek", def: "Burek", pal: { D: "#c08a55", d: "#8a5a30", W: "#f6ead8", K: "#2a1d2e", P: "#ff7a8a", R: "#e2445c", Y: "#ffd93c" }, draw(g) {
+      g.line(23, 25, 28, 19, "D", 2);
+      g.ell(28.4, 18.4, 1.5, 1.5, "W");
+      g.ell(16, 24.5, 8, 6.5, "D");
+      g.ell(15, 25.5, 4, 4.5, "W");
+      g.ell(11.5, 30, 2.6, 1.6, "W");
+      g.ell(19.5, 30, 2.6, 1.6, "W");
+      g.ell(15.5, 13.5, 8, 7, "D");
+      g.ell(19.5, 11, 2.6, 2.2, "d", true);
+      g.ell(7, 14.5, 2.8, 5.6, "d");
+      g.ell(24, 14.5, 2.8, 5.6, "d");
+      g.ell(15.5, 17.6, 4.6, 3, "W");
+      g.ell(15.5, 15.9, 1.9, 1.3, "K");
+      g.px(15, 15, "W");
+      g.px(15, 18, "K");
+      g.px(16, 18, "K");
+      g.rect(15, 19, 2, 2, "P");
+      g.rect(11, 12, 2, 3, "K");
+      g.rect(19, 12, 2, 3, "K");
+      g.px(11, 12, "W");
+      g.px(19, 12, "W");
+      g.rect(10, 20, 11, 1, "R");
+      g.px(15, 21, "Y");
+      g.px(16, 21, "Y");
+    } },
+    fox: { name: "Lisek", def: "Rudzik", price: 15, pal: { F: "#ff7a2f", f: "#c4511a", W: "#fff3e6", K: "#2a1d2e" }, draw(g) {
+      g.ell(25, 23, 4.2, 7.2, "F");
+      g.ell(26.4, 16.8, 2.6, 2.6, "W");
+      g.ell(15.5, 24.5, 7.5, 6, "F");
+      g.ell(15, 24.5, 3.5, 4.5, "W");
+      g.ell(12, 30, 2.4, 1.6, "K");
+      g.ell(19, 30, 2.4, 1.6, "K");
+      g.ell(15.5, 14, 8.6, 6.6, "F");
+      g.poly([[8, 11], [9, 2], [14, 8]], "F");
+      g.poly([[17, 8], [22, 2], [23, 11]], "F");
+      g.poly([[9.6, 9], [10, 5], [12.5, 8]], "W");
+      g.poly([[18.5, 8], [21, 5], [21.4, 9]], "W");
+      g.poly([[8.4, 5], [9, 2], [10.6, 4.4]], "K");
+      g.poly([[20.4, 4.4], [22, 2], [22.6, 5]], "K");
+      g.ell(11, 17.2, 3.6, 2.6, "W");
+      g.ell(20, 17.2, 3.6, 2.6, "W");
+      g.rect(11, 13, 2, 2, "K");
+      g.rect(19, 13, 2, 2, "K");
+      g.px(11, 13, "W");
+      g.px(19, 13, "W");
+      g.rect(15, 18, 2, 1, "K");
+      g.line(12, 20, 19, 20, "f", 1, "W");
+    } },
+    bunny: { name: "Kr\xF3liczek", def: "Kicek", price: 15, pal: { N: "#f2f0f5", n: "#ffb3c6", K: "#2a1d2e", P: "#ff8fa8", W: "#ffffff", g: "#cfc9da" }, draw(g) {
+      g.ell(11.5, 6.4, 2.5, 6.2, "N");
+      g.ell(19.5, 6.4, 2.5, 6.2, "N");
+      g.ell(11.5, 6.8, 1.1, 4.6, "n");
+      g.ell(19.5, 6.8, 1.1, 4.6, "n");
+      g.ell(15.5, 25, 7.6, 6, "N");
+      g.ell(23.6, 27, 2.6, 2.4, "W");
+      g.ell(11.5, 30.4, 3, 1.5, "g");
+      g.ell(19.5, 30.4, 3, 1.5, "g");
+      g.ell(15.5, 15.6, 7.2, 6.2, "N");
+      g.rect(10, 18, 2, 1, "P");
+      g.rect(20, 18, 2, 1, "P");
+      g.rect(12, 14, 2, 2, "K");
+      g.rect(18, 14, 2, 2, "K");
+      g.px(12, 14, "W");
+      g.px(18, 14, "W");
+      g.px(15, 17, "P");
+      g.px(16, 17, "P");
+      g.px(14, 18, "g");
+      g.px(17, 18, "g");
+      g.rect(15, 19, 2, 1, "W");
+      g.ell(13, 24.6, 1.7, 1.4, "W");
+      g.ell(18, 24.6, 1.7, 1.4, "W");
+    } },
+    owl: { name: "S\xF3wka", def: "Pipa", price: 20, pal: { O: "#9a6a3e", o: "#f0d9b0", u: "#6e4a2a", Y: "#ffd93c", K: "#2a1d2e", B: "#f08a24", W: "#ffffff" }, draw(g) {
+      g.ell(16, 18.5, 10, 12, "O");
+      g.ell(6.8, 20, 3, 7, "u");
+      g.ell(25.2, 20, 3, 7, "u");
+      g.poly([[7, 9.5], [6, 2], [11.5, 7]], "O");
+      g.poly([[25, 9.5], [26, 2], [20.5, 7]], "O");
+      g.ell(16, 23.5, 6, 6.6, "o");
+      for (const y of [20, 23, 26]) for (const x of [12, 15, 18]) {
+        g.px(x, y, "u", "o");
+        g.px(x + 1, y + 1, "u", "o");
+        g.px(x + 2, y, "u", "o");
+      }
+      g.ell(11.5, 13, 4.6, 4.6, "o");
+      g.ell(20.5, 13, 4.6, 4.6, "o");
+      g.ell(11.5, 13, 3, 3, "Y");
+      g.ell(20.5, 13, 3, 3, "Y");
+      g.ell(11.5, 13, 1.7, 1.7, "K");
+      g.ell(20.5, 13, 1.7, 1.7, "K");
+      g.px(11, 12, "W");
+      g.px(20, 12, "W");
+      g.poly([[14.5, 15], [17.5, 15], [16, 19]], "B");
+      g.rect(12, 29, 3, 2, "B");
+      g.rect(18, 29, 3, 2, "B");
+    } },
+    frog: { name: "\u017Babka", def: "Rechotka", price: 20, pal: { F: "#5cc468", f: "#2f7d3a", y: "#d3f5b4", W: "#ffffff", K: "#2a1d2e", P: "#ff8fa8" }, draw(g) {
+      g.ell(6, 26, 4.6, 3, "F");
+      g.ell(26, 26, 4.6, 3, "F");
+      g.ell(16, 21, 11, 8.6, "F");
+      g.ell(16, 25, 6.6, 4, "y");
+      g.ell(10, 12, 4.2, 4.2, "F");
+      g.ell(22, 12, 4.2, 4.2, "F");
+      g.ell(10, 12, 2.9, 2.9, "W");
+      g.ell(22, 12, 2.9, 2.9, "W");
+      g.ell(10.6, 12.6, 1.6, 1.7, "K");
+      g.ell(22.6, 12.6, 1.6, 1.7, "K");
+      g.px(10, 12, "W");
+      g.px(22, 12, "W");
+      g.line(9, 19, 12, 21, "f");
+      g.line(12, 21, 20, 21, "f");
+      g.line(20, 21, 23, 19, "f");
+      g.rect(6, 18, 2, 1, "P");
+      g.rect(24, 18, 2, 1, "P");
+      g.ell(19.5, 15.5, 1.3, 1, "f");
+      g.ell(12.5, 16.5, 1, 1, "f");
+      g.ell(23, 24, 1.2, 1, "f");
+      g.ell(10, 29.6, 3.2, 1.5, "F");
+      g.ell(22, 29.6, 3.2, 1.5, "F");
+      for (const x of [8, 10, 12, 20, 22, 24]) g.px(x, 30, "f");
+    } },
+    hedgehog: { name: "Je\u017Cyk", def: "Igie\u0142ka", price: 30, pal: { J: "#6e4a2e", j: "#a37650", S: "#f0d2a8", s: "#d9b083", K: "#2a1d2e", P: "#ff8fa8", W: "#ffffff" }, draw(g) {
+      for (let i = 0; i < 9; i++) {
+        const x = 10 + i * 2.3;
+        g.poly([[x - 2.2, 21], [x + 0.6, 9 + i % 2 * 2 + Math.abs(i - 4) * 0.9], [x + 3, 21]], "J");
+      }
+      g.ell(18.5, 21.5, 10.4, 7.6, "J");
+      g.line(12, 16, 14, 13, "j");
+      g.line(17, 14, 19, 11, "j");
+      g.line(22, 15, 24, 12, "j");
+      g.line(26, 18, 28, 16, "j");
+      g.ell(9.5, 22.5, 6, 5, "S");
+      g.ell(4.8, 23.5, 2.7, 2.1, "S");
+      g.ell(2.6, 23, 1.4, 1.3, "K");
+      g.rect(8, 20, 2, 2, "K");
+      g.px(8, 20, "W");
+      g.px(10, 24, "P");
+      g.px(11, 24, "P");
+      g.ell(12.5, 17.5, 1.5, 1.5, "s");
+      g.ell(16, 27.6, 8, 2.4, "s");
+      g.ell(10, 29.6, 2.3, 1.4, "s");
+      g.ell(22, 29.6, 2.3, 1.4, "s");
+    } },
+    panda: { name: "Panda", def: "Bambus", price: 40, pal: { W: "#f7f7f2", K: "#26232b", G: "#5cc468", g: "#2f7d3a", P: "#ff9aa8", w: "#ffffff" }, draw(g) {
+      g.ell(8.5, 5.6, 3.1, 3.1, "K");
+      g.ell(23.5, 5.6, 3.1, 3.1, "K");
+      g.line(26, 31, 29, 13, "G", 2);
+      g.px(27, 24, "g");
+      g.px(28, 19, "g");
+      g.ell(30, 13, 1.6, 1, "G");
+      g.ell(16, 25, 9, 6.6, "W");
+      g.ell(10.5, 29.6, 3.3, 2.2, "K");
+      g.ell(21.5, 29.6, 3.3, 2.2, "K");
+      g.ell(8, 23, 2.9, 4, "K");
+      g.ell(24.5, 22.5, 2.9, 4, "K");
+      g.ell(16, 13, 9.6, 8, "W");
+      g.ell(11.6, 13.6, 2.7, 3.3, "K");
+      g.ell(20.4, 13.6, 2.7, 3.3, "K");
+      g.rect(11, 12, 2, 2, "w");
+      g.rect(20, 12, 2, 2, "w");
+      g.px(12, 13, "K");
+      g.px(20, 13, "K");
+      g.ell(16, 16.6, 1.7, 1.1, "K");
+      g.px(15, 18, "K");
+      g.px(16, 18, "K");
+      g.rect(8, 17, 2, 1, "P");
+      g.rect(22, 17, 2, 1, "P");
+    } },
+    dragon: { name: "Smoczek", def: "Iskierka", price: 60, pal: { D: "#5cc468", d: "#2f7d3a", Y: "#ffe58a", y: "#e0b84a", w: "#ff8a3d", v: "#d65f1c", W: "#ffffff", K: "#2a1d2e", H: "#fff3c4", P: "#ff9aa8" }, draw(g) {
+      g.poly([[19, 17], [30, 5], [31.5, 13], [29, 19], [26, 22]], "w");
+      g.line(20, 17, 30, 6, "v");
+      g.line(21, 19, 30.5, 13, "v");
+      g.line(22, 28, 28, 29, "D", 2);
+      g.poly([[27, 26], [31.5, 28.5], [27, 31]], "d");
+      g.ell(17, 23.5, 7.6, 6.6, "D");
+      g.ell(15.5, 24.5, 4.1, 5, "Y");
+      for (const y of [22, 25, 28]) g.rect(12, y, 8, 1, "y", "Y");
+      g.ell(12.5, 29.6, 2.6, 1.7, "D");
+      g.ell(20.5, 29.6, 2.6, 1.7, "D");
+      g.px(11, 30, "H");
+      g.px(19, 30, "H");
+      g.poly([[20, 16.5], [22, 13], [23, 17.5]], "d");
+      g.poly([[22.5, 19], [25, 16], [25.2, 20.5]], "d");
+      g.ell(14, 12.5, 8, 6.6, "D");
+      g.ell(8.5, 15, 4.1, 3.1, "D");
+      g.px(6, 14, "d");
+      g.px(8, 14, "d");
+      g.line(6, 17, 10, 17, "d");
+      g.poly([[11.5, 7.5], [10, 0], [14.5, 6.5]], "H");
+      g.poly([[16.5, 6.5], [20, 0], [19.5, 8.5]], "H");
+      g.ell(15.6, 11.6, 2.6, 2.9, "W");
+      g.ell(16.2, 12.2, 1.4, 1.9, "K");
+      g.px(15, 11, "W");
+      g.px(12, 16, "P");
+    } },
+    unicorn: { name: "Jednoro\u017Cec", def: "T\u0119czusia", price: 80, pal: { U: "#ffffff", u: "#e6ddf5", M: "#ff7eb6", m: "#a66bff", c: "#5fd3f3", Y: "#ffcf3a", y: "#e0a020", K: "#2a1d2e", P: "#ff9aa8", W: "#ffffff" }, draw(g) {
+      g.ell(28, 22, 2.6, 6.2, "M");
+      g.ell(29, 25.5, 2, 4, "m");
+      g.ell(27.4, 18, 1.6, 2.5, "c");
+      g.ell(19, 23, 8.6, 5.6, "U");
+      g.rect(13, 26, 3, 5, "U");
+      g.rect(22, 26, 3, 5, "U");
+      g.rect(13, 30, 3, 2, "y");
+      g.rect(22, 30, 3, 2, "y");
+      g.poly([[9.5, 19], [14, 9.5], [19.5, 13], [17.5, 22.5]], "U");
+      g.ell(10.5, 11, 6.1, 5.1, "U");
+      g.ell(6, 14, 3.6, 3, "u");
+      g.px(4, 14, "m");
+      g.ell(16, 10.5, 3, 5, "M");
+      g.ell(17.6, 15.5, 2.6, 4.2, "m");
+      g.ell(13.4, 6, 2.6, 2.1, "c");
+      g.poly([[8.6, 7.5], [11.8, 7.5], [8, -1]], "Y");
+      g.px(9, 5, "y");
+      g.px(10, 6, "y");
+      g.px(8, 3, "y");
+      g.poly([[12, 7.5], [14, 2], [15.2, 7.5]], "U");
+      g.px(14, 5, "P");
+      g.rect(11, 10, 2, 2, "K");
+      g.px(11, 10, "W");
+      g.px(13, 9, "K");
+      g.rect(8, 13, 2, 1, "P");
+    } }
+  };
+  var PETSPR = {};
+  for (const k in PETS) {
+    const g = P(32, 32);
+    PETS[k].draw(g);
+    PETSPR[k] = sprite(g.rows(), PETS[k].pal);
+  }
+
   // src/util.js
   var $ = (id) => document.getElementById(id);
-  var app = $("app");
+  var app = typeof document !== "undefined" ? $("app") : null;
   var R = Math.random;
   var rnd = () => R();
   function seedRandom(seed) {
@@ -1239,6 +1549,124 @@ h2 { font-size: 1.6rem; }
       return ((t ^ t >>> 14) >>> 0) / 4294967296;
     };
   }
+
+  // src/lands.js
+  var MSPR = null;
+  var LANDS = {};
+  function init() {
+    if (MSPR) return;
+    MSPR = {
+      pine: PAINT(32, 32, { G: "#2f7d55", g: "#1f5c3e", H: "#58b07f", W: "#f4f8fb", T: "#7a4b2a" }, (g) => {
+        g.rect(14, 26, 4, 5, "T");
+        g.poly([[16, 1], [24, 12], [8, 12]], "G");
+        g.poly([[16, 6], [27, 19], [5, 19]], "G");
+        g.poly([[16, 12], [29, 27], [3, 27]], "G");
+        g.poly([[16, 6], [27, 19], [16, 19]], "g", "G");
+        g.poly([[16, 12], [29, 27], [16, 27]], "g", "G");
+        g.line(10, 11, 13, 9, "H");
+        g.line(8, 18, 12, 16, "H");
+        g.line(6, 26, 10, 24, "H");
+        g.poly([[16, 1], [19, 5], [13, 5]], "W");
+        g.line(8, 12, 12, 11, "W");
+        g.line(20, 11, 24, 12, "W");
+        g.line(5, 19, 10, 18, "W");
+        g.line(22, 18, 27, 19, "W");
+        g.line(3, 27, 8, 26, "W");
+        g.line(24, 26, 29, 27, "W");
+      }),
+      edelweiss: PAINT(32, 32, { W: "#ffffff", Y: "#ffd23f", g: "#5f9b6a" }, (g) => {
+        g.line(16, 25, 16, 30, "g");
+        g.ell(14, 28, 1.6, 0.8, "g");
+        for (let i = 0; i < 6; i++) {
+          const a = i * Math.PI / 3;
+          g.ell(16 + Math.cos(a) * 2.6, 22 + Math.sin(a) * 2.6, 1.5, 1.5, "W");
+        }
+        g.ell(16, 22, 1.2, 1.2, "Y");
+      }, false),
+      clock: PAINT(32, 32, { B: "#7a4b2a", C: "#fff6dc", K: "#2a1d2e", R: "#e8442c", Y: "#ffcf3a" }, (g) => {
+        g.ell(16, 16, 12.4, 12.4, "B");
+        g.ell(16, 16, 10.2, 10.2, "C");
+        for (let i = 0; i < 12; i++) {
+          const a = i * Math.PI / 6;
+          g.px(Math.round(16 + Math.cos(a) * 8.4), Math.round(16 + Math.sin(a) * 8.4), "K");
+        }
+        g.line(16, 16, 16, 10, "K");
+        g.line(16, 16, 20, 16, "R");
+        g.ell(16, 16, 1.2, 1.2, "Y");
+        g.rect(14, 2, 4, 2, "B");
+      }),
+      hourglass: PAINT(32, 32, { T: "#b07440", t: "#7a4b2a", G: "#d9f0ff", Y: "#f0c35a" }, (g) => {
+        g.rect(8, 3, 16, 3, "T");
+        g.rect(8, 26, 16, 3, "T");
+        g.rect(9, 6, 2, 20, "t");
+        g.rect(21, 6, 2, 20, "t");
+        g.poly([[11, 6], [21, 6], [16, 16]], "G");
+        g.poly([[16, 16], [21, 26], [11, 26]], "G");
+        g.poly([[13, 9], [19, 9], [16, 14]], "Y");
+        g.poly([[16, 19], [20, 26], [12, 26]], "Y");
+        g.line(16, 15, 16, 19, "Y");
+      }),
+      stone: PAINT(32, 32, { S: "#9aa3ad", s: "#6f7882", A: "#c9d1db" }, (g) => {
+        g.rect(6, 14, 20, 16, "S");
+        g.rect(4, 12, 24, 3, "s");
+        g.rect(4, 29, 24, 2, "s");
+        g.line(8, 18, 12, 18, "s");
+        g.line(18, 23, 23, 23, "s");
+        g.line(6, 15, 10, 15, "A");
+      })
+    };
+    Object.assign(ICON, { pine: url(MSPR.pine), clock: url(MSPR.clock), time: url(MSPR.hourglass), logic: url(PETSPR.owl) });
+    const ALP = [1, 2, 3].map((s) => tile("#8dbb72", [["#7da862", 18], ["#a2c98a", 10], ["#9aa3ad", 4], ["#c7ced6", 3]], s * 71, s === 2 ? 2 : 1));
+    const GRAVEL = [1, 2].map((s) => tile("#cfc6b6", [["#b9af9d", 16], ["#ded7ca", 10], ["#9a917f", 5], ["#efeae0", 3]], s * 53, 0));
+    Object.assign(LANDS, {
+      forest: {
+        key: "forest",
+        name: "Las",
+        desc: "\u015Acie\u017Cki ze strza\u0142ek, potwory, zaczarowane drzwi i drogowskazy.",
+        pathLabel: "Le\u015Bna \u015Bcie\u017Cka",
+        go: "Ruszamy do lasu!",
+        ground: GRASS,
+        lane: DIRT,
+        tree: SPR.tree,
+        treeHit: "Bum! Drzewo na drodze.",
+        flowers: [SPR.flower1, SPR.flower2],
+        hedge: ["#2c6e36", "#3f9b4a", "#357f3e", "#7ccf6a"],
+        exits: (n) => shuffle(["monster", "door", "sign"]).slice(0, n)
+      },
+      mountains: {
+        key: "mountains",
+        name: "G\xF3ry Zegarowe",
+        desc: "Wie\u017Ca zegarowa i kamie\u0144 czasu: odczytaj zegar i wyczuj, ile co trwa.",
+        pathLabel: "G\xF3rski szlak",
+        go: "Ruszamy w g\xF3ry!",
+        ground: ALP,
+        lane: GRAVEL,
+        tree: MSPR.pine,
+        treeHit: "Bum! \u015Awierk na drodze.",
+        flowers: [MSPR.edelweiss, SPR.flower2],
+        hedge: ["#4d5560", "#6b7580", "#5b646e", "#b4bec8"],
+        // every choice of exits offers something about time; the rest keeps maths and reading in play
+        exits: (n) => {
+          const t = pick(["clock", "time"]);
+          return shuffle([t, ...shuffle(["monster", "door", "sign", t === "clock" ? "time" : "clock"]).slice(0, n - 1)]);
+        }
+      }
+    });
+  }
+  var LAND_ORDER = ["forest", "mountains"];
+  var UNLOCK_TRIPS = 8;
+  var lands = () => {
+    init();
+    return LANDS;
+  };
+  var land = () => {
+    init();
+    return LANDS[GS.RUN && GS.RUN.land || "forest"] || LANDS.forest;
+  };
+  var msprites = () => {
+    init();
+    return MSPR;
+  };
 
   // src/scene.js
   var S = 4;
@@ -1285,24 +1713,24 @@ h2 { font-size: 1.6rem; }
   function bob(t, ph = 0) {
     return reduced() ? 0 : Math.round((Math.sin(t / 260 + ph) + 1) / 2);
   }
-  function clearing(cv, seed, band) {
+  function clearing(cv, seed, band, T = land()) {
     const { x, cols, rows } = cv, rnd2 = mulberry(seed);
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd2() * 3)], c * 16, r * 16, 16, 16);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) x.drawImage(band && r === band ? T.lane[(r + c) % 2] : T.ground[Math.floor(rnd2() * 3)], c * 16, r * 16, 16, 16);
     for (let i = 0; i < 6; i++) {
       const fx_ = Math.floor(rnd2() * cols * 16), fy = 24 + Math.floor(rnd2() * (rows * 16 - 34));
-      draw(x, rnd2() < 0.5 ? SPR.flower1 : SPR.flower2, fx_ - 8, fy - 12);
+      draw(x, rnd2() < 0.5 ? T.flowers[0] : T.flowers[1], fx_ - 8, fy - 12);
     }
-    for (let c = -1; c < cols + 1; c++) draw(x, SPR.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
+    for (let c = -1; c < cols + 1; c++) draw(x, T.tree, c * 16 + (Math.abs(c) % 2 ? 8 : 0), Math.abs(c) % 2 ? -5 : -3);
     light(x, cols * 16, rows * 16);
   }
-  function bakeClearing(cols, rows, seed, band) {
+  function bakeClearing(cols, rows, seed, band, T) {
     const cv = { c: document.createElement("canvas"), cols, rows };
     cv.c.width = cols * 32;
     cv.c.height = rows * 32;
     cv.x = cv.c.getContext("2d");
     cv.x.imageSmoothingEnabled = false;
     cv.x.scale(2, 2);
-    clearing(cv, seed, band);
+    clearing(cv, seed, band, T);
     return cv.c;
   }
 
@@ -1978,271 +2406,145 @@ h2 { font-size: 1.6rem; }
   }
   var PRAISE = ["Brawo!", "Super!", "Hurra!", "Ekstra!", "Wow!", "Bomba!", "Genialnie!"];
 
-  // src/pets.js
-  var PETS = {
-    cat: { name: "Kotek", def: "Mruczek", pal: { C: "#f0a046", c: "#c27a2c", W: "#fff3e0", K: "#2a1d2e", P: "#ff8fa8", n: "#ffb3c6", E: "#5cc468" }, draw(g) {
-      g.line(23, 27, 28, 22, "C", 2);
-      g.line(28, 22, 27, 15, "C", 2);
-      g.ell(27, 14.6, 1.6, 1.6, "c");
-      g.ell(16, 24, 8, 6.5, "C");
-      g.line(19, 19, 21, 21, "c");
-      g.line(21, 19, 23, 22, "c");
-      g.ell(15, 24.5, 3.5, 4, "W");
-      g.ell(12, 30, 2.6, 1.6, "W");
-      g.ell(19, 30, 2.6, 1.6, "W");
-      g.ell(15.5, 14, 8.5, 7, "C");
-      g.poly([[8, 10.5], [9, 2], [14, 8]], "C");
-      g.poly([[17, 8], [22, 2], [23, 10.5]], "C");
-      g.poly([[9.5, 8.5], [10, 4.5], [12.5, 7.5]], "n");
-      g.poly([[18.5, 7.5], [21, 4.5], [21.5, 8.5]], "n");
-      g.px(15, 8, "c");
-      g.px(15, 9, "c");
-      g.px(13, 8, "c");
-      g.px(17, 8, "c");
-      g.ell(15.5, 17.6, 3.6, 2.4, "W");
-      g.rect(10, 13, 3, 3, "E");
-      g.rect(18, 13, 3, 3, "E");
-      g.rect(11, 13, 1, 3, "K");
-      g.rect(19, 13, 1, 3, "K");
-      g.px(10, 13, "W");
-      g.px(18, 13, "W");
-      g.px(15, 16, "P");
-      g.px(16, 16, "P");
-      g.px(14, 18, "c");
-      g.px(17, 18, "c");
-      g.px(15, 17, "c");
-      g.px(16, 17, "c");
-      g.line(4, 16, 9, 17, "c");
-      g.line(27, 16, 22, 17, "c");
-    } },
-    dog: { name: "Piesek", def: "Burek", pal: { D: "#c08a55", d: "#8a5a30", W: "#f6ead8", K: "#2a1d2e", P: "#ff7a8a", R: "#e2445c", Y: "#ffd93c" }, draw(g) {
-      g.line(23, 25, 28, 19, "D", 2);
-      g.ell(28.4, 18.4, 1.5, 1.5, "W");
-      g.ell(16, 24.5, 8, 6.5, "D");
-      g.ell(15, 25.5, 4, 4.5, "W");
-      g.ell(11.5, 30, 2.6, 1.6, "W");
-      g.ell(19.5, 30, 2.6, 1.6, "W");
-      g.ell(15.5, 13.5, 8, 7, "D");
-      g.ell(19.5, 11, 2.6, 2.2, "d", true);
-      g.ell(7, 14.5, 2.8, 5.6, "d");
-      g.ell(24, 14.5, 2.8, 5.6, "d");
-      g.ell(15.5, 17.6, 4.6, 3, "W");
-      g.ell(15.5, 15.9, 1.9, 1.3, "K");
-      g.px(15, 15, "W");
-      g.px(15, 18, "K");
-      g.px(16, 18, "K");
-      g.rect(15, 19, 2, 2, "P");
-      g.rect(11, 12, 2, 3, "K");
-      g.rect(19, 12, 2, 3, "K");
-      g.px(11, 12, "W");
-      g.px(19, 12, "W");
-      g.rect(10, 20, 11, 1, "R");
-      g.px(15, 21, "Y");
-      g.px(16, 21, "Y");
-    } },
-    fox: { name: "Lisek", def: "Rudzik", price: 15, pal: { F: "#ff7a2f", f: "#c4511a", W: "#fff3e6", K: "#2a1d2e" }, draw(g) {
-      g.ell(25, 23, 4.2, 7.2, "F");
-      g.ell(26.4, 16.8, 2.6, 2.6, "W");
-      g.ell(15.5, 24.5, 7.5, 6, "F");
-      g.ell(15, 24.5, 3.5, 4.5, "W");
-      g.ell(12, 30, 2.4, 1.6, "K");
-      g.ell(19, 30, 2.4, 1.6, "K");
-      g.ell(15.5, 14, 8.6, 6.6, "F");
-      g.poly([[8, 11], [9, 2], [14, 8]], "F");
-      g.poly([[17, 8], [22, 2], [23, 11]], "F");
-      g.poly([[9.6, 9], [10, 5], [12.5, 8]], "W");
-      g.poly([[18.5, 8], [21, 5], [21.4, 9]], "W");
-      g.poly([[8.4, 5], [9, 2], [10.6, 4.4]], "K");
-      g.poly([[20.4, 4.4], [22, 2], [22.6, 5]], "K");
-      g.ell(11, 17.2, 3.6, 2.6, "W");
-      g.ell(20, 17.2, 3.6, 2.6, "W");
-      g.rect(11, 13, 2, 2, "K");
-      g.rect(19, 13, 2, 2, "K");
-      g.px(11, 13, "W");
-      g.px(19, 13, "W");
-      g.rect(15, 18, 2, 1, "K");
-      g.line(12, 20, 19, 20, "f", 1, "W");
-    } },
-    bunny: { name: "Kr\xF3liczek", def: "Kicek", price: 15, pal: { N: "#f2f0f5", n: "#ffb3c6", K: "#2a1d2e", P: "#ff8fa8", W: "#ffffff", g: "#cfc9da" }, draw(g) {
-      g.ell(11.5, 6.4, 2.5, 6.2, "N");
-      g.ell(19.5, 6.4, 2.5, 6.2, "N");
-      g.ell(11.5, 6.8, 1.1, 4.6, "n");
-      g.ell(19.5, 6.8, 1.1, 4.6, "n");
-      g.ell(15.5, 25, 7.6, 6, "N");
-      g.ell(23.6, 27, 2.6, 2.4, "W");
-      g.ell(11.5, 30.4, 3, 1.5, "g");
-      g.ell(19.5, 30.4, 3, 1.5, "g");
-      g.ell(15.5, 15.6, 7.2, 6.2, "N");
-      g.rect(10, 18, 2, 1, "P");
-      g.rect(20, 18, 2, 1, "P");
-      g.rect(12, 14, 2, 2, "K");
-      g.rect(18, 14, 2, 2, "K");
-      g.px(12, 14, "W");
-      g.px(18, 14, "W");
-      g.px(15, 17, "P");
-      g.px(16, 17, "P");
-      g.px(14, 18, "g");
-      g.px(17, 18, "g");
-      g.rect(15, 19, 2, 1, "W");
-      g.ell(13, 24.6, 1.7, 1.4, "W");
-      g.ell(18, 24.6, 1.7, 1.4, "W");
-    } },
-    owl: { name: "S\xF3wka", def: "Pipa", price: 20, pal: { O: "#9a6a3e", o: "#f0d9b0", u: "#6e4a2a", Y: "#ffd93c", K: "#2a1d2e", B: "#f08a24", W: "#ffffff" }, draw(g) {
-      g.ell(16, 18.5, 10, 12, "O");
-      g.ell(6.8, 20, 3, 7, "u");
-      g.ell(25.2, 20, 3, 7, "u");
-      g.poly([[7, 9.5], [6, 2], [11.5, 7]], "O");
-      g.poly([[25, 9.5], [26, 2], [20.5, 7]], "O");
-      g.ell(16, 23.5, 6, 6.6, "o");
-      for (const y of [20, 23, 26]) for (const x of [12, 15, 18]) {
-        g.px(x, y, "u", "o");
-        g.px(x + 1, y + 1, "u", "o");
-        g.px(x + 2, y, "u", "o");
-      }
-      g.ell(11.5, 13, 4.6, 4.6, "o");
-      g.ell(20.5, 13, 4.6, 4.6, "o");
-      g.ell(11.5, 13, 3, 3, "Y");
-      g.ell(20.5, 13, 3, 3, "Y");
-      g.ell(11.5, 13, 1.7, 1.7, "K");
-      g.ell(20.5, 13, 1.7, 1.7, "K");
-      g.px(11, 12, "W");
-      g.px(20, 12, "W");
-      g.poly([[14.5, 15], [17.5, 15], [16, 19]], "B");
-      g.rect(12, 29, 3, 2, "B");
-      g.rect(18, 29, 3, 2, "B");
-    } },
-    frog: { name: "\u017Babka", def: "Rechotka", price: 20, pal: { F: "#5cc468", f: "#2f7d3a", y: "#d3f5b4", W: "#ffffff", K: "#2a1d2e", P: "#ff8fa8" }, draw(g) {
-      g.ell(6, 26, 4.6, 3, "F");
-      g.ell(26, 26, 4.6, 3, "F");
-      g.ell(16, 21, 11, 8.6, "F");
-      g.ell(16, 25, 6.6, 4, "y");
-      g.ell(10, 12, 4.2, 4.2, "F");
-      g.ell(22, 12, 4.2, 4.2, "F");
-      g.ell(10, 12, 2.9, 2.9, "W");
-      g.ell(22, 12, 2.9, 2.9, "W");
-      g.ell(10.6, 12.6, 1.6, 1.7, "K");
-      g.ell(22.6, 12.6, 1.6, 1.7, "K");
-      g.px(10, 12, "W");
-      g.px(22, 12, "W");
-      g.line(9, 19, 12, 21, "f");
-      g.line(12, 21, 20, 21, "f");
-      g.line(20, 21, 23, 19, "f");
-      g.rect(6, 18, 2, 1, "P");
-      g.rect(24, 18, 2, 1, "P");
-      g.ell(19.5, 15.5, 1.3, 1, "f");
-      g.ell(12.5, 16.5, 1, 1, "f");
-      g.ell(23, 24, 1.2, 1, "f");
-      g.ell(10, 29.6, 3.2, 1.5, "F");
-      g.ell(22, 29.6, 3.2, 1.5, "F");
-      for (const x of [8, 10, 12, 20, 22, 24]) g.px(x, 30, "f");
-    } },
-    hedgehog: { name: "Je\u017Cyk", def: "Igie\u0142ka", price: 30, pal: { J: "#6e4a2e", j: "#a37650", S: "#f0d2a8", s: "#d9b083", K: "#2a1d2e", P: "#ff8fa8", W: "#ffffff" }, draw(g) {
-      for (let i = 0; i < 9; i++) {
-        const x = 10 + i * 2.3;
-        g.poly([[x - 2.2, 21], [x + 0.6, 9 + i % 2 * 2 + Math.abs(i - 4) * 0.9], [x + 3, 21]], "J");
-      }
-      g.ell(18.5, 21.5, 10.4, 7.6, "J");
-      g.line(12, 16, 14, 13, "j");
-      g.line(17, 14, 19, 11, "j");
-      g.line(22, 15, 24, 12, "j");
-      g.line(26, 18, 28, 16, "j");
-      g.ell(9.5, 22.5, 6, 5, "S");
-      g.ell(4.8, 23.5, 2.7, 2.1, "S");
-      g.ell(2.6, 23, 1.4, 1.3, "K");
-      g.rect(8, 20, 2, 2, "K");
-      g.px(8, 20, "W");
-      g.px(10, 24, "P");
-      g.px(11, 24, "P");
-      g.ell(12.5, 17.5, 1.5, 1.5, "s");
-      g.ell(16, 27.6, 8, 2.4, "s");
-      g.ell(10, 29.6, 2.3, 1.4, "s");
-      g.ell(22, 29.6, 2.3, 1.4, "s");
-    } },
-    panda: { name: "Panda", def: "Bambus", price: 40, pal: { W: "#f7f7f2", K: "#26232b", G: "#5cc468", g: "#2f7d3a", P: "#ff9aa8", w: "#ffffff" }, draw(g) {
-      g.ell(8.5, 5.6, 3.1, 3.1, "K");
-      g.ell(23.5, 5.6, 3.1, 3.1, "K");
-      g.line(26, 31, 29, 13, "G", 2);
-      g.px(27, 24, "g");
-      g.px(28, 19, "g");
-      g.ell(30, 13, 1.6, 1, "G");
-      g.ell(16, 25, 9, 6.6, "W");
-      g.ell(10.5, 29.6, 3.3, 2.2, "K");
-      g.ell(21.5, 29.6, 3.3, 2.2, "K");
-      g.ell(8, 23, 2.9, 4, "K");
-      g.ell(24.5, 22.5, 2.9, 4, "K");
-      g.ell(16, 13, 9.6, 8, "W");
-      g.ell(11.6, 13.6, 2.7, 3.3, "K");
-      g.ell(20.4, 13.6, 2.7, 3.3, "K");
-      g.rect(11, 12, 2, 2, "w");
-      g.rect(20, 12, 2, 2, "w");
-      g.px(12, 13, "K");
-      g.px(20, 13, "K");
-      g.ell(16, 16.6, 1.7, 1.1, "K");
-      g.px(15, 18, "K");
-      g.px(16, 18, "K");
-      g.rect(8, 17, 2, 1, "P");
-      g.rect(22, 17, 2, 1, "P");
-    } },
-    dragon: { name: "Smoczek", def: "Iskierka", price: 60, pal: { D: "#5cc468", d: "#2f7d3a", Y: "#ffe58a", y: "#e0b84a", w: "#ff8a3d", v: "#d65f1c", W: "#ffffff", K: "#2a1d2e", H: "#fff3c4", P: "#ff9aa8" }, draw(g) {
-      g.poly([[19, 17], [30, 5], [31.5, 13], [29, 19], [26, 22]], "w");
-      g.line(20, 17, 30, 6, "v");
-      g.line(21, 19, 30.5, 13, "v");
-      g.line(22, 28, 28, 29, "D", 2);
-      g.poly([[27, 26], [31.5, 28.5], [27, 31]], "d");
-      g.ell(17, 23.5, 7.6, 6.6, "D");
-      g.ell(15.5, 24.5, 4.1, 5, "Y");
-      for (const y of [22, 25, 28]) g.rect(12, y, 8, 1, "y", "Y");
-      g.ell(12.5, 29.6, 2.6, 1.7, "D");
-      g.ell(20.5, 29.6, 2.6, 1.7, "D");
-      g.px(11, 30, "H");
-      g.px(19, 30, "H");
-      g.poly([[20, 16.5], [22, 13], [23, 17.5]], "d");
-      g.poly([[22.5, 19], [25, 16], [25.2, 20.5]], "d");
-      g.ell(14, 12.5, 8, 6.6, "D");
-      g.ell(8.5, 15, 4.1, 3.1, "D");
-      g.px(6, 14, "d");
-      g.px(8, 14, "d");
-      g.line(6, 17, 10, 17, "d");
-      g.poly([[11.5, 7.5], [10, 0], [14.5, 6.5]], "H");
-      g.poly([[16.5, 6.5], [20, 0], [19.5, 8.5]], "H");
-      g.ell(15.6, 11.6, 2.6, 2.9, "W");
-      g.ell(16.2, 12.2, 1.4, 1.9, "K");
-      g.px(15, 11, "W");
-      g.px(12, 16, "P");
-    } },
-    unicorn: { name: "Jednoro\u017Cec", def: "T\u0119czusia", price: 80, pal: { U: "#ffffff", u: "#e6ddf5", M: "#ff7eb6", m: "#a66bff", c: "#5fd3f3", Y: "#ffcf3a", y: "#e0a020", K: "#2a1d2e", P: "#ff9aa8", W: "#ffffff" }, draw(g) {
-      g.ell(28, 22, 2.6, 6.2, "M");
-      g.ell(29, 25.5, 2, 4, "m");
-      g.ell(27.4, 18, 1.6, 2.5, "c");
-      g.ell(19, 23, 8.6, 5.6, "U");
-      g.rect(13, 26, 3, 5, "U");
-      g.rect(22, 26, 3, 5, "U");
-      g.rect(13, 30, 3, 2, "y");
-      g.rect(22, 30, 3, 2, "y");
-      g.poly([[9.5, 19], [14, 9.5], [19.5, 13], [17.5, 22.5]], "U");
-      g.ell(10.5, 11, 6.1, 5.1, "U");
-      g.ell(6, 14, 3.6, 3, "u");
-      g.px(4, 14, "m");
-      g.ell(16, 10.5, 3, 5, "M");
-      g.ell(17.6, 15.5, 2.6, 4.2, "m");
-      g.ell(13.4, 6, 2.6, 2.1, "c");
-      g.poly([[8.6, 7.5], [11.8, 7.5], [8, -1]], "Y");
-      g.px(9, 5, "y");
-      g.px(10, 6, "y");
-      g.px(8, 3, "y");
-      g.poly([[12, 7.5], [14, 2], [15.2, 7.5]], "U");
-      g.px(14, 5, "P");
-      g.rect(11, 10, 2, 2, "K");
-      g.px(11, 10, "W");
-      g.px(13, 9, "K");
-      g.rect(8, 13, 2, 1, "P");
-    } }
-  };
-  var PETSPR = {};
-  for (const k in PETS) {
-    const g = P(32, 32);
-    PETS[k].draw(g);
-    PETSPR[k] = sprite(g.rows(), PETS[k].pal);
+  // src/time-data.js
+  var NOM = ["", "pierwsza", "druga", "trzecia", "czwarta", "pi\u0105ta", "sz\xF3sta", "si\xF3dma", "\xF3sma", "dziewi\u0105ta", "dziesi\u0105ta", "jedenasta", "dwunasta"];
+  var GEN = ["", "pierwszej", "drugiej", "trzeciej", "czwartej", "pi\u0105tej", "sz\xF3stej", "si\xF3dmej", "\xF3smej", "dziewi\u0105tej", "dziesi\u0105tej", "jedenastej", "dwunastej"];
+  var h12 = (h) => (h - 1 + 120) % 12 + 1;
+  var digital = (h, m) => `${h12(h)}:${m === 30 ? "30" : "00"}`;
+  var words = (h, m) => m === 30 ? `wp\xF3\u0142 do ${GEN[h12(h + 1)]}` : NOM[h12(h)];
+  var timeOpt = (h, m) => ({ a: digital(h, m), n: words(h, m), label: digital(h, m), sub: words(h, m), h: h12(h), m });
+  function genRead(lvl) {
+    const h = ri(1, 12), m = rnd() < (lvl === 1 ? 0.35 : 0.6) ? 30 : 0;
+    const wrong = m === 30 ? [[h + 1, 30], [h, 0], [h + 1, 0], [h - 1, 30]] : [[h + 1, 0], [h - 1, 0], [h, 30], [h - 1, 30]];
+    const opts = [timeOpt(h, m), ...shuffle(wrong).slice(0, lvl === 1 ? 2 : 3).map(([a, b]) => timeOpt(a, b))];
+    return {
+      kind: "read",
+      title: "Kt\xF3ra godzina?",
+      h: h12(h),
+      m,
+      opts: shuffle(opts),
+      ans: digital(h, m),
+      say: "Kt\xF3ra godzina jest na zegarze? Ma\u0142a wskaz\xF3wka pokazuje godzin\u0119, du\u017Ca minuty.",
+      why: () => m === 30 ? `Du\u017Ca wskaz\xF3wka stoi na 6, wi\u0119c jest p\xF3\u0142 godziny. Ma\u0142a jest mi\u0119dzy ${h12(h)} a ${h12(h + 1)}, czyli wp\xF3\u0142 do ${GEN[h12(h + 1)]}: ${digital(h, m)}.` : `Du\u017Ca wskaz\xF3wka stoi na 12, wi\u0119c jest pe\u0142na godzina. Ma\u0142a pokazuje ${h12(h)}, czyli ${NOM[h12(h)]}: ${digital(h, m)}.`
+    };
+  }
+  function genSet(lvl) {
+    const h = ri(1, 12), m = lvl === 1 ? 0 : rnd() < 0.5 ? 30 : 0;
+    return {
+      kind: "set",
+      title: `Ustaw zegar na ${digital(h, m)}`,
+      h,
+      m,
+      ans: digital(h, m),
+      say: `Ustaw zegar na godzin\u0119 ${words(h, m)}. Strza\u0142kami przesuwasz ma\u0142\u0105 wskaz\xF3wk\u0119, a przyciskiem du\u017C\u0105.`,
+      why: () => m === 30 ? `Na ${digital(h, m)} du\u017Ca wskaz\xF3wka stoi na 6, a ma\u0142a mi\u0119dzy ${h12(h)} a ${h12(h + 1)}.` : `Na ${digital(h, m)} du\u017Ca wskaz\xF3wka stoi na 12, a ma\u0142a na ${h12(h)}.`
+    };
+  }
+  var EVENTS = [["Bajka", "\u{1F3AC}"], ["Wizyta u babci", "\u{1F475}"], ["Basen", "\u{1F3CA}"], ["Urodziny u kole\u017Canki", "\u{1F382}"], ["Spacer z psem", "\u{1F415}"], ["Wycieczka do zoo", "\u{1F992}"]];
+  var durWord = (min) => min === 30 ? "p\xF3\u0142 godziny" : min === 60 ? "godzin\u0119" : min === 90 ? "p\xF3\u0142torej godziny" : `${min / 60} godziny`;
+  function genElapsed(lvl) {
+    const [ev, e] = pick(EVENTS);
+    const sm = lvl === 3 && rnd() < 0.5 ? 30 : 0, dur = pick(lvl === 1 ? [60] : lvl === 2 ? [60, 120, 180] : [30, 60, 90, 120]);
+    const h = ri(1, 11), endMin = h * 60 + sm + dur, eh = Math.floor(endMin / 60), em = endMin % 60;
+    const wrong = [[eh + 1, em], [eh - 1, em], [h, sm], [eh, em === 30 ? 0 : 30]];
+    const right = timeOpt(eh, em), opts = [right];
+    for (const [a, b] of shuffle(wrong)) {
+      const o = timeOpt(a, b);
+      if (!opts.some((x) => x.a === o.a) && opts.length < (lvl === 1 ? 3 : 4)) opts.push(o);
+    }
+    return {
+      kind: "elapsed",
+      title: "O kt\xF3rej si\u0119 sko\u0144czy?",
+      h,
+      m: sm,
+      e,
+      ans: right.a,
+      opts: shuffle(opts),
+      text: `${ev} zaczyna si\u0119 o ${digital(h, sm)} i trwa ${durWord(dur)}.`,
+      say: `${ev} zaczyna si\u0119 o ${words(h, sm)} i trwa ${durWord(dur)}. O kt\xF3rej si\u0119 sko\u0144czy?`,
+      why: () => `${digital(h, sm)} i jeszcze ${durWord(dur)} to ${right.a}.${dur >= 60 ? " Godzina to jeden pe\u0142ny obr\xF3t du\u017Cej wskaz\xF3wki." : ""}`
+    };
+  }
+  var SPANS = [
+    { k: "s", label: "sekund\u0119 lub dwie", hint: "Sekunda to tyle, co jedno kla\u015Bni\u0119cie." },
+    { k: "m1", label: "oko\u0142o minuty", hint: "Minuta to 60 sekund \u2014 tyle, co porz\u0105dne mycie r\u0105k." },
+    { k: "m5", label: "kilka minut", hint: "Kilka minut to na przyk\u0142ad mycie z\u0119b\xF3w albo jedna piosenka." },
+    { k: "h1", label: "oko\u0142o godziny", hint: "Godzina to 60 minut \u2014 tyle, co lekcja w szkole i przerwa." },
+    { k: "long", label: "wiele godzin", hint: "Wiele godzin to na przyk\u0142ad ca\u0142a noc snu." }
+  ];
+  var ACTS = [
+    ["kla\u015Bni\u0119cie w d\u0142onie", "\u{1F44F}", "s"],
+    ["mrugni\u0119cie okiem", "\u{1F609}", "s"],
+    ["kichni\u0119cie", "\u{1F927}", "s"],
+    ["podskok", "\u{1F998}", "s"],
+    ["umycie r\u0105k", "\u{1F9FC}", "m1"],
+    ["zawi\u0105zanie but\xF3w", "\u{1F45F}", "m1"],
+    ["za\u0142o\u017Cenie kurtki", "\u{1F9E5}", "m1"],
+    ["mycie z\u0119b\xF3w", "\u{1F9B7}", "m5"],
+    ["zjedzenie jab\u0142ka", "\u{1F34E}", "m5"],
+    ["ubranie si\u0119 rano", "\u{1F455}", "m5"],
+    ["jedna piosenka", "\u{1F3B5}", "m5"],
+    ["lekcja w szkole", "\u{1F3EB}", "h1"],
+    ["upieczenie ciasta", "\u{1F382}", "h1"],
+    ["zabawa na placu zabaw", "\u{1F938}", "h1"],
+    ["sen w nocy", "\u{1F6CF}\uFE0F", "long"],
+    ["wycieczka w g\xF3ry", "\u{1F3D4}\uFE0F", "long"],
+    ["dzie\u0144 w szkole", "\u{1F392}", "long"]
+  ].map(([n, e, c]) => ({ n, e, c }));
+  var spanIdx = (k) => SPANS.findIndex((s) => s.k === k);
+  function genHowLong(lvl) {
+    const act = pick(ACTS), i = spanIdx(act.c);
+    const far = SPANS.filter((_, j) => Math.abs(j - i) >= 2), near = SPANS.filter((_, j) => Math.abs(j - i) === 1);
+    const others = lvl === 1 ? shuffle(far).slice(0, 2) : shuffle([...shuffle(near).slice(0, 1), ...shuffle(far)]).slice(0, lvl === 2 ? 2 : 3);
+    return {
+      kind: "howlong",
+      title: `Ile trwa ${act.n}?`,
+      e: act.e,
+      ans: act.c,
+      opts: shuffle([SPANS[i], ...others]).map((s) => ({ a: s.k, n: s.label })),
+      say: `Ile trwa ${act.n}?`,
+      why: () => `${cap(act.n)} trwa ${SPANS[i].label}. ${SPANS[i].hint}`
+    };
+  }
+  function genLonger(lvl) {
+    for (; ; ) {
+      const [a, b] = shuffle(ACTS), d = spanIdx(b.c) - spanIdx(a.c);
+      if (Math.abs(d) < (lvl === 1 ? 2 : 1)) continue;
+      const win = d > 0 ? b : a, lose = d > 0 ? a : b;
+      return {
+        kind: "longer",
+        title: "Co trwa d\u0142u\u017Cej?",
+        ans: win.n,
+        opts: [a, b].map((x) => ({ a: x.n, e: x.e, n: x.n })),
+        say: `Co trwa d\u0142u\u017Cej: ${a.n} czy ${b.n}?`,
+        why: () => `${cap(win.n)} trwa ${SPANS[spanIdx(win.c)].label}, a ${lose.n} tylko ${SPANS[spanIdx(lose.c)].label}.`
+      };
+    }
+  }
+  function genFeel(lvl) {
+    const secs = lvl === 1 ? 5 : 10;
+    return {
+      kind: "feel",
+      title: `Wyczuj ${secs} sekund`,
+      secs,
+      tol: lvl === 3 ? 2 : 3,
+      say: `Naci\u015Bnij start i policz w my\u015Blach do ${secs}, powoli, tak jak tyka zegar. Potem naci\u015Bnij stop.`
+    };
+  }
+  var cap = (s) => s[0].toUpperCase() + s.slice(1);
+  function clockRoomTasks(lvl) {
+    return [genRead(lvl), genSet(lvl), genElapsed(lvl)];
+  }
+  function timeRoomTasks(lvl) {
+    return lvl === 3 ? [genHowLong(lvl), genLonger(lvl), genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), genLonger(lvl), genFeel(lvl)];
+  }
+  function tripTimeLine(ms) {
+    const min = Math.round(ms / 6e4);
+    if (min < 1) return "";
+    const mw = min === 1 ? "minut\u0119" : min % 10 >= 2 && min % 10 <= 4 && (min % 100 < 12 || min % 100 > 14) ? "minuty" : "minut";
+    const songs = Math.round(min / 3);
+    const cmp = songs >= 1 ? ` To tyle, co ${songs} ${songs === 1 ? "piosenka" : songs >= 2 && songs <= 4 ? "piosenki" : "piosenek"}.` : " To kr\xF3cej ni\u017C jedna piosenka.";
+    return `Ta wyprawa trwa\u0142a ${min === 1 ? "minut\u0119" : `${min} ${mw}`}.${cmp}${min >= 45 ? " Prawie jak ca\u0142a lekcja w szkole!" : ""}`;
   }
 
   // src/chest-room.js
@@ -2316,6 +2618,9 @@ h2 { font-size: 1.6rem; }
       growGarden(GS.G.camp);
       record("polish.password", misses === 0, took(), `${pw.w}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
       tripEnd(GS.RUN, true);
+      const opened = !GS.G.lands.includes("mountains") && GS.G.trips >= UNLOCK_TRIPS;
+      if (opened) GS.G.lands.push("mountains");
+      const timeLine = tripTimeLine(GS.RUN.active || 0), landKey = GS.RUN.land;
       save();
       speak(pw.w);
       snd.fanfare();
@@ -2323,13 +2628,13 @@ h2 { font-size: 1.6rem; }
       bigEffect();
       setTimeout(bigEffect, 700);
       $("coinN").textContent = GS.G.coins;
-      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}`), 900);
+      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryli\u015Bmy now\u0105 krain\u0119: ${lands().mountains.name}!` : ""}`), 900);
       $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
       $("campBtn").addEventListener("click", () => {
         GS.RUN = null;
         camp();
       });
-      $("againBtn").addEventListener("click", startTrip);
+      $("againBtn").addEventListener("click", () => startTrip(landKey));
     }
   }
 
@@ -2759,24 +3064,24 @@ h2 { font-size: 1.6rem; }
     return steps;
   }
   function hedge(ctx, x0, y0, w, h, seed) {
-    const rnd2 = mulberry(seed), P2 = 0.5;
-    ctx.fillStyle = "#2c6e36";
+    const rnd2 = mulberry(seed), P2 = 0.5, [base, a, b, hi] = land().hedge;
+    ctx.fillStyle = base;
     ctx.fillRect(x0, y0, w, h);
     for (let i = 0; i < w * h / 6; i++) {
       const cx = x0 + Math.floor(rnd2() * w / P2) * P2, cy = y0 + Math.floor(rnd2() * h / P2) * P2, rr = 1 + Math.floor(rnd2() * 3);
-      ctx.fillStyle = rnd2() < 0.5 ? "#3f9b4a" : "#357f3e";
+      ctx.fillStyle = rnd2() < 0.5 ? a : b;
       for (let dy = -rr; dy <= rr; dy += P2) {
         const hw = Math.round(Math.sqrt(rr * rr - dy * dy) / P2) * P2;
         ctx.fillRect(cx - hw, cy + dy, hw * 2 + P2, P2);
       }
-      ctx.fillStyle = "#7ccf6a";
+      ctx.fillStyle = hi;
       ctx.fillRect(cx - rr / 2, cy - rr / 2, P2, P2);
     }
   }
   function pathRoom() {
     roomShell();
     const lv = L(), run = GS.RUN, first = run.i === 0;
-    const types = shuffle(["monster", "door", "sign"]).slice(0, lv.exits);
+    const T = land(), types = T.exits(lv.exits);
     const M = genMap(lv, types);
     if (window.__LW_TEST) {
       window.__LW_TEST.M = M;
@@ -2787,7 +3092,7 @@ h2 { font-size: 1.6rem; }
     const OY = 8, BW = (M.COLS + 1) * 16, BH = (M.ROWS + 1) * 16;
     const cv = mountCanvas(M.COLS + 1, M.ROWS + 1);
     $("sc").appendChild(cv.c);
-    cv.c.setAttribute("aria-label", "Le\u015Bna \u015Bcie\u017Cka");
+    cv.c.setAttribute("aria-label", T.pathLabel);
     const bg = document.createElement("canvas");
     bg.width = BW * 2;
     bg.height = BH * 2;
@@ -2800,8 +3105,8 @@ h2 { font-size: 1.6rem; }
     bx.translate(0, OY);
     for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) {
       const k = r + "," + c, openCell = !M.blocks.has(k);
-      bx.drawImage(lv.showPath && openCell || isExit(r, c) ? DIRT[(r + c) % 2] : GRASS[Math.floor(rnd2() * 3)], c * 16, r * 16, 16, 16);
-      if (!openCell && rnd2() < 0.3) draw(bx, rnd2() < 0.5 ? SPR.flower1 : SPR.flower2, c * 16, r * 16);
+      bx.drawImage(lv.showPath && openCell || isExit(r, c) ? T.lane[(r + c) % 2] : T.ground[Math.floor(rnd2() * 3)], c * 16, r * 16, 16, 16);
+      if (!openCell && rnd2() < 0.3) draw(bx, rnd2() < 0.5 ? T.flowers[0] : T.flowers[1], c * 16, r * 16);
     }
     for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) {
       if ((r + c) % 2) {
@@ -2814,12 +3119,12 @@ h2 { font-size: 1.6rem; }
     }
     for (let r = 0; r < M.ROWS; r++) for (let c = 0; c < M.COLS; c++) {
       const b = M.blocks.get(r + "," + c);
-      if (b) draw(bx, SPR[b], c * 16, r * 16 - (b === "tree" ? 2 : 0));
+      if (b) draw(bx, b === "tree" ? T.tree : SPR[b], c * 16, r * 16 - (b === "tree" ? 2 : 0));
     }
     for (let r = 0; r < M.ROWS; r++) {
       const X = M.COLS * 16, Y = r * 16;
       if (M.exits.some((e) => e.cell[0] === r)) {
-        bx.drawImage(DIRT[r % 2], X, Y, 16, 16);
+        bx.drawImage(T.lane[r % 2], X, Y, 16, 16);
         bx.fillStyle = "rgba(30,60,20,.28)";
         bx.fillRect(X, Y, 16, 1);
       } else hedge(bx, X, Y, 16, 16, M.seed + r);
@@ -2828,7 +3133,7 @@ h2 { font-size: 1.6rem; }
     hedge(bx, 0, 0, BW, OY, M.seed + 50);
     hedge(bx, 0, BH - OY, BW, OY, M.seed + 60);
     light(bx, BW, BH);
-    const EXSPR = { monster: MINI_MON, door: SPR.door, sign: SPR.sign };
+    const EXSPR = { monster: MINI_MON, door: SPR.door, sign: SPR.sign, clock: msprites().clock, time: msprites().hourglass };
     let coins = new Set(M.coins), crash = false;
     const hero = { x: 0, y: M.start[0] * 16, hop: 0 }, pet = { x: 0, y: M.start[0] * 16 + 6 };
     let cell = M.start.slice();
@@ -3015,7 +3320,7 @@ h2 { font-size: 1.6rem; }
       picked.forEach((k) => coins.add(k));
       fails++;
       tries++;
-      const msg = result === "tree" ? "Bum! Drzewo na drodze." : result === "rock" ? "Ups, kamie\u0144!" : result === "edge" ? "Tam nie ma przej\u015Bcia." : `Nie ${gw("dosz\u0142y\u015Bmy", "doszli\u015Bmy")} jeszcze do \u017Cadnego wyj\u015Bcia.`;
+      const msg = result === "tree" ? T.treeHit : result === "rock" ? "Ups, kamie\u0144!" : result === "edge" ? "Tam nie ma przej\u015Bcia." : `Nie ${gw("dosz\u0142y\u015Bmy", "doszli\u015Bmy")} jeszcze do \u017Cadnego wyj\u015Bcia.`;
       const back = picked.length ? " Monety wr\xF3ci\u0142y na miejsce \u2014 licz\u0105 si\u0119 dopiero, gdy dojdziesz do wyj\u015Bcia." : "";
       await sleep(500);
       if (left(run)) return;
@@ -3066,7 +3371,7 @@ h2 { font-size: 1.6rem; }
       nextRoom();
     }
     const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
-    const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. Z lasu prowadz\u0105 ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Monety licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `Las si\u0119 rozwidla. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
+    const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadz\u0105"} ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Monety licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `${T.key === "mountains" ? "Szlak si\u0119 rozwidla" : "Las si\u0119 rozwidla"}. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
     say(petName(), intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : ""));
   }
 
@@ -3242,6 +3547,493 @@ h2 { font-size: 1.6rem; }
     }));
   }
 
+  // src/logic-data.js
+  var ATTR = {
+    fur: ["ma futerko", "nie ma futerka"],
+    wings: ["ma skrzyd\u0142a", "nie ma skrzyde\u0142"],
+    feathers: ["ma pi\xF3ra", "nie ma pi\xF3r"],
+    legs4: ["ma cztery \u0142apy", "nie ma czterech \u0142ap"],
+    water: ["mieszka w wodzie", "nie mieszka w wodzie"]
+  };
+  var ANIMALS = [
+    { k: "kot", e: "\u{1F431}", g: "m", t: ["fur", "legs4"] },
+    { k: "pies", e: "\u{1F436}", g: "m", t: ["fur", "legs4"] },
+    { k: "mysz", e: "\u{1F42D}", g: "f", t: ["fur", "legs4"] },
+    { k: "kr\xF3lik", e: "\u{1F430}", g: "m", t: ["fur", "legs4"] },
+    { k: "sowa", e: "\u{1F989}", g: "f", t: ["wings", "feathers"] },
+    { k: "kura", e: "\u{1F414}", g: "f", t: ["wings", "feathers"] },
+    { k: "motyl", e: "\u{1F98B}", g: "m", t: ["wings"] },
+    { k: "biedronka", e: "\u{1F41E}", g: "f", t: ["wings"] },
+    { k: "ryba", e: "\u{1F41F}", g: "f", t: ["water"] },
+    { k: "o\u015Bmiornica", e: "\u{1F419}", g: "f", t: ["water"] },
+    { k: "\u015Blimak", e: "\u{1F40C}", g: "m", t: [] },
+    { k: "jaszczurka", e: "\u{1F98E}", g: "f", t: ["legs4"] }
+  ];
+  var CRIMES = [
+    ["zjad\u0142 ciastko", "Kto\u015B zjad\u0142 ciastko z obozu!", "Kto zjad\u0142 ciastko?"],
+    ["schowa\u0142 czapk\u0119", "Kto\u015B schowa\u0142 czapk\u0119!", "Kto schowa\u0142 czapk\u0119?"],
+    ["rozsypa\u0142 monety", "Kto\u015B rozsypa\u0142 monety!", "Kto rozsypa\u0142 monety?"],
+    ["zabra\u0142 kredki", "Kto\u015B zabra\u0142 kredki!", "Kto zabra\u0142 kredki?"]
+  ];
+  var notWas = (a) => `To nie ${a.g === "f" ? "by\u0142a" : "by\u0142"} ${a.k}.`;
+  function genWho(lvl) {
+    const n = lvl === 1 ? 3 : 4, need = lvl === 3 ? 3 : 2;
+    for (let tries = 0; tries < 500; tries++) {
+      const sus = shuffle(ANIMALS).slice(0, n), cul = pick(sus), [verb, intro, q] = pick(CRIMES);
+      const clues = [];
+      for (const at of Object.keys(ATTR)) {
+        const has = cul.t.includes(at), fit = sus.filter((s) => s.t.includes(at) === has);
+        if (fit.length < n) clues.push({ text: `Ten, kto ${verb}, ${ATTR[at][has ? 0 : 1]}.`, fit: new Set(fit.map((s) => s.k)), at, has });
+      }
+      if (lvl > 1) {
+        for (const s of sus) if (s !== cul) clues.push({ text: notWas(s), fit: new Set(sus.filter((x) => x !== s).map((x) => x.k)), not: s.k });
+      }
+      const sets = combos(shuffle(clues), need).filter((cs) => cs.filter((c) => c.not).length <= 1);
+      for (const cs of sets) {
+        const both = sus.filter((s) => cs.every((c) => c.fit.has(s.k)));
+        if (both.length !== 1 || both[0] !== cul) continue;
+        if (cs.some((c) => c.fit.size < 2)) continue;
+        if (cs.some((c, i) => sus.filter((s) => cs.every((d, j) => j === i || d.fit.has(s.k))).length < 2)) continue;
+        const ordered = cs.slice().sort((a, b) => (a.not ? 1 : 0) - (b.not ? 1 : 0));
+        return {
+          kind: "who",
+          title: q,
+          intro,
+          clues: ordered.map((c) => c.text),
+          say: `${intro} Podejrzani: ${sus.map((s) => s.k).join(", ")}. Wskaz\xF3wki: ${ordered.map((c) => c.text).join(" ")} ${q}`,
+          opts: sus.map((s) => ({ a: s.k, e: s.e, n: s.k })),
+          ans: cul.k,
+          why: (a) => {
+            const c = ordered.find((c2) => !c2.fit.has(a));
+            return c ? `${cap2(a)} nie pasuje do wskaz\xF3wki: \u201E${c.text}\u201D` : "";
+          }
+        };
+      }
+    }
+    throw new Error("genWho: no puzzle");
+  }
+  function combos(arr, k, start = 0, cur = [], out = []) {
+    if (cur.length === k) {
+      out.push(cur.slice());
+      return out;
+    }
+    for (let i = start; i < arr.length && out.length < 400; i++) {
+      cur.push(arr[i]);
+      combos(arr, k, i + 1, cur, out);
+      cur.pop();
+    }
+    return out;
+  }
+  var cap2 = (s) => s[0].toUpperCase() + s.slice(1);
+  var THEMES = [
+    [["\u{1F34E}", "jab\u0142ko"], ["\u{1F34C}", "banan"], ["\u{1F347}", "winogrona"], ["\u{1F353}", "truskawka"]],
+    [["\u{1F534}", "czerwone k\xF3\u0142ko"], ["\u{1F535}", "niebieskie k\xF3\u0142ko"], ["\u{1F7E1}", "\u017C\xF3\u0142te k\xF3\u0142ko"], ["\u{1F7E2}", "zielone k\xF3\u0142ko"]],
+    [["\u2B50", "gwiazdka"], ["\u{1F319}", "ksi\u0119\u017Cyc"], ["\u2600\uFE0F", "s\u0142o\u0144ce"], ["\u2601\uFE0F", "chmurka"]],
+    [["\u{1F431}", "kot"], ["\u{1F436}", "pies"], ["\u{1F42D}", "mysz"], ["\u{1F430}", "kr\xF3lik"]],
+    [["\u{1F338}", "kwiatek"], ["\u{1F344}", "grzybek"], ["\u{1F341}", "li\u015B\u0107"], ["\u{1F332}", "choinka"]]
+  ];
+  var PATTERNS = { 1: ["AB", "AAB", "ABB"], 2: ["ABC", "AABB", "ABAC", "AAB"], 3: ["ABCB", "AABC", "ABBC", "ABCD"] };
+  function genSeq(lvl) {
+    const th = pick(THEMES), pat = pick(PATTERNS[lvl]), letters = [...new Set(pat)], sym = shuffle(th).slice(0, letters.length);
+    const of = (ch) => sym[letters.indexOf(ch)];
+    const shown = pat.length * 2 + ri(0, pat.length - 1), items = Array.from({ length: shown }, (_, i) => of(pat[i % pat.length]));
+    const ans = of(pat[shown % pat.length]);
+    const pool = th.filter((x) => !sym.includes(x)), opts = shuffle([...sym, ...pool].slice(0, Math.max(sym.length, lvl === 1 ? 3 : 4)));
+    if (!opts.includes(ans)) opts[0] = ans;
+    const cycle = Array.from({ length: pat.length }, (_, i) => of(pat[i])[1]).join(", ");
+    return {
+      kind: "seq",
+      title: "Co b\u0119dzie dalej?",
+      items: items.map((x) => x[0]),
+      say: `Co b\u0119dzie dalej? Popatrz, co si\u0119 powtarza.`,
+      opts: shuffle(opts).map(([e, n]) => ({ a: n, e, n })),
+      ans: ans[1],
+      why: () => `Powtarza si\u0119: ${cycle}. Potem znowu od pocz\u0105tku.`
+    };
+  }
+  var CATS = [
+    { one: "owoc", many: "owoce", items: [["\u{1F34E}", "jab\u0142ko"], ["\u{1F34C}", "banan"], ["\u{1F350}", "gruszka"], ["\u{1F347}", "winogrona"], ["\u{1F353}", "truskawka"], ["\u{1F34A}", "pomara\u0144cza"]] },
+    { one: "zwierz\u0119", many: "zwierz\u0119ta", items: [["\u{1F431}", "kot"], ["\u{1F436}", "pies"], ["\u{1F42E}", "krowa"], ["\u{1F437}", "\u015Bwinka"], ["\u{1F414}", "kura"], ["\u{1F434}", "ko\u0144"]] },
+    { one: "pojazd", many: "pojazdy", items: [["\u{1F697}", "auto"], ["\u{1F6B2}", "rower"], ["\u2708\uFE0F", "samolot"], ["\u{1F682}", "poci\u0105g"], ["\u{1F68C}", "autobus"], ["\u{1F680}", "rakieta"]] },
+    { one: "ubranie", many: "ubrania", items: [["\u{1F455}", "koszulka"], ["\u{1F456}", "spodnie"], ["\u{1F9E2}", "czapka"], ["\u{1F9E6}", "skarpetki"], ["\u{1F457}", "sukienka"], ["\u{1F9E4}", "r\u0119kawiczki"]] }
+  ];
+  var FEATS = [
+    { yes: "lataj\u0105", no: "nie lata", items: [["\u{1F985}", "orze\u0142"], ["\u{1F98B}", "motyl"], ["\u{1F41D}", "pszczo\u0142a"], ["\u{1F989}", "sowa"], ["\u{1F426}", "ptaszek"]], other: [["\u{1F436}", "pies"], ["\u{1F40C}", "\u015Blimak"], ["\u{1F41F}", "ryba"], ["\u{1F422}", "\u017C\xF3\u0142w"]] },
+    { yes: "mieszkaj\u0105 w wodzie", no: "nie mieszka w wodzie", items: [["\u{1F41F}", "ryba"], ["\u{1F419}", "o\u015Bmiornica"], ["\u{1F42C}", "delfin"], ["\u{1F433}", "wieloryb"]], other: [["\u{1F412}", "ma\u0142pa"], ["\u{1F992}", "\u017Cyrafa"], ["\u{1F431}", "kot"], ["\u{1F414}", "kura"]] },
+    { yes: "s\u0105 zimne", no: "nie jest zimne", items: [["\u{1F366}", "lody"], ["\u{1F9CA}", "l\xF3d"], ["\u26C4", "ba\u0142wanek"], ["\u2744\uFE0F", "\u015Bnie\u017Cynka"]], other: [["\u{1F525}", "ogie\u0144"], ["\u2615", "gor\u0105ca herbata"], ["\u2600\uFE0F", "s\u0142o\u0144ce"]] },
+    { yes: "s\u0105 okr\u0105g\u0142e", no: "nie jest okr\u0105g\u0142e", items: [["\u26BD", "pi\u0142ka"], ["\u{1F34A}", "pomara\u0144cza"], ["\u{1F315}", "ksi\u0119\u017Cyc w pe\u0142ni"], ["\u{1F369}", "p\u0105czek"], ["\u{1F3C0}", "pi\u0142ka do kosza"]], other: [["\u{1F4CF}", "linijka"], ["\u{1F4DA}", "ksi\u0105\u017Cki"], ["\u{1F9F1}", "ceg\u0142a"]] }
+  ];
+  function genOdd(lvl) {
+    const n = lvl === 1 ? 3 : 4;
+    if (lvl === 1 || ri(0, 2) === 0) {
+      const [a, b] = shuffle(CATS), same2 = shuffle(a.items).slice(0, n - 1), odd2 = pick(b.items);
+      return oddOut(same2, odd2, `${cap2(odd2[1])} to ${b.one}, a reszta to ${a.many}.`);
+    }
+    const f = pick(FEATS), same = shuffle(f.items).slice(0, n - 1), odd = pick(f.other);
+    return oddOut(same, odd, `Wszystkie ${f.yes}, a ${odd[1]} ${f.no}.`);
+  }
+  function oddOut(same, odd, why) {
+    const all = shuffle([...same, odd]);
+    return {
+      kind: "odd",
+      title: "Co tu nie pasuje?",
+      say: "Co tu nie pasuje? Jedna rzecz jest inna ni\u017C reszta.",
+      opts: all.map(([e, n]) => ({ a: n, e, n })),
+      ans: odd[1],
+      why: () => why
+    };
+  }
+  var IFS = [
+    [["Je\u015Bli pada deszcz, Tosia bierze parasol."], "Pada deszcz.", "Co zrobi Tosia?", ["We\u017Amie parasol", "\u2602\uFE0F"], ["We\u017Amie okulary od s\u0142o\u0144ca", "\u{1F576}\uFE0F"], ["P\xF3jdzie spa\u0107", "\u{1F6CF}\uFE0F"]],
+    [["Je\u015Bli jest zimno, Kuba zak\u0142ada czapk\u0119."], "Jest bardzo zimno.", "Co zrobi Kuba?", ["Za\u0142o\u017Cy czapk\u0119", "\u{1F9E2}"], ["Zje lody", "\u{1F366}"], ["Zdejmie buty", "\u{1F45F}"]],
+    [["Je\u015Bli kot jest g\u0142odny, miauczy przy misce."], "Kot jest g\u0142odny.", "Co zrobi kot?", ["B\u0119dzie miaucze\u0107 przy misce", "\u{1F431}"], ["P\xF3jdzie p\u0142ywa\u0107", "\u{1F3CA}"], ["B\u0119dzie szczeka\u0107", "\u{1F436}"]],
+    [["Je\u015Bli zadzwoni dzwonek, dzieci wychodz\u0105 na przerw\u0119."], "Zadzwoni\u0142 dzwonek.", "Co zrobi\u0105 dzieci?", ["Wyjd\u0105 na przerw\u0119", "\u{1F938}"], ["P\xF3jd\u0105 spa\u0107", "\u{1F6CF}\uFE0F"], ["Zaczn\u0105 lekcj\u0119 od nowa", "\u{1F4DA}"]],
+    [["Je\u015Bli zrobi si\u0119 ciemno, w obozie zapalamy lampion."], "Zrobi\u0142o si\u0119 ciemno.", "Co zrobimy?", ["Zapalimy lampion", "\u{1F3EE}"], ["Zgasimy ognisko", "\u{1F4A8}"], ["Zjemy \u015Bniadanie", "\u{1F963}"]],
+    [["Je\u015Bli ro\u015Blina nie dostaje wody, wi\u0119dnie."], "Nikt nie podlewa\u0142 kwiatka.", "Co stanie si\u0119 z kwiatkiem?", ["Zwi\u0119dnie", "\u{1F940}"], ["Uro\u015Bnie wielki", "\u{1F33B}"], ["Zamieni si\u0119 w drzewo", "\u{1F333}"]],
+    [["Je\u015Bli Ola sko\u0144czy obiad, dostanie deser."], "Ola zjad\u0142a ca\u0142y obiad.", "Co dostanie Ola?", ["Deser", "\u{1F370}"], ["Nic", "\u{1F6AB}"], ["Drugi obiad", "\u{1F372}"]]
+  ];
+  var CHAINS = [
+    [["Je\u015Bli zadzwoni budzik, Kuba wstanie.", "Je\u015Bli Kuba wstanie, zje \u015Bniadanie."], "Budzik zadzwoni\u0142.", "Co na pewno zrobi Kuba?", ["Zje \u015Bniadanie", "\u{1F963}"], ["Zostanie w \u0142\xF3\u017Cku", "\u{1F6CF}\uFE0F"], ["Zje kolacj\u0119", "\u{1F35D}"]],
+    [["Je\u015Bli spadnie \u015Bnieg, ulepimy ba\u0142wana.", "Je\u015Bli ulepimy ba\u0142wana, damy mu marchewk\u0119."], "Spad\u0142 \u015Bnieg.", "Co dostanie ba\u0142wan?", ["Marchewk\u0119", "\u{1F955}"], ["Parasol", "\u2602\uFE0F"], ["Okulary od s\u0142o\u0144ca", "\u{1F576}\uFE0F"]],
+    [["Je\u015Bli piesek jest brudny, k\u0105piemy go.", "Je\u015Bli k\u0105piemy pieska, potem go wycieramy r\u0119cznikiem."], "Piesek wr\xF3ci\u0142 ca\u0142y w b\u0142ocie.", "Co zrobimy na ko\u0144cu?", ["Wytrzemy go r\u0119cznikiem", "\u{1F9FA}"], ["P\xF3jdziemy na spacer w b\u0142ocie", "\u{1F327}\uFE0F"], ["Nic", "\u{1F6AB}"]],
+    [["Je\u015Bli zbierzemy wszystkie runy, otworzymy skrzyni\u0119.", "Je\u015Bli otworzymy skrzyni\u0119, dostaniemy monety."], "Mamy wszystkie runy.", "Co dostaniemy?", ["Monety", "\u{1F4B0}"], ["Nic", "\u{1F6AB}"], ["Patyk", "\u{1F33F}"]]
+  ];
+  function genIf(lvl) {
+    const [rules, fact, q, right, ...wrong] = pick(lvl === 3 ? CHAINS : IFS);
+    return {
+      kind: "if",
+      title: q,
+      clues: [...rules, fact],
+      say: `${rules.join(" ")} ${fact} ${q}`,
+      opts: shuffle([right, ...wrong]).map(([n, e]) => ({ a: n, e, n })),
+      ans: right[0],
+      why: () => `${rules[rules.length - 1]} A z tego, co wiemy: ${fact.toLowerCase()}`
+    };
+  }
+  function logicRoomPuzzles(lvl) {
+    return shuffle([genWho(lvl), pick([genSeq, genOdd, genIf])(lvl)]);
+  }
+
+  // src/quiz.js
+  function askChoice(q, o) {
+    return new Promise((resolve) => {
+      const run = GS.RUN, took = timer();
+      $("ctl").innerHTML = `<div class="task">${o.head || ""}</div>
+      <div class="opts ${o.cls || ""}">${q.opts.map((op) => `<button class="btn opt" data-a="${esc(op.a)}">${op.e ? `<span class="em" aria-hidden="true">${op.e}</span>` : ""}<span class="lb">${esc(op.label != null ? op.label : op.n)}</span>${op.sub ? `<small>${esc(op.sub)}</small>` : ""}</button>`).join("")}</div>`;
+      if (o.after) o.after($("ctl"));
+      if (window.__LW_TEST) window.__LW_TEST.q = { kind: q.kind, ans: q.ans };
+      const labelOf = (a) => {
+        const op = q.opts.find((x) => x.a === a);
+        return op ? op.label != null ? op.label : op.n : a;
+      };
+      let misses = 0, done = false;
+      app.querySelectorAll("#ctl .opt").forEach((b) => b.addEventListener("click", async () => {
+        if (done || b.disabled) return;
+        const a = b.dataset.a;
+        if (a === q.ans) {
+          done = true;
+          b.classList.add("right");
+          snd.ok();
+          burst(b);
+          record(o.skill, misses === 0, took(), o.note(misses));
+          save();
+          resolve({ ok: misses === 0 });
+          return;
+        }
+        misses++;
+        b.classList.add("wrong");
+        b.disabled = true;
+        b.classList.remove("shake");
+        void b.offsetWidth;
+        b.classList.add("shake");
+        if (misses === 1) {
+          snd.bad();
+          say(petName(), `Hmm, to nie to. ${q.why(a)}`);
+          return;
+        }
+        done = true;
+        const fainted = await hurt();
+        if (left(run)) return;
+        const right = app.querySelector(`#ctl .opt[data-a="${CSS.escape(q.ans)}"]`);
+        if (right) right.classList.add("right");
+        if (!fainted) say(petName(), `Dobra odpowied\u017A to: ${labelOf(q.ans)}. ${q.why(a)}`);
+        record(o.skill, false, took(), o.note(misses));
+        save();
+        await sleep(3200);
+        if (left(run)) return;
+        resolve({ ok: false });
+      }));
+    });
+  }
+
+  // src/logic-room.js
+  async function logicRoom() {
+    roomShell();
+    const run = GS.RUN, lvl = GS.G.level;
+    const cv = mountCanvas(8, 4);
+    $("sc").appendChild(cv.c);
+    cv.c.setAttribute("aria-label", "Stra\u017Cnik skrzyni");
+    const bg = bakeClearing(8, 4, run.seed + 777);
+    GS.scene = { cv, draw(t) {
+      const c = cv.x;
+      c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
+      draw(c, PETSPR.owl, 70, 12 - bob(t, 1), 2);
+      draw(c, PETSPR[GS.G.hero.pet], 6, 34 - bob(t, 2), 1.25);
+      draw(c, GS.HERO, 22, 16 - bob(t), 1.75);
+    } };
+    say(petName(), "Skrzyni pilnuje M\u0105dra Sowa. Przepu\u015Bci nas, je\u015Bli rozwi\u0105\u017Cemy dwie zagadki. My\u015Bl spokojnie, \u0142\u0105cz wskaz\xF3wki!");
+    let good = 0;
+    for (const q of logicRoomPuzzles(lvl)) {
+      await sleep(700);
+      if (left(run)) return;
+      say("M\u0105dra Sowa", q.kind === "who" ? `${q.intro} ${q.title}` : q.title, q.say);
+      const r = await askChoice(q, { skill: "logic." + q.kind, cls: q.kind === "if" ? "wide" : "", head: headFor(q), note: (miss) => noteFor(q, miss) });
+      if (left(run)) return;
+      if (r.ok) good++;
+    }
+    const coins = good * 2;
+    GS.RUN.coins += coins;
+    updHud();
+    say(heroName(), `${good === 2 ? "Obie zagadki rozwi\u0105zane!" : good ? "Uda\u0142o si\u0119!" : "Przeszli\u015Bmy!"} Sowa przepuszcza nas do skrzyni.${coins ? ` +${coins} monety.` : ""}`);
+    nextRoom();
+  }
+  function headFor(q) {
+    if (q.kind === "who") return `<p class="task-q">${esc(q.intro)}</p><ol class="clues">${q.clues.map((c) => `<li>${esc(c)}</li>`).join("")}</ol><p class="task-q">${esc(q.title)}</p>`;
+    if (q.kind === "if") return `<ol class="clues rules">${q.clues.map((c) => `<li>${esc(c)}</li>`).join("")}</ol><p class="task-q">${esc(q.title)}</p>`;
+    if (q.kind === "seq") return `<p class="task-q">${esc(q.title)}</p><div class="seq" aria-label="Ci\u0105g obrazk\xF3w">${q.items.map((e) => `<span>${e}</span>`).join("")}<span class="q">?</span></div>`;
+    return `<p class="task-q">${esc(q.title)}</p>`;
+  }
+  function noteFor(q, miss) {
+    const tail = miss ? `, pomy\u0142ki: ${miss}` : "";
+    if (q.kind === "who") return `${q.opts.length} podejrzanych, ${q.clues.length} wskaz\xF3wki${tail}`;
+    return `${q.title.replace(/\?$/, "")}: ${q.ans}${tail}`;
+  }
+
+  // src/time-rooms.js
+  function drawClock(c, h, m) {
+    const x = c.getContext("2d"), W = c.width, R2 = W / 2 - 6;
+    x.clearRect(0, 0, W, W);
+    x.save();
+    x.translate(W / 2, W / 2);
+    x.fillStyle = "#7a4b2a";
+    x.beginPath();
+    x.arc(0, 0, R2, 0, Math.PI * 2);
+    x.fill();
+    x.fillStyle = "#fff6dc";
+    x.beginPath();
+    x.arc(0, 0, R2 * 0.9, 0, Math.PI * 2);
+    x.fill();
+    for (let i = 0; i < 60; i++) {
+      const a = i / 60 * Math.PI * 2, big = i % 5 === 0;
+      x.strokeStyle = big ? "#2a1d2e" : "#b9a98a";
+      x.lineWidth = big ? W / 90 : W / 220;
+      x.beginPath();
+      x.moveTo(Math.sin(a) * R2 * 0.86, -Math.cos(a) * R2 * 0.86);
+      x.lineTo(Math.sin(a) * R2 * (big ? 0.76 : 0.81), -Math.cos(a) * R2 * (big ? 0.76 : 0.81));
+      x.stroke();
+    }
+    x.fillStyle = "#2a1d2e";
+    x.font = `900 ${Math.round(W / 9)}px Nunito, sans-serif`;
+    x.textAlign = "center";
+    x.textBaseline = "middle";
+    for (let n = 1; n <= 12; n++) {
+      const a = n / 12 * Math.PI * 2;
+      x.fillText(String(n), Math.sin(a) * R2 * 0.6, -Math.cos(a) * R2 * 0.6 + W / 120);
+    }
+    const hand = (a, len, w, col) => {
+      x.strokeStyle = col;
+      x.lineWidth = w;
+      x.lineCap = "round";
+      x.beginPath();
+      x.moveTo(-Math.sin(a) * len * 0.12, Math.cos(a) * len * 0.12);
+      x.lineTo(Math.sin(a) * len, -Math.cos(a) * len);
+      x.stroke();
+    };
+    hand((h12(h) % 12 + m / 60) / 12 * Math.PI * 2, R2 * 0.45, W / 26, "#2b6cb0");
+    hand(m / 60 * Math.PI * 2, R2 * 0.74, W / 44, "#e8442c");
+    x.fillStyle = "#ffcf3a";
+    x.beginPath();
+    x.arc(0, 0, W / 40, 0, Math.PI * 2);
+    x.fill();
+    x.restore();
+  }
+  var clockHTML = (cls = "") => `<canvas class="clock ${cls}" width="440" height="440" role="img" aria-label="Zegar ze wskaz\xF3wkami"></canvas>`;
+  function sceneFor(label, prop, seed) {
+    const cv = mountCanvas(8, 4);
+    $("sc").appendChild(cv.c);
+    cv.c.setAttribute("aria-label", label);
+    const bg = bakeClearing(8, 4, seed);
+    GS.scene = { cv, draw(t) {
+      const c = cv.x;
+      c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
+      draw(c, msprites().stone, 64, 26, 1.4);
+      draw(c, prop, 66, 6 - bob(t, 1), 1.6);
+      draw(c, PETSPR[GS.G.hero.pet], 6, 34 - bob(t, 2), 1.25);
+      draw(c, GS.HERO, 22, 16 - bob(t), 1.75);
+    } };
+  }
+  async function clockRoom() {
+    roomShell();
+    const run = GS.RUN, lvl = GS.G.level;
+    sceneFor("Wie\u017Ca zegarowa", msprites().clock, run.seed + run.i * 17);
+    say(petName(), "Wie\u017Ca zegarowa! Zegarmistrz da nam trzy zadania. Ma\u0142a niebieska wskaz\xF3wka pokazuje godzin\u0119, du\u017Ca czerwona minuty.");
+    let good = 0;
+    for (const q of clockRoomTasks(lvl)) {
+      await sleep(500);
+      if (left(run)) return;
+      let r;
+      if (q.kind === "set") r = await setClock(q);
+      else {
+        say(petName(), q.kind === "read" ? "Kt\xF3ra godzina jest na zegarze?" : `${q.text} O kt\xF3rej si\u0119 sko\u0144czy?`, q.say);
+        r = await askChoice(q, {
+          skill: q.kind === "read" ? "time.read" : "time.elapsed",
+          cls: "times",
+          head: `${clockHTML()}<p class="task-q">${q.kind === "read" ? "Kt\xF3ra godzina?" : `<span class="em">${q.e}</span> ${esc(q.text)}<br>O kt\xF3rej si\u0119 sko\u0144czy?`}</p>`,
+          after: (el) => drawClock(el.querySelector(".clock"), q.h, q.m),
+          note: (miss) => `${q.kind === "read" ? "zegar " : "koniec "}${q.ans}${miss ? `, pomy\u0142ki: ${miss}` : ""}`
+        });
+      }
+      if (left(run)) return;
+      if (r.ok) good++;
+    }
+    finish(run, good, "Zegar nie ma przed nami tajemnic!");
+  }
+  function setClock(q) {
+    return new Promise((resolve) => {
+      const run = GS.RUN, took = timer();
+      let h = h12(q.h + 4 + Math.floor(Math.random() * 5)), m = q.m === 30 ? 0 : 30, misses = 0, done = false;
+      say(petName(), `Ustaw zegar na ${q.ans}, czyli ${words(q.h, q.m)}.`, q.say);
+      $("ctl").innerHTML = `<div class="task">${clockHTML("big")}<p class="task-q">Ustaw: <b>${esc(q.ans)}</b></p></div>
+      <div class="setclock">
+        <button class="btn small" id="hBack" aria-label="Ma\u0142a wskaz\xF3wka do ty\u0142u">\u25C0 ma\u0142a</button>
+        <button class="btn small" id="hFwd" aria-label="Ma\u0142a wskaz\xF3wka do przodu">ma\u0142a \u25B6</button>
+        <button class="btn small" id="mFlip">du\u017Ca na ${m === 0 ? "6" : "12"}</button>
+      </div>
+      <button class="btn main" id="clockOk">Gotowe</button>`;
+      if (window.__LW_TEST) window.__LW_TEST.q = { kind: "set", ans: q.ans, h: h12(q.h), m: q.m, cur: () => ({ h, m }) };
+      const cnv = app.querySelector("#ctl .clock"), paint2 = () => {
+        drawClock(cnv, h, m);
+        $("mFlip").textContent = `du\u017Ca na ${m === 0 ? "6" : "12"}`;
+      };
+      paint2();
+      $("hBack").addEventListener("click", () => {
+        if (done) return;
+        h = h12(h - 1);
+        snd.step();
+        paint2();
+      });
+      $("hFwd").addEventListener("click", () => {
+        if (done) return;
+        h = h12(h + 1);
+        snd.step();
+        paint2();
+      });
+      $("mFlip").addEventListener("click", () => {
+        if (done) return;
+        m = m === 0 ? 30 : 0;
+        snd.step();
+        paint2();
+      });
+      $("clockOk").addEventListener("click", async () => {
+        if (done) return;
+        if (h === h12(q.h) && m === q.m) {
+          done = true;
+          snd.ok();
+          burst(cnv);
+          record("time.set", misses === 0, took(), `${q.ans}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
+          save();
+          say(heroName(), `Jest ${q.ans}!`);
+          resolve({ ok: misses === 0 });
+          return;
+        }
+        misses++;
+        const hint = m !== q.m ? q.m === 30 ? "Przy p\xF3\u0142 godzinie du\u017Ca wskaz\xF3wka stoi na 6." : "Przy pe\u0142nej godzinie du\u017Ca wskaz\xF3wka stoi na 12." : `Ma\u0142a wskaz\xF3wka ma pokaza\u0107 ${q.m === 30 ? `miejsce mi\u0119dzy ${h12(q.h)} a ${h12(q.h + 1)}` : h12(q.h)}.`;
+        if (misses === 1) {
+          snd.bad();
+          say(petName(), `Jeszcze nie. ${hint}`);
+          return;
+        }
+        done = true;
+        const fainted = await hurt();
+        if (left(run)) return;
+        h = h12(q.h);
+        m = q.m;
+        paint2();
+        if (!fainted) say(petName(), `Tak wygl\u0105da ${q.ans}. ${q.why()}`);
+        record("time.set", false, took(), `${q.ans}, pomy\u0142ki: ${misses}`);
+        save();
+        await sleep(3200);
+        if (left(run)) return;
+        resolve({ ok: false });
+      });
+    });
+  }
+  async function timeRoom() {
+    roomShell();
+    const run = GS.RUN, lvl = GS.G.level;
+    sceneFor("Kamie\u0144 czasu", msprites().hourglass, run.seed + run.i * 19);
+    say(petName(), "Kamie\u0144 czasu! Sprawdzimy, ile co trwa: sekunda, minuta, godzina.");
+    let good = 0;
+    for (const q of timeRoomTasks(lvl)) {
+      await sleep(500);
+      if (left(run)) return;
+      let r;
+      if (q.kind === "feel") r = await feel(q);
+      else {
+        say(petName(), q.title, q.say);
+        r = await askChoice(q, {
+          skill: q.kind === "howlong" ? "time.howlong" : "time.longer",
+          cls: q.kind === "longer" ? "two" : "spans",
+          head: `<p class="task-q">${q.e ? `<span class="em big">${q.e}</span><br>` : ""}${esc(q.title)}</p>`,
+          note: (miss) => `${q.title} \u2192 ${q.opts.find((o) => o.a === q.ans).n}${miss ? `, pomy\u0142ki: ${miss}` : ""}`
+        });
+      }
+      if (left(run)) return;
+      if (r.ok) good++;
+    }
+    finish(run, good, "Czujemy ju\u017C, ile trwa czas!");
+  }
+  function feel(q) {
+    return new Promise((resolve) => {
+      const run = GS.RUN;
+      let t0 = 0, done = false;
+      say(petName(), `${q.title}! Naci\u015Bnij start i policz w my\u015Blach do ${q.secs}. Potem stop.`, q.say);
+      $("ctl").innerHTML = `<div class="task"><p class="task-q"><span class="em big">\u23F1\uFE0F</span><br>Policz w my\u015Blach do ${q.secs}: \u201Eraz i, dwa i, trzy i\u2026\u201D</p></div>
+      <button class="btn main" id="feelBtn">Start</button>`;
+      if (window.__LW_TEST) window.__LW_TEST.q = { kind: "feel", secs: q.secs };
+      $("feelBtn").addEventListener("click", async () => {
+        if (done) return;
+        if (!t0) {
+          t0 = performance.now();
+          snd.step();
+          $("feelBtn").textContent = "Stop";
+          $("feelBtn").classList.add("gold");
+          return;
+        }
+        done = true;
+        const s = (performance.now() - t0) / 1e3, d = s - q.secs, ok = Math.abs(d) <= q.tol, shown = Math.round(s * 10) / 10;
+        record("time.feel", ok, s * 1e3, `${q.secs} s \u2192 ${shown} s`);
+        save();
+        if (ok) {
+          snd.ok();
+          burst($("feelBtn"));
+        }
+        const said = `${String(shown).replace(".", ",")} ${secWord(shown)}`;
+        say(petName(), ok ? `Min\u0119\u0142o ${said}. \u015Awietne wyczucie!` : `Min\u0119\u0142o ${said}. ${d < 0 ? "Za szybko! Licz wolniej: raz i, dwa i\u2026" : "Troch\u0119 za d\u0142ugo. Licz odrobin\u0119 szybciej."} Ka\u017Cda sekunda to jedno tykni\u0119cie zegara.`);
+        await sleep(2600);
+        if (left(run)) return;
+        resolve({ ok });
+      });
+    });
+  }
+  var secWord = (n) => n % 1 ? "sekundy" : n === 1 ? "sekunda" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "sekundy" : "sekund";
+  function finish(run, good, line) {
+    GS.RUN.coins += good;
+    updHud();
+    say(heroName(), `${line} ${good ? `+${good} ${good === 1 ? "moneta" : good < 5 ? "monety" : "monet"}.` : ""}`);
+    nextRoom();
+  }
+
   // src/expedition.js
   var PASSWORDS = [
     ["sowa", "\u{1F989}", "M\u0105dry ptak. Nie \u015Bpi w nocy i wo\u0142a: hu, hu!"],
@@ -3263,15 +4055,16 @@ h2 { font-size: 1.6rem; }
     ["ksi\u0119\u017Cyc", "\u{1F319}", "\u015Awieci w nocy. Bywa okr\u0105g\u0142y albo jak rogalik."],
     ["pingwin", "\u{1F427}", "Ptak w czarnym fraku. Nie lata, ale p\u0142ywa."]
   ].map(([w, e, r]) => ({ w, e, r }));
-  var ROOM_NAME = { monster: "potw\xF3r", door: "zaczarowane drzwi", sign: "rozdro\u017Ce" };
+  var ROOM_NAME = { monster: "potw\xF3r", door: "zaczarowane drzwi", sign: "rozdro\u017Ce", clock: "wie\u017Ca zegarowa", time: "kamie\u0144 czasu", logic: "stra\u017Cnik skrzyni" };
   GS.RUN = null;
-  function startTrip() {
+  function startTrip(landKey) {
+    const key = typeof landKey === "string" && lands()[landKey] && GS.G.lands.includes(landKey) ? landKey : "forest";
     const lv = L(), pw = pick(PASSWORDS.filter((p) => p.w.length >= lv.pass[0] && p.w.length <= lv.pass[1]));
-    const rooms = ["path", null, "path", null, "path", null, "chest"], spots = 6;
+    const rooms = ["path", null, "path", null, "path", null, "logic", "chest"], spots = 6;
     const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
     order.forEach((idx, k) => runes[Math.floor(k * spots / order.length)].push(pw.w[idx]));
     const maxHp = 3 + wellHearts(GS.G.camp);
-    GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
+    GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
     tripStart(GS.RUN);
     room();
   }
@@ -3315,7 +4108,7 @@ h2 { font-size: 1.6rem; }
   }
   function room() {
     const t = GS.RUN.rooms[GS.RUN.i];
-    ({ path: pathRoom, monster: monsterRoom, door: doorRoom, sign: signRoom, chest: chestRoom })[t]();
+    ({ path: pathRoom, monster: monsterRoom, door: doorRoom, sign: signRoom, clock: clockRoom, time: timeRoom, logic: logicRoom, chest: chestRoom })[t]();
   }
   var left = (run) => GS.RUN !== run || !run;
   async function nextRoom() {
@@ -3678,8 +4471,9 @@ h2 { font-size: 1.6rem; }
 
   // src/shell.js
   function hudHTML(run) {
+    lands();
     const hearts = run ? Array.from({ length: run.maxHp }, (_, i) => `<img src="${ICON.heart}" alt="" class="${i < run.hp ? "" : "empty"}">`).join("") : "";
-    const TI = { path: "tree", monster: "heart", door: "door", sign: "sign", chest: "chest" };
+    const TI = { path: run && run.land === "mountains" ? "pine" : "tree", monster: "heart", door: "door", sign: "sign", chest: "chest", clock: "clock", time: "time", logic: "logic" };
     const trail = run ? run.rooms.map((r, i) => `${i ? "<i></i>" : ""}<span class="${i < run.i ? "done" : i === run.i ? "now" : ""}">${r ? `<img src="${ICON[TI[r]]}" alt="">` : "<b>?</b>"}</span>`).join("") : "";
     return `<div class="hud">
     ${run ? `<span class="hearts" aria-label="Serduszka: ${run.hp}">${hearts}</span>` : `<button class="icon-btn" id="homeBtn" aria-label="Ob\xF3z">\u26FA</button>`}
@@ -3971,6 +4765,42 @@ h2 { font-size: 1.6rem; }
       window.scrollTo({ top: 0 });
     } catch (e) {
     }
+  }
+
+  // src/map.js
+  function worldMap() {
+    GS.scene = null;
+    if (GS.G.trips >= UNLOCK_TRIPS && !GS.G.lands.includes("mountains")) {
+      GS.G.lands.push("mountains");
+      save();
+    }
+    const open = GS.G.lands, left2 = Math.max(0, UNLOCK_TRIPS - GS.G.trips);
+    app.innerHTML = `${hudHTML(null)}<h1>Mapa przyg\xF3d</h1>${dialogHTML()}
+    <div class="lands">${LAND_ORDER.map((k, i) => {
+      const L2 = lands()[k], ok = open.includes(k);
+      return `<button class="land${ok ? "" : " locked"}" data-land="${k}" ${ok ? "" : 'aria-disabled="true"'}>
+        <canvas width="256" height="96" aria-hidden="true"></canvas>
+        <b>${esc(L2.name)}</b><span>${esc(ok ? L2.desc : `Otworzy si\u0119 po ${UNLOCK_TRIPS} wyprawach. Zosta\u0142o: ${left2}.`)}</span></button>`;
+    }).join("")}</div>
+    <button class="btn small" id="backBtn">Wr\xF3\u0107 do obozu</button>`;
+    wireHud(worldMap);
+    wireSay();
+    app.querySelectorAll(".land").forEach((b, i) => {
+      const pic = bakeClearing(8, 3, 40 + i * 9, 2, lands()[b.dataset.land]);
+      b.querySelector("canvas").getContext("2d").drawImage(pic, 0, 0, 256, 96);
+      b.addEventListener("click", () => {
+        const k = b.dataset.land;
+        if (!open.includes(k)) {
+          snd.bad();
+          say(petName(), `Tam jeszcze nie dojdziemy. Jeszcze ${left2} ${left2 === 1 ? "wyprawa" : left2 < 5 ? "wyprawy" : "wypraw"} w lesie i ruszamy!`);
+          return;
+        }
+        snd.letter();
+        startTrip(k);
+      });
+    });
+    $("backBtn").addEventListener("click", camp);
+    say(petName(), open.length > 1 ? "Dok\u0105d dzi\u015B idziemy? Las czy G\xF3ry Zegarowe?" : "Na razie znamy drog\u0119 do lasu. Za kilka wypraw odkryjemy g\xF3ry!");
   }
 
   // src/sha256.js
@@ -4418,7 +5248,7 @@ h2 { font-size: 1.6rem; }
     const C = GS.G.camp;
     app.innerHTML = `${hudHTML(null)}<h1>Ob\xF3z</h1><div id="sc"></div>${dialogHTML()}
     <div class="decor-bar" id="decorBar" hidden></div>
-    <button class="btn main" id="tripBtn">Wyprawa do lasu</button>
+    <button class="btn main" id="tripBtn">Wyprawa</button>
     <div class="row"><button class="btn small gold" id="buildBtn">Budowa obozu</button><button class="btn small" id="editBtn">Ustaw ozdoby</button></div>
     <div class="row"><button class="btn small" id="shopBtn">Sklep: czapki i zwierzaki</button><button class="btn small" id="lookBtn">Zmie\u0144 wygl\u0105d</button><button class="btn small" id="playersBtn">Gracze</button></div>
     ${parentHTML()}`;
@@ -4542,7 +5372,7 @@ h2 { font-size: 1.6rem; }
     const ripe = C.beds.filter((b) => b.s === RIPE).length;
     const lines = [`Cze\u015B\u0107, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygod\u0119?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wypraw\u0119?`];
     say(petName(), ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`);
-    $("tripBtn").addEventListener("click", startTrip);
+    $("tripBtn").addEventListener("click", worldMap);
     $("buildBtn").addEventListener("click", buildScreen);
     $("shopBtn").addEventListener("click", shop);
     $("lookBtn").addEventListener("click", () => creator(true));

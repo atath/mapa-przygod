@@ -214,3 +214,34 @@ h2 { font-size: 1.6rem; }
 .stale .panel { max-width: 420px; }
 .stale h2 { font-size: 1.5rem; color: var(--leaf); }
 .stale p { margin: 0; }
+
+/* ---------- logic and time tasks ---------- */
+.task { display: grid; justify-items: center; gap: 8px; margin: 4px 0 12px; text-align: center; }
+.task-q { margin: 0; font-weight: 800; font-size: 1.25rem; }
+.task .em, .opt .em { font-size: 2rem; line-height: 1; }
+.task .em.big { font-size: 3.2rem; }
+.clock { width: min(210px, 60vw); height: auto; aspect-ratio: 1; }
+.clock.big { width: min(240px, 66vw); }
+.clues { margin: 0; padding: 10px 14px 10px 34px; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; text-align: left; font-weight: 700; max-width: 100%; }
+.clues li + li { margin-top: 4px; }
+.seq { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: 2rem; line-height: 1; }
+.seq .q { display: inline-grid; place-items: center; min-width: 2.2rem; border: 3px dashed var(--wood); border-radius: 10px; font-family: var(--font-body); font-weight: 900; font-size: 1.6rem; color: var(--wood-dark); }
+.opts .opt { display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 1.1rem; line-height: 1.2; padding: 8px; }
+.opts .opt .lb { font-family: var(--font-body); font-weight: 800; }
+.opts .opt small { font-family: var(--font-body); font-size: .85rem; font-weight: 700; opacity: .8; }
+.opts.times .opt .lb { font-family: var(--font-body); font-weight: 900; font-size: 1.9rem; }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.opts.wide { grid-template-columns: 1fr; }
+.opts.wide .opt { grid-template-columns: auto 1fr; justify-items: start; text-align: left; gap: 10px; min-height: 60px; }
+.opts.spans .opt { font-size: 1.15rem; }
+.setclock { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 12px; }
+
+/* ---------- world map ---------- */
+.lands { display: grid; gap: 14px; margin: 8px 0 16px; }
+.land { display: grid; gap: 4px; text-align: left; border: 3px solid var(--wood-dark); border-radius: 14px; background: var(--surface); padding: 10px; box-shadow: 0 5px 0 var(--wood-dark); font: inherit; color: inherit; cursor: pointer; }
+.land canvas { width: 100%; height: auto; border-radius: 8px; image-rendering: pixelated; }
+.land b { font-family: var(--font-pixel); font-size: 1.5rem; color: var(--leaf); }
+.land span { font-weight: 700; color: var(--muted); }
+.land.locked { filter: grayscale(.85); opacity: .75; }
+.land.locked b::after { content: " 🔒"; }
+.land:active:not(.locked) { transform: translateY(4px); box-shadow: 0 1px 0 var(--wood-dark); }

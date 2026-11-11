@@ -1,6 +1,6 @@
 /* ================== Helpers ================== */
 export const $ = (id) => document.getElementById(id);
-export const app = $("app");
+export const app = typeof document !== "undefined" ? $("app") : null;
 /* Game randomness (maps, monsters, words, passwords) goes through rnd(). Normally it is
    Math.random; tests set window.__LW_TEST.seed before the page loads, which makes every
    expedition repeatable, so a failure seen once can be replayed exactly.
