@@ -351,6 +351,83 @@ h2 { font-size: 1.6rem; }
     for (const b of camp2.beds) if (b.s < RIPE) b.s++;
   }
 
+  // src/stats.js
+  var MAX_ANSWERS = 400;
+  var MAX_TRIPS = 40;
+  var MAX_DAYS = 60;
+  var IDLE_MS = 12e4;
+  var SKILLS = {
+    "math.cards": "Karty: suma r\xF3wna mocy potwora",
+    "math.add": "Dodawanie",
+    "math.sub": "Odejmowanie",
+    "math.miss": "Brakuj\u0105ca liczba",
+    "math.three": "Trzy liczby",
+    "math.buy": "Odejmowanie przy zakupach",
+    "logic.spell": "Dob\xF3r czaru do potwora",
+    "polish.word": "Uk\u0142adanie s\u0142owa z liter",
+    "polish.read": "Czytanie drogowskaz\xF3w",
+    "polish.password": "Has\u0142o do skrzyni",
+    "code.path": "\u015Acie\u017Cka ze strza\u0142ek"
+  };
+  var emptyStats = () => ({ answers: [], trips: [], days: {} });
+  function normalizeStats(s) {
+    const d = emptyStats();
+    if (!s || typeof s !== "object") return d;
+    if (Array.isArray(s.answers)) d.answers = s.answers.filter((a) => a && SKILLS[a.k] && typeof a.t === "number").map((a) => ({ k: a.k, ok: !!a.ok, ms: Math.max(0, a.ms | 0), t: a.t, ...typeof a.d === "string" ? { d: a.d.slice(0, 40) } : {} })).slice(-MAX_ANSWERS);
+    if (Array.isArray(s.trips)) d.trips = s.trips.filter((x) => x && typeof x.t === "number").map((x) => ({ t: x.t, ms: Math.max(0, x.ms | 0), done: !!x.done, lv: x.lv | 0 })).slice(-MAX_TRIPS);
+    if (s.days && typeof s.days === "object") {
+      for (const k of Object.keys(s.days).sort().slice(-MAX_DAYS)) if (/^\d{4}-\d\d-\d\d$/.test(k)) d.days[k] = Math.max(0, s.days[k] | 0);
+    }
+    return d;
+  }
+  var st = () => GS.G && GS.G.stats;
+  function record(skill, ok, ms, detail) {
+    const s = st();
+    if (!s || !SKILLS[skill]) return;
+    s.answers.push({ k: skill, ok: !!ok, ms: Math.max(0, Math.round(ms || 0)), t: Date.now(), ...detail != null ? { d: String(detail).slice(0, 40) } : {} });
+    if (s.answers.length > MAX_ANSWERS) s.answers.splice(0, s.answers.length - MAX_ANSWERS);
+  }
+  function tripStart(run) {
+    run.t0 = Date.now();
+    run.active = 0;
+  }
+  function tripEnd(run, done) {
+    const s = st();
+    if (!s || !run || run.ended) return;
+    run.ended = true;
+    s.trips.push({ t: run.t0 || Date.now(), ms: run.active || 0, done: !!done, lv: GS.G.level });
+    if (s.trips.length > MAX_TRIPS) s.trips.splice(0, s.trips.length - MAX_TRIPS);
+  }
+  var dayKey = (d = /* @__PURE__ */ new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  var timer = () => {
+    const t0 = performance.now();
+    return () => performance.now() - t0;
+  };
+  var lastInput = Date.now();
+  var dirty = 0;
+  var isActive = () => typeof document !== "undefined" && document.visibilityState === "visible" && Date.now() - lastInput < IDLE_MS;
+  if (typeof window !== "undefined") {
+    for (const ev of ["pointerdown", "keydown"]) addEventListener(ev, () => {
+      lastInput = Date.now();
+    }, { capture: true, passive: true });
+    setInterval(() => {
+      const s = st();
+      if (!s || !isActive()) return;
+      if (document.querySelector("#panel:not([hidden]), #pin1, #staleBox")) return;
+      const k = dayKey();
+      s.days[k] = (s.days[k] || 0) + 1;
+      if (GS.RUN) GS.RUN.active = (GS.RUN.active || 0) + 1e3;
+      if (++dirty >= 30) {
+        dirty = 0;
+        if (onTick) onTick();
+      }
+    }, 1e3);
+  }
+  var onTick = null;
+  function persistWith(fn) {
+    onTick = fn;
+  }
+
   // src/save.js
   var KEY = "lesna-wyprawa";
   var KEY2 = "lesna-wyprawa-v2";
@@ -383,7 +460,8 @@ h2 { font-size: 1.6rem; }
       fights: Math.max(0, s.fights | 0),
       voice: s.voice !== false,
       sound: s.sound !== false,
-      camp: normalizeCamp(s.camp)
+      camp: normalizeCamp(s.camp),
+      stats: normalizeStats(s.stats)
     };
   }
   var blankProfile = () => normalizeProfile({}, newId());
@@ -446,6 +524,7 @@ h2 { font-size: 1.6rem; }
     GS.G = GS.DB.active ? GS.DB.profiles[GS.DB.active] : null;
     stale = false;
   }
+  persistWith(() => save());
   var saveFailed = false;
   function save() {
     if (stale) return;
@@ -2175,12 +2254,12 @@ h2 { font-size: 1.6rem; }
     $("sc").appendChild(cv.c);
     cv.c.setAttribute("aria-label", "Skrzynia ze skarbem");
     const bg = bakeClearing(8, 4, GS.RUN.seed + 999);
-    const st = { open: false };
+    const st2 = { open: false };
     GS.scene = { cv, draw(t) {
       const c = cv.x;
       c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
-      draw(c, SPR.chest, 56, 18 - (st.open ? 0 : bob(t, 1)), 2);
-      if (st.open) {
+      draw(c, SPR.chest, 56, 18 - (st2.open ? 0 : bob(t, 1)), 2);
+      if (st2.open) {
         for (let i = 0; i < 5; i++) draw(c, SPR.coin, 58 + i * 5, 8 - Math.round(Math.abs(Math.sin(t / 200 + i)) * 4), 0.9);
       }
       draw(c, PETSPR[GS.G.hero.pet], 6, 34 - bob(t, 2), 1.25);
@@ -2188,15 +2267,16 @@ h2 { font-size: 1.6rem; }
     } };
     let misses = 0, picShown = lv.picPass;
     const riddle = () => `<b>Zagadka:</b> ${esc(pw.r)}${picShown ? ` <span class="pic">${pw.e}</span>` : ""}`;
-    say(petName(), `Skrzynia jest zamkni\u0119ta na has\u0142o! U\u0142\xF3\u017C je ze zdobytych run. ${riddle()}`, `Skrzynia jest zamkni\u0119ta na has\u0142o. U\u0142\xF3\u017C je ze zdobytych run. Zagadka: ${pw.r}`);
+    sayHTML(petName(), `Skrzynia jest zamkni\u0119ta na has\u0142o! U\u0142\xF3\u017C je ze zdobytych run. ${riddle()}`, `Skrzynia jest zamkni\u0119ta na has\u0142o. U\u0142\xF3\u017C je ze zdobytych run. Zagadka: ${pw.r}`);
     $("ctl").innerHTML = `<div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>
     <div class="row">${picShown ? "" : `<button class="btn small" id="hintBtn">Podpowied\u017A</button>`}${libHintHTML()}</div>`;
     if ($("hintBtn")) $("hintBtn").addEventListener("click", () => {
       picShown = true;
       $("hintBtn").remove();
-      say(petName(), `${riddle()}`, `Zagadka: ${pw.r}. Sp\xF3jrz na obrazek.`);
+      sayHTML(petName(), riddle(), `Zagadka: ${pw.r}. Sp\xF3jrz na obrazek.`);
     });
+    const took = timer();
     let pos = 0;
     const slots = app.querySelectorAll(".slot");
     wireLibHint(() => {
@@ -2222,18 +2302,20 @@ h2 { font-size: 1.6rem; }
         if (misses === 2 && !picShown) {
           picShown = true;
           if ($("hintBtn")) $("hintBtn").remove();
-          say(petName(), `Podpowiem ci obrazkiem. ${riddle()}`, `Podpowiem ci obrazkiem. Zagadka: ${pw.r}`);
-        } else if (misses >= 4) say(petName(), esc(`Nast\u0119pna runa to \u201E${letters[pos]}\u201D.`), `Nast\u0119pna litera to ${letters[pos]}.`);
+          sayHTML(petName(), `Podpowiem ci obrazkiem. ${riddle()}`, `Podpowiem ci obrazkiem. Zagadka: ${pw.r}`);
+        } else if (misses >= 4) say(petName(), `Nast\u0119pna runa to \u201E${letters[pos]}\u201D.`, `Nast\u0119pna litera to ${letters[pos]}.`);
         else say(petName(), "Ta runa jeszcze nie teraz. Pomy\u015Bl o zagadce.");
       }
     }));
     function openChest() {
-      st.open = true;
+      st2.open = true;
       const house = houseBonus(GS.G.camp), bonus = 5 + GS.G.level * 2 + house;
       GS.RUN.coins += bonus;
       GS.G.coins += GS.RUN.coins;
       GS.G.trips++;
       growGarden(GS.G.camp);
+      record("polish.password", misses === 0, took(), `${pw.w}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
+      tripEnd(GS.RUN, true);
       save();
       speak(pw.w);
       snd.fanfare();
@@ -2241,7 +2323,7 @@ h2 { font-size: 1.6rem; }
       bigEffect();
       setTimeout(bigEffect, 700);
       $("coinN").textContent = GS.G.coins;
-      setTimeout(() => cv.c.isConnected && say(heroName(), esc(`Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}`)), 900);
+      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}`), 900);
       $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
       $("campBtn").addEventListener("click", () => {
         GS.RUN = null;
@@ -2261,13 +2343,13 @@ h2 { font-size: 1.6rem; }
     cv.c.setAttribute("aria-label", "Potw\xF3r na polanie");
     const bg = bakeClearing(8, 4, GS.RUN.seed + GS.RUN.i);
     const run = GS.RUN;
-    const st = { mhp: maxHp, shake: 0, gone: 0, swing: 0, proj: null, shield: 0, flash: 0 };
+    const st2 = { mhp: maxHp, shake: 0, gone: 0, swing: 0, proj: null, shield: 0, flash: 0 };
     GS.scene = { cv, draw(t) {
       const x = cv.x;
       x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
       draw(x, PETSPR[GS.G.hero.pet], 4, 34 - bob(t, 2), 1.25);
-      if (!(st.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st.swing, 16 - bob(t), 1.75);
-      if (st.shield) {
+      if (!(st2.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st2.swing, 16 - bob(t), 1.75);
+      if (st2.shield) {
         x.strokeStyle = "rgba(140,220,255,.9)";
         x.lineWidth = 2;
         x.beginPath();
@@ -2276,19 +2358,19 @@ h2 { font-size: 1.6rem; }
         x.fillStyle = "rgba(140,220,255,.18)";
         x.fill();
       }
-      if (st.gone < 1) {
+      if (st2.gone < 1) {
         x.save();
-        x.globalAlpha = 1 - st.gone;
-        const sx = 82 + (st.shake ? Math.round(Math.sin(t / 20) * 2) : 0);
-        draw(x, mon.frames[Math.floor(t / 240) % 2], sx, 16 - bob(t, 1) - st.gone * 10, 2.25);
+        x.globalAlpha = 1 - st2.gone;
+        const sx = 82 + (st2.shake ? Math.round(Math.sin(t / 20) * 2) : 0);
+        draw(x, mon.frames[Math.floor(t / 240) % 2], sx, 16 - bob(t, 1) - st2.gone * 10, 2.25);
         x.drawImage(E.icon, 70, 1, 13, 13);
         for (let i = 0; i < maxHp; i++) {
-          x.globalAlpha = (1 - st.gone) * (i < st.mhp ? 1 : 0.22);
+          x.globalAlpha = (1 - st2.gone) * (i < st2.mhp ? 1 : 0.22);
           x.drawImage(SPR.heart, 84 + i * 12, 1, 14, 14);
         }
         x.restore();
       }
-      if (st.proj) x.drawImage(st.proj.spr, st.proj.x - 8, st.proj.y - 8, 16, 16);
+      if (st2.proj) x.drawImage(st2.proj.spr, st2.proj.x - 8, st2.proj.y - 8, 16, 16);
     } };
     const anim = (ms, fn) => new Promise((res) => {
       const t0 = performance.now();
@@ -2301,14 +2383,14 @@ h2 { font-size: 1.6rem; }
       requestAnimationFrame(f);
     });
     const fly = (spr, a, b, y) => anim(450, (p) => {
-      st.proj = p < 1 ? { spr, x: a + (b - a) * p, y: y - Math.sin(p * Math.PI) * 10 } : null;
+      st2.proj = p < 1 ? { spr, x: a + (b - a) * p, y: y - Math.sin(p * Math.PI) * 10 } : null;
     });
     const swing = () => anim(300, (p) => {
-      st.swing = Math.round(Math.sin(p * Math.PI) * 18);
+      st2.swing = Math.round(Math.sin(p * Math.PI) * 18);
     });
     const shake = () => {
-      st.shake = 1;
-      setTimeout(() => st.shake = 0, 500);
+      st2.shake = 1;
+      setTimeout(() => st2.shake = 0, 500);
     };
     function makeHand(T) {
       const sol = [];
@@ -2357,12 +2439,13 @@ h2 { font-size: 1.6rem; }
         const v = ans + ri(-3, 3);
         if (v >= 0) opts.add(v);
       }
-      return { show, say: sayTxt, ans, opts: shuffle([...opts]), q: kind === "miss" ? show : show + " = ?" };
+      return { kind, show, say: sayTxt, ans, opts: shuffle([...opts]), q: kind === "miss" ? show : show + " = ?" };
     }
     let wrongSpells = 0;
     function playerTurn(prefix) {
       const N = ri(lv.hp[0], lv.hp[1]), hand = makeHand(N), sel = /* @__PURE__ */ new Set();
       let spell = null, busy = false;
+      const took = timer();
       if (window.__LW_TEST) Object.assign(window.__LW_TEST, { T: N, el });
       $("ctl").innerHTML = `
       <div class="foe"><span class="power"><img src="${EICON[el]}" width="40" height="40" alt="">${esc(mon.name)} \xB7 moc <b>${N}</b></span></div>
@@ -2398,17 +2481,19 @@ h2 { font-size: 1.6rem; }
       $("cast").addEventListener("click", async () => {
         if (busy || !spell || !sel.size) return;
         busy = true;
-        const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter;
+        const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter, ms = took();
+        record("math.cards", okSum, ms, `moc ${N}: ${[...sel].map((i) => hand[i]).join(" + ")} = ${total}`);
+        record("logic.spell", okEl, ms, `${E.adj} \u2192 ${ELEM[spell].name}`);
         await swing();
         await fly(ELEM[spell].icon, 44, 96, 30);
         if (left(run)) return;
         if (okSum && okEl) {
           snd.hit();
           shake();
-          st.mhp--;
+          st2.mhp--;
           burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
-          if (st.mhp <= 0) return defeat();
-          say(heroName(), esc(`Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st.mhp} ${st.mhp === 1 ? "serduszko" : "serduszka"}.`));
+          if (st2.mhp <= 0) return defeat();
+          say(heroName(), `Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st2.mhp} ${st2.mhp === 1 ? "serduszko" : "serduszka"}.`);
         } else {
           snd.bad();
           let msg;
@@ -2418,41 +2503,43 @@ h2 { font-size: 1.6rem; }
             msg = `${ELEM[spell].name} nie dzia\u0142a na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora dzia\u0142a ${ELEM[counter].name}.` : "Zajrzyj do ksi\u0119gi czar\xF3w.");
           }
           if (!okSum && !okEl) msg += " I sprawd\u017A czar w ksi\u0119dze.";
-          say(mon.name, esc("Hi hi! " + msg));
+          say(mon.name, "Hi hi! " + msg);
         }
         await sleep(1800);
         if (left(run)) return;
         monsterTurn();
       });
-      say(petName(), esc((prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`));
+      say(petName(), (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`);
     }
     function monsterTurn() {
       const q = attackQ();
       $("ctl").innerHTML = `<div class="foe"><span class="power">\u{1F6E1}\uFE0F Tarcza: ile to?</span></div><div class="sum">${q.q}</div>
       <div class="opts">${q.opts.map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>`;
-      say(mon.name, esc(`${mon.name} ${mon.attack}! Os\u0142o\u0144 si\u0119 tarcz\u0105: ${q.q}`), `${mon.name} ${mon.attack}! Os\u0142o\u0144 si\u0119 tarcz\u0105. ${q.say}?`);
+      say(mon.name, `${mon.name} ${mon.attack}! Os\u0142o\u0144 si\u0119 tarcz\u0105: ${q.q}`, `${mon.name} ${mon.attack}! Os\u0142o\u0144 si\u0119 tarcz\u0105. ${q.say}?`);
       let done = false;
+      const took = timer();
       app.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", async () => {
         if (done) return;
         done = true;
         const ok = +b.dataset.v === q.ans;
+        record("math." + q.kind, ok, took(), `${q.show.replace("?", "\u25A1")} \u2192 ${b.dataset.v}${ok ? "" : ` (${q.ans})`}`);
         b.classList.add(ok ? "right" : "wrong");
         if (ok) {
-          st.shield = 1;
+          st2.shield = 1;
           snd.letter();
           await fly(E.icon, 92, 40, 30);
           snd.ok();
-          say(heroName(), esc(`Tarcza! Odpowied\u017A ${q.ans} jest dobra. Atak odbity!`));
+          say(heroName(), `Tarcza! Odpowied\u017A ${q.ans} jest dobra. Atak odbity!`);
           await sleep(1300);
-          st.shield = 0;
+          st2.shield = 0;
           if (left(run)) return;
         } else {
           await fly(E.icon, 92, 36, 30);
-          st.flash = 1;
-          setTimeout(() => st.flash = 0, 600);
+          st2.flash = 1;
+          setTimeout(() => st2.flash = 0, 600);
           const fainted = await hurt();
           if (left(run)) return;
-          if (!fainted) say(petName(), esc(`A\u0142a! Dobra odpowied\u017A to ${q.ans}. Nast\u0119pnym razem si\u0119 uda!`));
+          if (!fainted) say(petName(), `A\u0142a! Dobra odpowied\u017A to ${q.ans}. Nast\u0119pnym razem si\u0119 uda!`);
           await sleep(1800);
           if (left(run)) return;
         }
@@ -2463,7 +2550,7 @@ h2 { font-size: 1.6rem; }
       snd.poof();
       burst(cv.c, 40, PAL);
       await anim(600, (p) => {
-        st.gone = p;
+        st2.gone = p;
       });
       if (left(run)) return;
       const loot = ri(2, 3) + (GS.G.level - 1);
@@ -2473,7 +2560,7 @@ h2 { font-size: 1.6rem; }
       save();
       updHud();
       snd.coin();
-      say(heroName(), esc(`${pick(PRAISE)} ${mon.name} uciek\u0142 i zostawi\u0142 ${loot} monety!`));
+      say(heroName(), `${pick(PRAISE)} ${mon.name} uciek\u0142 i zostawi\u0142 ${loot} monety!`);
       nextRoom();
     }
     const intro = GS.G.fights === 0 ? `Uwaga! ${mon.name} to potw\xF3r ${E.adj}. Ka\u017Cdy potw\xF3r boi si\u0119 innego czaru, to jest w ksi\u0119dze czar\xF3w. Wybierz dobry czar i karty, kt\xF3re razem daj\u0105 jego moc. Potem potw\xF3r zaatakuje, a ty os\u0142onisz si\u0119 tarcz\u0105.` : `Grrr! ${mon.name} zagradza drog\u0119!`;
@@ -2623,9 +2710,9 @@ h2 { font-size: 1.6rem; }
             if (m2 === FULL) return d;
             continue;
           }
-          const st = r2 + "," + c2 + "," + m2;
-          if (!seen.has(st)) {
-            seen.add(st);
+          const st2 = r2 + "," + c2 + "," + m2;
+          if (!seen.has(st2)) {
+            seen.add(st2);
             next.push([r2, c2, m2]);
           }
         }
@@ -2770,9 +2857,9 @@ h2 { font-size: 1.6rem; }
         x.font = "bold 7px sans-serif";
         x.textAlign = "center";
         x.textBaseline = "middle";
-        simulate(M, prog).forEach((st, n) => {
-          if (st.crash) {
-            const cx2 = Math.max(0, Math.min(M.COLS - 1, st.c)) * 16 + 8, cy2 = Math.max(0, Math.min(M.ROWS - 1, st.r)) * 16 + 8;
+        simulate(M, prog).forEach((st2, n) => {
+          if (st2.crash) {
+            const cx2 = Math.max(0, Math.min(M.COLS - 1, st2.c)) * 16 + 8, cy2 = Math.max(0, Math.min(M.ROWS - 1, st2.r)) * 16 + 8;
             x.fillStyle = "#e8442c";
             x.save();
             x.translate(cx2, cy2);
@@ -2782,7 +2869,7 @@ h2 { font-size: 1.6rem; }
             x.restore();
             return;
           }
-          const cx = st.c * 16 + 8, cy = st.r * 16 + 8;
+          const cx = st2.c * 16 + 8, cy = st2.r * 16 + 8;
           x.fillStyle = "rgba(255,255,255,.88)";
           x.beginPath();
           x.arc(cx, cy, 4.5, 0, 7);
@@ -2817,6 +2904,7 @@ h2 { font-size: 1.6rem; }
         requestAnimationFrame(f);
       });
     }
+    let took = timer();
     let prog = [], busy = false, active = -1, fails = 0, tries = 0;
     const maxTries = GS.G.level === 3 ? 3 : Infinity;
     const triesWord = (n) => n === 1 ? "pr\xF3ba" : n < 5 ? "pr\xF3by" : "pr\xF3b", leftWord = (n) => n === 1 ? "Zosta\u0142a" : "Zosta\u0142y";
@@ -2876,7 +2964,7 @@ h2 { font-size: 1.6rem; }
       }
       busy = true;
       let result = "short", reached = null;
-      const picked = [];
+      const picked = [], thought = took(), blocks = prog.length;
       const steps = simulate(M, prog);
       for (const stp of steps) {
         if (stp.bi !== active) {
@@ -2909,16 +2997,21 @@ h2 { font-size: 1.6rem; }
       }
       active = -1;
       drawProg();
+      const detail = (ok) => `${blocks} ${blocks === 1 ? "klocek" : blocks < 5 ? "klocki" : "klock\xF3w"}, monety ${picked.length}/${M.coins.size}${ok ? "" : `, ${result === "short" ? "za kr\xF3tko" : "zderzenie"}`}`;
       if (result === "win") {
+        record("code.path", true, thought, detail(true));
+        save();
         GS.RUN.rooms[GS.RUN.i + 1] = reached.type;
         GS.RUN.coins += picked.length;
         updHud();
         const all = picked.length > 0 && coins.size === 0;
         snd.ok();
         burst(cv.c, 30);
-        say(heroName(), esc(`Uda\u0142o si\u0119! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " \u2014 wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`));
+        say(heroName(), `Uda\u0142o si\u0119! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " \u2014 wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
         return nextRoom();
       }
+      record("code.path", false, thought, detail(false));
+      took = timer();
       picked.forEach((k) => coins.add(k));
       fails++;
       tries++;
@@ -2933,7 +3026,7 @@ h2 { font-size: 1.6rem; }
       pet.x = 0;
       pet.y = hero.y + 6;
       if (tries >= maxTries) return guide();
-      say(petName(), esc(msg + back + (isFinite(maxTries) ? ` ${leftWord(maxTries - tries)} ${maxTries - tries} ${triesWord(maxTries - tries)}.` : " Popraw strza\u0142ki i spr\xF3buj jeszcze raz.")));
+      say(petName(), msg + back + (isFinite(maxTries) ? ` ${leftWord(maxTries - tries)} ${maxTries - tries} ${triesWord(maxTries - tries)}.` : " Popraw strza\u0142ki i spr\xF3buj jeszcze raz."));
       drawProg();
       busy = false;
     });
@@ -2969,12 +3062,12 @@ h2 { font-size: 1.6rem; }
       }
       const ex = M.exits.find((e) => e.cell[0] === cell[0] && e.cell[1] === cell[1]);
       GS.RUN.rooms[GS.RUN.i + 1] = ex.type;
-      say(petName(), esc(`Jeste\u015Bmy przy wyj\u015Bciu. Idziemy: ${ROOM_NAME[ex.type]}.`));
+      say(petName(), `Jeste\u015Bmy przy wyj\u015Bciu. Idziemy: ${ROOM_NAME[ex.type]}.`);
       nextRoom();
     }
     const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
     const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. Z lasu prowadz\u0105 ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Monety licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `Las si\u0119 rozwidla. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
-    say(petName(), esc(intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : "")));
+    say(petName(), intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : ""));
   }
 
   // src/polish-rooms.js
@@ -2986,20 +3079,20 @@ h2 { font-size: 1.6rem; }
     $("sc").appendChild(cv.c);
     cv.c.setAttribute("aria-label", "Zaczarowane drzwi");
     const bg = bakeClearing(8, 4, GS.RUN.seed + GS.RUN.i * 7);
-    const st = { open: 0, glow: 0 };
+    const st2 = { open: 0, glow: 0 };
     GS.scene = { cv, draw(t) {
       const c = cv.x;
       c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
       c.save();
-      c.globalAlpha = 1 - st.open;
-      draw(c, SPR.door, 52, 10 - st.open * 6, 1.6);
+      c.globalAlpha = 1 - st2.open;
+      draw(c, SPR.door, 52, 10 - st2.open * 6, 1.6);
       c.restore();
-      if (st.open > 0) {
-        c.fillStyle = `rgba(255,233,140,${st.open * 0.8})`;
+      if (st2.open > 0) {
+        c.fillStyle = `rgba(255,233,140,${st2.open * 0.8})`;
         c.fillRect(56, 14, 22, 36);
       }
       for (let i = 0; i < letters.length; i++) {
-        const on = i < st.glow;
+        const on = i < st2.glow;
         c.fillStyle = on ? "#ffe14d" : "#5a4bb0";
         c.fillRect(52 + i * 4, 6, 3, 3);
       }
@@ -3007,10 +3100,11 @@ h2 { font-size: 1.6rem; }
       draw(c, GS.HERO, 22, 16 - bob(t), 1.75);
     } };
     const decoys = GS.G.level === 1 ? [] : shuffle("aeiouykrstmnl".split("").filter((l) => !letters.includes(l))).slice(0, GS.G.level === 2 ? 1 : 2);
-    if (lv.spoken) say(petName(), esc(`Zaczarowane drzwi! Otworzy je s\u0142owo z obrazka: \u201E${x.w}\u201D. U\u0142\xF3\u017C je z run.`), `Zaczarowane drzwi! Otworzy je s\u0142owo ${x.w}. U\u0142\xF3\u017C je z liter, po kolei.`);
+    if (lv.spoken) say(petName(), `Zaczarowane drzwi! Otworzy je s\u0142owo z obrazka: \u201E${x.w}\u201D. U\u0142\xF3\u017C je z run.`, `Zaczarowane drzwi! Otworzy je s\u0142owo ${x.w}. U\u0142\xF3\u017C je z liter, po kolei.`);
     else say(petName(), "Zaczarowane drzwi! Otworzy je nazwa tego, co widzisz na obrazku. U\u0142\xF3\u017C j\u0105 z run. Uwaga, niekt\xF3re runy s\u0105 fa\u0142szywe!");
     $("ctl").innerHTML = `<div class="hint-pic" aria-hidden="true">${x.e}</div><div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>${libHintHTML()}`;
+    const took = timer();
     let pos = 0, misses = 0;
     const slots = app.querySelectorAll(".slot");
     wireLibHint(() => {
@@ -3018,7 +3112,7 @@ h2 { font-size: 1.6rem; }
       if (!t) return false;
       const l = letters[pos];
       t.click();
-      if (pos < letters.length) say(petName(), esc(`Biblioteczka podpowiada: \u201E${l}\u201D.`));
+      if (pos < letters.length) say(petName(), `Biblioteczka podpowiada: \u201E${l}\u201D.`);
     });
     app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", async () => {
       if (pos >= letters.length || b.classList.contains("used")) return;
@@ -3027,18 +3121,20 @@ h2 { font-size: 1.6rem; }
         slots[pos].classList.add("filled");
         b.classList.add("used");
         pos++;
-        st.glow = pos;
+        st2.glow = pos;
         snd.letter();
         if (pos === letters.length) {
           snd.door();
           burst(app.querySelector(".slots"), 30);
           speak(x.w);
+          record("polish.word", misses === 0, took(), `${x.w}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
+          save();
           const run = GS.RUN;
           await new Promise((res) => {
             const t0 = performance.now();
             function f(n) {
-              st.open = Math.min(1, (n - t0) / 700);
-              if (st.open < 1) requestAnimationFrame(f);
+              st2.open = Math.min(1, (n - t0) / 700);
+              if (st2.open < 1) requestAnimationFrame(f);
               else res();
             }
             requestAnimationFrame(f);
@@ -3047,7 +3143,7 @@ h2 { font-size: 1.6rem; }
           GS.RUN.coins += GS.G.level;
           updHud();
           snd.coin();
-          say(heroName(), esc(`${pick(PRAISE)} \u201E${x.w}\u201D otworzy\u0142o drzwi!`));
+          say(heroName(), `${pick(PRAISE)} \u201E${x.w}\u201D otworzy\u0142o drzwi!`);
           nextRoom();
         }
       } else {
@@ -3056,7 +3152,7 @@ h2 { font-size: 1.6rem; }
         void b.offsetWidth;
         b.classList.add("shake");
         snd.bad();
-        if (misses >= 3) say(petName(), esc(`Nast\u0119pna litera to \u201E${letters[pos]}\u201D.`), `Nast\u0119pna litera to ${letters[pos]}.`);
+        if (misses >= 3) say(petName(), `Nast\u0119pna litera to \u201E${letters[pos]}\u201D.`, `Nast\u0119pna litera to ${letters[pos]}.`);
         else say(petName(), "Ta runa nie pasuje. Powiedz s\u0142owo powoli i pos\u0142uchaj, jaka g\u0142oska jest nast\u0119pna.");
       }
     }));
@@ -3101,13 +3197,14 @@ h2 { font-size: 1.6rem; }
       draw(c, PETSPR[GS.G.hero.pet], 6, 34 - bob(t, 2), 1.25);
       draw(c, GS.HERO, 22, 16 - bob(t), 1.75);
     } };
-    say(
+    sayHTML(
       petName(),
       `Rozdro\u017Ce! Musimy doj\u015B\u0107 tam, gdzie jest <span class="pic">${target.e}</span>. Drogowskazy s\u0105 podobne \u2014 czytaj bardzo uwa\u017Cnie, litera po literze!`,
       "Rozdro\u017Ce! Sp\xF3jrz na obrazek. Drogowskazy s\u0105 do siebie podobne, wi\u0119c czytaj bardzo uwa\u017Cnie, litera po literze."
     );
     $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>${libHintHTML()}`;
-    let done = false;
+    let done = false, wrongPicks = [];
+    const took = timer();
     wireLibHint(() => {
       const wrong = [...app.querySelectorAll("[data-w]")].filter((b2) => !b2.disabled && b2.dataset.w !== target.w);
       if (done || !wrong.length) return false;
@@ -3115,7 +3212,7 @@ h2 { font-size: 1.6rem; }
       b.classList.add("wrong");
       b.disabled = true;
       snd.letter();
-      say(petName(), esc(`Biblioteczka m\xF3wi: \u201E${b.dataset.w}\u201D to nie ta droga.`), `Biblioteczka m\xF3wi: ${b.dataset.w} to nie ta droga.`);
+      say(petName(), `Biblioteczka m\xF3wi: \u201E${b.dataset.w}\u201D to nie ta droga.`, `Biblioteczka m\xF3wi: ${b.dataset.w} to nie ta droga.`);
     });
     app.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", async () => {
       if (done || b.disabled) return;
@@ -3125,11 +3222,14 @@ h2 { font-size: 1.6rem; }
         snd.ok();
         burst(b);
         speak(target.w);
+        record("polish.read", !wrongPicks.length, took(), wrongPicks.length ? `${target.w} \u2190 ${wrongPicks.join(", ")}` : target.w);
+        save();
         GS.RUN.coins += GS.G.level;
         updHud();
-        say(heroName(), esc(`${pick(PRAISE)} \u201E${target.w}\u201D \u2014 to nasza droga.`));
+        say(heroName(), `${pick(PRAISE)} \u201E${target.w}\u201D \u2014 to nasza droga.`);
         nextRoom();
       } else {
+        wrongPicks.push(b.dataset.w);
         b.classList.add("wrong");
         b.disabled = true;
         b.classList.remove("shake");
@@ -3137,7 +3237,7 @@ h2 { font-size: 1.6rem; }
         b.classList.add("shake");
         const run = GS.RUN, fainted = await hurt();
         if (left(run)) return;
-        if (!fainted) say(petName(), esc(`Tu jest napisane \u201E${b.dataset.w}\u201D. To nie to! Szukamy dalej.`), `Tu jest napisane ${b.dataset.w}. To nie to. Szukamy dalej.`);
+        if (!fainted) say(petName(), `Tu jest napisane \u201E${b.dataset.w}\u201D. To nie to! Szukamy dalej.`, `Tu jest napisane ${b.dataset.w}. To nie to. Szukamy dalej.`);
       }
     }));
   }
@@ -3172,6 +3272,7 @@ h2 { font-size: 1.6rem; }
     order.forEach((idx, k) => runes[Math.floor(k * spots / order.length)].push(pw.w[idx]));
     const maxHp = 3 + wellHearts(GS.G.camp);
     GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
+    tripStart(GS.RUN);
     room();
   }
   function roomShell() {
@@ -3185,6 +3286,8 @@ h2 { font-size: 1.6rem; }
           speechSynthesis.cancel();
         } catch (e) {
         }
+        tripEnd(GS.RUN, false);
+        save();
         GS.RUN = null;
         camp();
         return;
@@ -3225,7 +3328,7 @@ h2 { font-size: 1.6rem; }
       GS.RUN.got = GS.RUN.got.concat(got);
       updHud();
       snd.letter();
-      say(petName(), esc(`Zdobywamy ${got.length === 1 ? "run\u0119" : "runy"}: ${got.join(", ").toUpperCase()}! Przyda si\u0119 do has\u0142a skrzyni.`), `Zdobywamy ${got.length === 1 ? "run\u0119" : "runy"}: ${got.join(", ")}. Przyda si\u0119 do has\u0142a skrzyni.`);
+      say(petName(), `Zdobywamy ${got.length === 1 ? "run\u0119" : "runy"}: ${got.join(", ").toUpperCase()}! Przyda si\u0119 do has\u0142a skrzyni.`, `Zdobywamy ${got.length === 1 ? "run\u0119" : "runy"}: ${got.join(", ")}. Przyda si\u0119 do has\u0142a skrzyni.`);
       const r = app.querySelector(".runes");
       if (r) burst(r, 18);
       await sleep(1900);
@@ -3247,7 +3350,7 @@ h2 { font-size: 1.6rem; }
     GS.RUN.coins -= lost;
     GS.RUN.hp = GS.RUN.maxHp;
     updHud();
-    say(petName(), esc(`Ojej, ${heroName()} si\u0119 ${gw("zm\u0119czy\u0142a", "zm\u0119czy\u0142")}. Odpoczywamy chwilk\u0119\u2026 Ju\u017C lepiej! ${lost ? gw("Zgubi\u0142y\u015Bmy ", "Zgubili\u015Bmy ") + lost + " " + (lost === 1 ? "monet\u0119" : "monety") + ". " : ""}Spr\xF3bujmy jeszcze raz.`));
+    say(petName(), `Ojej, ${heroName()} si\u0119 ${gw("zm\u0119czy\u0142a", "zm\u0119czy\u0142")}. Odpoczywamy chwilk\u0119\u2026 Ju\u017C lepiej! ${lost ? gw("Zgubi\u0142y\u015Bmy ", "Zgubili\u015Bmy ") + lost + " " + (lost === 1 ? "monet\u0119" : "monety") + ". " : ""}Spr\xF3bujmy jeszcze raz.`);
     return true;
   }
   function libHintHTML() {
@@ -3603,7 +3706,10 @@ h2 { font-size: 1.6rem; }
   function dialogHTML() {
     return `<div class="dialog" role="status" aria-live="polite"><div class="body"><span class="who" id="who"></span><span class="txt" id="txt"></span></div><button class="say" id="sayBtn" aria-label="Przeczytaj jeszcze raz">\u{1F50A}</button></div>`;
   }
-  function say(who, html, spoken) {
+  function say(who, text, spoken) {
+    sayHTML(who, esc(text), spoken != null ? spoken : String(text));
+  }
+  function sayHTML(who, html, spoken) {
     const oldErr = document.getElementById("sayErr");
     if (oldErr) oldErr.remove();
     $("who").textContent = who || "";
@@ -3707,12 +3813,13 @@ h2 { font-size: 1.6rem; }
         if (v >= 0) opts.add(v);
       }
       asking = true;
+      const took = timer();
       $("ask").hidden = false;
       $("ask").innerHTML = `<div class="sum">${have} \u2212 ${price} = ?</div><div class="opts">${shuffle([...opts]).map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>
       <button class="btn small" id="askCancel">Jednak nie kupuj\u0119</button>`;
       say(
         petName(),
-        esc(`Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to 1 moneta rabatu!`),
+        `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to 1 moneta rabatu!`,
         `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to jedna moneta rabatu.`
       );
       $("ask").scrollIntoView({ block: "nearest" });
@@ -3725,6 +3832,7 @@ h2 { font-size: 1.6rem; }
         if (!asking) return;
         const ok = +b.dataset.v === ans;
         b.classList.add(ok ? "right" : "wrong");
+        record("math.buy", ok, took(), `${have} \u2212 ${price} \u2192 ${b.dataset.v}${ok ? "" : ` (${ans})`}`);
         const paid = ok ? price - 1 : price;
         GS.G.coins -= paid;
         const done = apply();
@@ -3732,7 +3840,7 @@ h2 { font-size: 1.6rem; }
         ok ? snd.ok() : snd.coin();
         burst(btn, 30);
         $("coinN").textContent = GS.G.coins;
-        say(petName(), esc((ok ? `Brawo, zostanie ${ans}! Z rabatem p\u0142acimy ${paid}. ` : `Zostanie ${ans}. P\u0142acimy ${paid}. `) + done));
+        say(petName(), (ok ? `Brawo, zostanie ${ans}! Z rabatem p\u0142acimy ${paid}. ` : `Zostanie ${ans}. P\u0142acimy ${paid}. `) + done);
         setTimeout(() => {
           asking = null;
           $("ask").hidden = true;
@@ -3754,7 +3862,7 @@ h2 { font-size: 1.6rem; }
     });
     $("backBtn").addEventListener("click", camp);
     render();
-    say(petName(), esc(`Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Ka\u017Cdy budynek pomaga na wyprawach.`));
+    say(petName(), `Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Ka\u017Cdy budynek pomaga na wyprawach.`);
     try {
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -4103,14 +4211,26 @@ h2 { font-size: 1.6rem; }
         msg("Tekst jest zaznaczony \u2014 skopiuj go r\u0119cznie (Kopiuj w menu).");
       }
     });
-    $("dlBtn").addEventListener("click", () => {
+    $("dlBtn").addEventListener("click", async () => {
+      const name = `mapa-przygod-zapis-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`, data = $("exportTxt").value;
+      const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
+      if (dl) {
+        try {
+          await dl.save({ filename: name, data });
+          msg("Kopia zapisana.");
+        } catch (e) {
+          msg(e && e.code === "declined" ? "Nie zapisano pliku. Mo\u017Cesz te\u017C u\u017Cy\u0107 \u201EKopiuj tekst\u201D." : "Nie uda\u0142o si\u0119 zapisa\u0107 pliku \u2014 u\u017Cyj \u201EKopiuj tekst\u201D.", false);
+        }
+        return;
+      }
       try {
-        const a = document.createElement("a"), day = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-        a.href = URL.createObjectURL(new Blob([$("exportTxt").value], { type: "application/json" }));
-        a.download = `mapa-przygod-zapis-${day}.json`;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+        a.download = name;
         document.body.appendChild(a);
         a.click();
         a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1e4);
         msg("Plik powinien si\u0119 pobra\u0107. Je\u015Bli nic si\u0119 nie sta\u0142o, u\u017Cyj \u201EKopiuj tekst\u201D.");
       } catch (e) {
         msg("Nie uda\u0142o si\u0119 pobra\u0107 pliku \u2014 u\u017Cyj \u201EKopiuj tekst\u201D.", false);
@@ -4269,7 +4389,7 @@ h2 { font-size: 1.6rem; }
             burst(b, 40);
           } else snd.letter();
           GS.G.hero.pet = k;
-          say(petName(), esc(`Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. Id\u0119 z tob\u0105 na wypraw\u0119!`));
+          say(petName(), `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. Id\u0119 z tob\u0105 na wypraw\u0119!`);
         }
         save();
         rebuildHero();
@@ -4370,7 +4490,7 @@ h2 { font-size: 1.6rem; }
     function harvest(i, e) {
       const bed = C.beds[i];
       if (bed.s < RIPE) {
-        say(petName(), esc(`Ta grz\u0105dka jeszcze ro\u015Bnie. Po ${RIPE - bed.s === 1 ? "nast\u0119pnej wyprawie" : `${RIPE - bed.s} wyprawach`} b\u0119dzie plon.`));
+        say(petName(), `Ta grz\u0105dka jeszcze ro\u015Bnie. Po ${RIPE - bed.s === 1 ? "nast\u0119pnej wyprawie" : `${RIPE - bed.s} wyprawach`} b\u0119dzie plon.`);
         return;
       }
       const got = PLANT_NAME[bed.p];
@@ -4381,7 +4501,7 @@ h2 { font-size: 1.6rem; }
       snd.coin();
       burst(cv.c, 18);
       $("coinN").textContent = GS.G.coins;
-      say(heroName(), esc(`Zebrane: ${got}! +3 monety. Posia\u0142am nowe nasionko.`.replace("Posia\u0142am", gw("Posia\u0142am", "Posia\u0142em"))));
+      say(heroName(), `Zebrane: ${got}! +3 monety. Posia\u0142am nowe nasionko.`.replace("Posia\u0142am", gw("Posia\u0142am", "Posia\u0142em")));
     }
     function renderBar() {
       const inv = Object.keys(C.inv).filter((k) => C.inv[k] > 0);
@@ -4421,7 +4541,7 @@ h2 { font-size: 1.6rem; }
     });
     const ripe = C.beds.filter((b) => b.s === RIPE).length;
     const lines = [`Cze\u015B\u0107, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygod\u0119?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wypraw\u0119?`];
-    say(petName(), esc(ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`));
+    say(petName(), ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`);
     $("tripBtn").addEventListener("click", startTrip);
     $("buildBtn").addEventListener("click", buildScreen);
     $("shopBtn").addEventListener("click", shop);

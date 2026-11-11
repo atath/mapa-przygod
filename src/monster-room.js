@@ -10,6 +10,7 @@ import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, pick, reduced, ri, shuffle, sleep, rnd } from "./util.js";
+import { record, timer } from "./stats.js";
 
 /* ---------- Monster room (spells + math, turn-based) ---------- */
 export function monsterRoom() {
@@ -56,12 +57,12 @@ export function monsterRoom() {
     else if (kind === "miss") { const s_ = ri(8, max), a = ri(2, s_ - 2); ans = s_ - a; show = `${a} + ? = ${s_}`; sayTxt = `${a} dodać ile daje ${s_}`; }
     else { const a = ri(4, 12), b = ri(2, 8), c = ri(1, Math.min(9, a + b - 1)); ans = a + b - c; show = `${a} + ${b} − ${c}`; sayTxt = `${a} dodać ${b} odjąć ${c}`; }
     const opts = new Set([ans]); while (opts.size < (lvl === 1 ? 3 : 4)) { const v = ans + ri(-3, 3); if (v >= 0) opts.add(v); }
-    return { show, say: sayTxt, ans, opts: shuffle([...opts]), q: kind === "miss" ? show : show + " = ?" };
+    return { kind, show, say: sayTxt, ans, opts: shuffle([...opts]), q: kind === "miss" ? show : show + " = ?" };
   }
   let wrongSpells = 0;
   function playerTurn(prefix) {
     const N = ri(lv.hp[0], lv.hp[1]), hand = makeHand(N), sel = new Set();
-    let spell = null, busy = false;
+    let spell = null, busy = false; const took = timer();
     if (window.__LW_TEST) Object.assign(window.__LW_TEST, { T: N, el });
     $("ctl").innerHTML = `
       <div class="foe"><span class="power"><img src="${EICON[el]}" width="40" height="40" alt="">${esc(mon.name)} · moc <b>${N}</b></span></div>
@@ -87,45 +88,48 @@ export function monsterRoom() {
     }));
     $("cast").addEventListener("click", async () => {
       if (busy || !spell || !sel.size) return; busy = true;
-      const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter;
+      const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter, ms = took();
+      record("math.cards", okSum, ms, `moc ${N}: ${[...sel].map((i) => hand[i]).join(" + ")} = ${total}`);
+      record("logic.spell", okEl, ms, `${E.adj} → ${ELEM[spell].name}`);
       await swing(); await fly(ELEM[spell].icon, 44, 96, 30);
       if (left(run)) return;
       if (okSum && okEl) {
         snd.hit(); shake(); st.mhp--; burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
         if (st.mhp <= 0) return defeat();
-        say(heroName(), esc(`Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st.mhp} ${st.mhp === 1 ? "serduszko" : "serduszka"}.`));
+        say(heroName(), `Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st.mhp} ${st.mhp === 1 ? "serduszko" : "serduszka"}.`);
       } else {
         snd.bad();
         let msg;
         if (!okSum) msg = total < N ? `${total} to za mało! Moc potwora to ${N}.` : `${total} to za dużo! Moc potwora to dokładnie ${N}.`;
         else { wrongSpells++; msg = `${ELEM[spell].name} nie działa na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora działa ${ELEM[counter].name}.` : "Zajrzyj do księgi czarów."); }
         if (!okSum && !okEl) msg += " I sprawdź czar w księdze.";
-        say(mon.name, esc("Hi hi! " + msg));
+        say(mon.name, "Hi hi! " + msg);
       }
       await sleep(1800); if (left(run)) return;
       monsterTurn();
     });
-    say(petName(), esc((prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`));
+    say(petName(), (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`);
   }
 
   function monsterTurn() {
     const q = attackQ();
     $("ctl").innerHTML = `<div class="foe"><span class="power">🛡️ Tarcza: ile to?</span></div><div class="sum">${q.q}</div>
       <div class="opts">${q.opts.map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>`;
-    say(mon.name, esc(`${mon.name} ${mon.attack}! Osłoń się tarczą: ${q.q}`), `${mon.name} ${mon.attack}! Osłoń się tarczą. ${q.say}?`);
-    let done = false;
+    say(mon.name, `${mon.name} ${mon.attack}! Osłoń się tarczą: ${q.q}`, `${mon.name} ${mon.attack}! Osłoń się tarczą. ${q.say}?`);
+    let done = false; const took = timer();
     app.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", async () => {
       if (done) return; done = true;
       const ok = +b.dataset.v === q.ans;
+      record("math." + q.kind, ok, took(), `${q.show.replace("?", "□")} → ${b.dataset.v}${ok ? "" : ` (${q.ans})`}`);
       b.classList.add(ok ? "right" : "wrong");
       if (ok) {
         st.shield = 1; snd.letter(); await fly(E.icon, 92, 40, 30); snd.ok();
-        say(heroName(), esc(`Tarcza! Odpowiedź ${q.ans} jest dobra. Atak odbity!`));
+        say(heroName(), `Tarcza! Odpowiedź ${q.ans} jest dobra. Atak odbity!`);
         await sleep(1300); st.shield = 0; if (left(run)) return;
       } else {
         await fly(E.icon, 92, 36, 30); st.flash = 1; setTimeout(() => (st.flash = 0), 600);
         const fainted = await hurt(); if (left(run)) return;
-        if (!fainted) say(petName(), esc(`Ała! Dobra odpowiedź to ${q.ans}. Następnym razem się uda!`));
+        if (!fainted) say(petName(), `Ała! Dobra odpowiedź to ${q.ans}. Następnym razem się uda!`);
         await sleep(1800); if (left(run)) return;
       }
       playerTurn();
@@ -137,7 +141,7 @@ export function monsterRoom() {
     await anim(600, (p) => { st.gone = p; });
     if (left(run)) return;
     const loot = ri(2, 3) + (GS.G.level - 1); GS.RUN.coins += loot; GS.RUN.beaten++; GS.G.fights++; save(); updHud(); snd.coin();
-    say(heroName(), esc(`${pick(PRAISE)} ${mon.name} uciekł i zostawił ${loot} monety!`));
+    say(heroName(), `${pick(PRAISE)} ${mon.name} uciekł i zostawił ${loot} monety!`);
     nextRoom();
   }
 

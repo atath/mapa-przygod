@@ -6,8 +6,10 @@ import { PRAISE, burst } from "./fx.js";
 import { PETSPR } from "./pets.js";
 import { SPR } from "./props.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
-import { heroName, petName, say } from "./shell.js";
+import { heroName, petName, say, sayHTML } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle, rnd } from "./util.js";
+import { record, timer } from "./stats.js";
+import { save } from "./save.js";
 
 /* ---------- Door room (Polish: build word) ---------- */
 export function doorRoom() {
@@ -26,15 +28,16 @@ export function doorRoom() {
   } };
   // extra decoy runes make it harder on higher levels
   const decoys = GS.G.level === 1 ? [] : shuffle("aeiouykrstmnl".split("").filter((l) => !letters.includes(l))).slice(0, GS.G.level === 2 ? 1 : 2);
-  if (lv.spoken) say(petName(), esc(`Zaczarowane drzwi! Otworzy je słowo z obrazka: „${x.w}”. Ułóż je z run.`), `Zaczarowane drzwi! Otworzy je słowo ${x.w}. Ułóż je z liter, po kolei.`);
+  if (lv.spoken) say(petName(), `Zaczarowane drzwi! Otworzy je słowo z obrazka: „${x.w}”. Ułóż je z run.`, `Zaczarowane drzwi! Otworzy je słowo ${x.w}. Ułóż je z liter, po kolei.`);
   else say(petName(), "Zaczarowane drzwi! Otworzy je nazwa tego, co widzisz na obrazku. Ułóż ją z run. Uwaga, niektóre runy są fałszywe!");
   $("ctl").innerHTML = `<div class="hint-pic" aria-hidden="true">${x.e}</div><div class="slots">${letters.map(() => `<span class="slot"></span>`).join("")}</div>
     <div class="tiles">${shuffle(letters.concat(decoys)).map((l) => `<button class="tile" data-l="${esc(l)}">${esc(l)}</button>`).join("")}</div>${libHintHTML()}`;
+  const took = timer();
   let pos = 0, misses = 0; const slots = app.querySelectorAll(".slot");
   wireLibHint(() => {
     const t = [...app.querySelectorAll(".tile:not(.used)")].find((b) => b.dataset.l === letters[pos]); if (!t) return false;
     const l = letters[pos]; t.click();
-    if (pos < letters.length) say(petName(), esc(`Biblioteczka podpowiada: „${l}”.`)); // the last rune opens the door — let it speak the word
+    if (pos < letters.length) say(petName(), `Biblioteczka podpowiada: „${l}”.`); // the last rune opens the door — let it speak the word
   });
   app.querySelectorAll(".tile").forEach((b) => b.addEventListener("click", async () => {
     if (pos >= letters.length || b.classList.contains("used")) return;
@@ -42,15 +45,16 @@ export function doorRoom() {
       slots[pos].textContent = letters[pos]; slots[pos].classList.add("filled"); b.classList.add("used"); pos++; st.glow = pos; snd.letter();
       if (pos === letters.length) {
         snd.door(); burst(app.querySelector(".slots"), 30); speak(x.w);
+        record("polish.word", misses === 0, took(), `${x.w}${misses ? `, pomyłki: ${misses}` : ""}`); save();
         const run = GS.RUN;
         await new Promise((res) => { const t0 = performance.now(); function f(n) { st.open = Math.min(1, (n - t0) / 700); if (st.open < 1) requestAnimationFrame(f); else res(); } requestAnimationFrame(f); });
         if (left(run)) return;
         GS.RUN.coins += GS.G.level; updHud(); snd.coin();
-        say(heroName(), esc(`${pick(PRAISE)} „${x.w}” otworzyło drzwi!`)); nextRoom();
+        say(heroName(), `${pick(PRAISE)} „${x.w}” otworzyło drzwi!`); nextRoom();
       }
     } else {
       misses++; b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); snd.bad();
-      if (misses >= 3) say(petName(), esc(`Następna litera to „${letters[pos]}”.`), `Następna litera to ${letters[pos]}.`);
+      if (misses >= 3) say(petName(), `Następna litera to „${letters[pos]}”.`, `Następna litera to ${letters[pos]}.`);
       else say(petName(), "Ta runa nie pasuje. Powiedz słowo powoli i posłuchaj, jaka głoska jest następna.");
     }
   }));
@@ -93,26 +97,29 @@ export function signRoom() {
     choices.forEach((_, i) => draw(c, SPR.sign, 54 + i * 18, 22, 1.2));
     draw(c, PETSPR[GS.G.hero.pet], 6, 34 - bob(t, 2), 1.25); draw(c, GS.HERO, 22, 16 - bob(t), 1.75);
   } };
-  say(petName(), `Rozdroże! Musimy dojść tam, gdzie jest <span class="pic">${target.e}</span>. Drogowskazy są podobne — czytaj bardzo uważnie, litera po literze!`,
+  sayHTML(petName(), `Rozdroże! Musimy dojść tam, gdzie jest <span class="pic">${target.e}</span>. Drogowskazy są podobne — czytaj bardzo uważnie, litera po literze!`,
     "Rozdroże! Spójrz na obrazek. Drogowskazy są do siebie podobne, więc czytaj bardzo uważnie, litera po literze.");
   $("ctl").innerHTML = `<div class="opts">${choices.map((c) => `<button class="btn sign" data-w="${esc(c)}">${esc(c)}</button>`).join("")}</div>${libHintHTML()}`;
-  let done = false;
+  let done = false, wrongPicks = [];
+  const took = timer();
   wireLibHint(() => {
     const wrong = [...app.querySelectorAll("[data-w]")].filter((b) => !b.disabled && b.dataset.w !== target.w);
     if (done || !wrong.length) return false;
     const b = wrong[0]; b.classList.add("wrong"); b.disabled = true; snd.letter();
-    say(petName(), esc(`Biblioteczka mówi: „${b.dataset.w}” to nie ta droga.`), `Biblioteczka mówi: ${b.dataset.w} to nie ta droga.`);
+    say(petName(), `Biblioteczka mówi: „${b.dataset.w}” to nie ta droga.`, `Biblioteczka mówi: ${b.dataset.w} to nie ta droga.`);
   });
   app.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", async () => {
     if (done || b.disabled) return;
     if (b.dataset.w === target.w) {
       done = true; b.classList.add("right"); snd.ok(); burst(b); speak(target.w);
+      record("polish.read", !wrongPicks.length, took(), wrongPicks.length ? `${target.w} ← ${wrongPicks.join(", ")}` : target.w); save();
       GS.RUN.coins += GS.G.level; updHud();
-      say(heroName(), esc(`${pick(PRAISE)} „${target.w}” — to nasza droga.`)); nextRoom();
+      say(heroName(), `${pick(PRAISE)} „${target.w}” — to nasza droga.`); nextRoom();
     } else {
+      wrongPicks.push(b.dataset.w);
       b.classList.add("wrong"); b.disabled = true; b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
       const run = GS.RUN, fainted = await hurt(); if (left(run)) return;
-      if (!fainted) say(petName(), esc(`Tu jest napisane „${b.dataset.w}”. To nie to! Szukamy dalej.`), `Tu jest napisane ${b.dataset.w}. To nie to. Szukamy dalej.`);
+      if (!fainted) say(petName(), `Tu jest napisane „${b.dataset.w}”. To nie to! Szukamy dalej.`, `Tu jest napisane ${b.dataset.w}. To nie to. Szukamy dalej.`);
     }
   }));
 }

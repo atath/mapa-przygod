@@ -5,7 +5,7 @@ import { heroSprite } from "./hero.js";
 import { PETS } from "./pets.js";
 import { ICON } from "./props.js";
 import { save } from "./save.js";
-import { $ } from "./util.js";
+import { $, esc } from "./util.js";
 
 /* ================== Shell bits ================== */
 export function hudHTML(run) {
@@ -26,7 +26,10 @@ export function wireHud(onHome) {
 }
 export let lastSay = "";
 export function dialogHTML() { return `<div class="dialog" role="status" aria-live="polite"><div class="body"><span class="who" id="who"></span><span class="txt" id="txt"></span></div><button class="say" id="sayBtn" aria-label="Przeczytaj jeszcze raz">🔊</button></div>`; }
-export function say(who, html, spoken) {
+// say() shows plain text: names, words and numbers can never turn into markup.
+// sayHTML() is only for the few lines that carry a picture or bold text on purpose.
+export function say(who, text, spoken) { sayHTML(who, esc(text), spoken != null ? spoken : String(text)); }
+export function sayHTML(who, html, spoken) {
   const oldErr = document.getElementById("sayErr"); if (oldErr) oldErr.remove();
   $("who").textContent = who || ""; $("txt").innerHTML = html;
   lastSay = spoken != null ? spoken : $("txt").textContent; speak(lastSay);

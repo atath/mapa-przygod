@@ -29,6 +29,15 @@ for (const level of [1, 2, 3]) {
       const db = await readDB(o.p);
       assert.equal(db.profiles.p1.trips, 1);
       assert.ok(db.profiles.p1.coins > 10, "coins were not added to the save");
+      // measurements for stage 3: every room left an answer, the trip and the play time were counted
+      const st = db.profiles.p1.stats, kinds = new Set(st.answers.map((a) => a.k)), seen = new Set(rooms.map((r) => r.kind));
+      const expect = ["code.path", "polish.password"].concat(seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
+      for (const k of expect) assert.ok(kinds.has(k), `no answer recorded for ${k}`);
+      assert.equal(st.answers.filter((a) => a.k === "code.path").length, 3, "one path answer per path room");
+      assert.ok(st.answers.every((a) => a.ms >= 0 && a.t > 0));
+      assert.equal(st.trips.length, 1); assert.equal(st.trips[0].done, true); assert.equal(st.trips[0].lv, level);
+      assert.ok(st.trips[0].ms >= 5000, `trip active time ${st.trips[0].ms} ms looks wrong`);
+      assert.ok(Object.values(st.days).reduce((a, b) => a + b, 0) >= 5, "play time was not counted");
       assert.deepEqual(o.errs, []);
     } finally { await o.close(); }
   });
@@ -76,6 +85,8 @@ test("going back to camp mid-animation does not move the next expedition", { tim
     await p.waitForTimeout(4500); // longer than the old room's pending wait
     assert.equal(await label(p), "Leśna ścieżka");
     assert.equal(await p.$eval(".trail span.now", (e) => [...e.parentNode.querySelectorAll("span")].indexOf(e)), 0);
+    const trips = (await readDB(p)).profiles.p1.stats.trips;
+    assert.equal(trips.length, 1, "the abandoned trip was not recorded"); assert.equal(trips[0].done, false);
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }
 });

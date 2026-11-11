@@ -92,11 +92,20 @@ export function wireParent(onLeave) {
     try { await navigator.clipboard.writeText(t.value); msg("Skopiowano. Wklej tekst tam, gdzie go przechowasz."); }
     catch (e) { t.focus(); t.select(); msg("Tekst jest zaznaczony — skopiuj go ręcznie (Kopiuj w menu)."); }
   });
-  $("dlBtn").addEventListener("click", () => {
+  $("dlBtn").addEventListener("click", async () => {
+    const name = `mapa-przygod-zapis-${new Date().toISOString().slice(0, 10)}.json`, data = $("exportTxt").value;
+    // Inside claude.ai a page may not download on its own: the viewer confirms the save there.
+    const dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads").catch(() => null) : null;
+    if (dl) {
+      try { await dl.save({ filename: name, data }); msg("Kopia zapisana."); }
+      catch (e) { msg(e && e.code === "declined" ? "Nie zapisano pliku. Możesz też użyć „Kopiuj tekst”." : "Nie udało się zapisać pliku — użyj „Kopiuj tekst”.", false); }
+      return;
+    }
     try {
-      const a = document.createElement("a"), day = new Date().toISOString().slice(0, 10);
-      a.href = URL.createObjectURL(new Blob([$("exportTxt").value], { type: "application/json" }));
-      a.download = `mapa-przygod-zapis-${day}.json`; document.body.appendChild(a); a.click(); a.remove();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+      a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
       msg("Plik powinien się pobrać. Jeśli nic się nie stało, użyj „Kopiuj tekst”.");
     } catch (e) { msg("Nie udało się pobrać pliku — użyj „Kopiuj tekst”.", false); }
   });

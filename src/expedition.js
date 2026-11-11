@@ -11,6 +11,8 @@ import { ICON } from "./props.js";
 import { dialogHTML, gw, heroName, hudHTML, petName, say, wireHud, wireSay } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle, sleep } from "./util.js";
 import { libraryHints, wellHearts } from "./camp-data.js";
+import { tripEnd, tripStart } from "./stats.js";
+import { save } from "./save.js";
 
 /* ================== Expedition ================== */
 export const PASSWORDS = [
@@ -31,6 +33,7 @@ export function startTrip() {
   order.forEach((idx, k) => runes[Math.floor((k * spots) / order.length)].push(pw.w[idx]));
   const maxHp = 3 + wellHearts(GS.G.camp);
   GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp) };
+  tripStart(GS.RUN);
   room();
 }
 export function roomShell() {
@@ -38,7 +41,7 @@ export function roomShell() {
   app.innerHTML = `${hudHTML(GS.RUN)}<div id="sc"></div>${dialogHTML()}<div class="ctl" id="ctl"></div>`;
   wireHud(); wireSay();
   $("quitBtn").addEventListener("click", () => {
-    if ($("quitBtn").dataset.armed) { try { speechSynthesis.cancel(); } catch (e) {} GS.RUN = null; camp(); return; }
+    if ($("quitBtn").dataset.armed) { try { speechSynthesis.cancel(); } catch (e) {} tripEnd(GS.RUN, false); save(); GS.RUN = null; camp(); return; }
     $("quitBtn").dataset.armed = "1"; say(petName(), "Wracamy do obozu? Kliknij namiot jeszcze raz. Monety z tej wyprawy przepadną.");
     setTimeout(() => { if ($("quitBtn")) delete $("quitBtn").dataset.armed; }, 4000);
   });
@@ -63,7 +66,7 @@ export async function nextRoom() {
   if (got.length) {
     await sleep(1300); if (left(run)) return;
     GS.RUN.got = GS.RUN.got.concat(got); updHud(); snd.letter();
-    say(petName(), esc(`Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ").toUpperCase()}! Przyda się do hasła skrzyni.`), `Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ")}. Przyda się do hasła skrzyni.`);
+    say(petName(), `Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ").toUpperCase()}! Przyda się do hasła skrzyni.`, `Zdobywamy ${got.length === 1 ? "runę" : "runy"}: ${got.join(", ")}. Przyda się do hasła skrzyni.`);
     const r = app.querySelector(".runes"); if (r) burst(r, 18);
     await sleep(1900);
   } else await sleep(900);
@@ -76,7 +79,7 @@ export async function hurt() {
   if (GS.RUN.hp > 0) return false;
   await sleep(700); if (left(run)) return true;
   const lost = Math.min(2, GS.RUN.coins); GS.RUN.coins -= lost; GS.RUN.hp = GS.RUN.maxHp; updHud();
-  say(petName(), esc(`Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " " + (lost === 1 ? "monetę" : "monety") + ". " : ""}Spróbujmy jeszcze raz.`));
+  say(petName(), `Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " " + (lost === 1 ? "monetę" : "monety") + ". " : ""}Spróbujmy jeszcze raz.`);
   return true;
 }
 

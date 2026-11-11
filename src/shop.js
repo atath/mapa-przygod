@@ -50,7 +50,7 @@ export function shop() {
         const it = PETS[k];
         if (!GS.G.pets.includes(k)) { if (GS.G.coins < it.price) return noMoney(b, it.price); GS.G.coins -= it.price; GS.G.pets.push(k); snd.fanfare(); burst(b, 40); }
         else snd.letter();
-        GS.G.hero.pet = k; say(petName(), esc(`Cześć, ${heroName()}! Jestem ${petName()}. Idę z tobą na wyprawę!`));
+        GS.G.hero.pet = k; say(petName(), `Cześć, ${heroName()}! Jestem ${petName()}. Idę z tobą na wyprawę!`);
       }
       save(); rebuildHero(); $("coinN").textContent = GS.G.coins; render();
     }));

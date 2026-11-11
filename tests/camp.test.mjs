@@ -29,6 +29,9 @@ test("building: right answer gives 1 coin off, a wrong one still buys; effects r
     let r = await buy(p, "house", true); assert.equal(r.coins, r.have - r.price + 1);
     r = await buy(p, "house", false); assert.equal(r.coins, r.have - r.price);
     for (const k of ["well", "well", "garden", "garden", "library", "pen"]) await buy(p, k, true);
+    const buys = (await readDB(p)).profiles.p1.stats.answers.filter((a) => a.k === "math.buy");
+    assert.equal(buys.length, 8); assert.deepEqual(buys.map((a) => a.ok), [true, false, true, true, true, true, true, true]);
+    assert.match(buys[1].d, /^\d+ − \d+ → \d+ \(\d+\)$/, "a wrong answer should note the right one");
     const c = (await readDB(p)).profiles.p1.camp;
     assert.deepEqual(c.b, { house: 2, well: 2, garden: 2, library: 1, pen: 1 });
     assert.equal(c.beds.length, 2);

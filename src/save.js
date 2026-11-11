@@ -1,5 +1,6 @@
 import { GS } from "./state.js";
 import { normalizeCamp } from "./camp-data.js";
+import { normalizeStats, persistWith } from "./stats.js";
 
 /* ================== Save ==================
    Version 2 keeps every player profile and the parent settings under one key.
@@ -31,7 +32,8 @@ export function normalizeProfile(s, id) {
     pets, petNames,
     level: [1, 2, 3].includes(s.level) ? s.level : 1, trips: Math.max(0, s.trips | 0), fights: Math.max(0, s.fights | 0),
     voice: s.voice !== false, sound: s.sound !== false,
-    camp: normalizeCamp(s.camp)
+    camp: normalizeCamp(s.camp),
+    stats: normalizeStats(s.stats)
   };
 }
 export const blankProfile = () => normalizeProfile({}, newId());
@@ -83,6 +85,7 @@ export function reloadDB() {
   GS.G = GS.DB.active ? GS.DB.profiles[GS.DB.active] : null; stale = false;
 }
 
+persistWith(() => save());
 export let saveFailed = false;
 export function save() {
   if (stale) return;

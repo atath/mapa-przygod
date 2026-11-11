@@ -10,6 +10,8 @@ import { bob, draw, light, mountCanvas } from "./scene.js";
 import { gw, heroName, petName, say } from "./shell.js";
 import { P } from "./sprites.js";
 import { $, app, esc, mulberry, reduced, ri, shuffle, sleep, rnd } from "./util.js";
+import { record, timer } from "./stats.js";
+import { save } from "./save.js";
 
 /* ---------- Path room (programming, several exits) ---------- */
 export const DIRS = { up: [-1, 0, "↑", "w górę"], down: [1, 0, "↓", "w dół"], left: [0, -1, "←", "w lewo"], right: [0, 1, "→", "w prawo"] };
@@ -213,6 +215,7 @@ export function pathRoom() {
       function f(now) { const p = Math.min(1, (now - t0) / ms); obj.x = sx + (tx - sx) * p; obj.y = sy + (ty - sy) * p; if (hop) obj.hop = Math.round(Math.sin(p * Math.PI) * 3); if (p < 1) requestAnimationFrame(f); else { obj.hop = 0; res(); } }
       requestAnimationFrame(f); });
   }
+  let took = timer();
   let prog = [], busy = false, active = -1, fails = 0, tries = 0; const maxTries = GS.G.level === 3 ? 3 : Infinity;
   const triesWord = (n) => n === 1 ? "próba" : n < 5 ? "próby" : "prób", leftWord = (n) => (n === 1 ? "Została" : "Zostały");
   $("ctl").innerHTML = `<div class="program" id="program" aria-label="Plan drogi"></div><span class="limit" id="limit"></span>
@@ -243,7 +246,7 @@ export function pathRoom() {
   $("goBtn").addEventListener("click", async () => {
     if (busy) return;
     if (!prog.length) { say(petName(), "Najpierw ułóż strzałki."); return; }
-    busy = true; let result = "short", reached = null; const picked = [];
+    busy = true; let result = "short", reached = null; const picked = [], thought = took(), blocks = prog.length;
     const steps = simulate(M, prog);
     for (const stp of steps) {
       if (stp.bi !== active) { active = stp.bi; drawProg(); }
@@ -260,13 +263,16 @@ export function pathRoom() {
       if (reached) { result = "win"; break; }
     }
     active = -1; drawProg();
+    const detail = (ok) => `${blocks} ${blocks === 1 ? "klocek" : blocks < 5 ? "klocki" : "klocków"}, monety ${picked.length}/${M.coins.size}${ok ? "" : `, ${result === "short" ? "za krótko" : "zderzenie"}`}`;
     if (result === "win") {
+      record("code.path", true, thought, detail(true)); save();
       GS.RUN.rooms[GS.RUN.i + 1] = reached.type; GS.RUN.coins += picked.length; updHud();
       const all = picked.length > 0 && coins.size === 0;
       snd.ok(); burst(cv.c, 30);
-      say(heroName(), esc(`Udało się! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`));
+      say(heroName(), `Udało się! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
       return nextRoom();
     }
+    record("code.path", false, thought, detail(false)); took = timer();
     picked.forEach((k) => coins.add(k));
     fails++; tries++;
     const msg = result === "tree" ? "Bum! Drzewo na drodze." : result === "rock" ? "Ups, kamień!" : result === "edge" ? "Tam nie ma przejścia." : `Nie ${gw("doszłyśmy", "doszliśmy")} jeszcze do żadnego wyjścia.`;
@@ -274,7 +280,7 @@ export function pathRoom() {
     await sleep(500); if (left(run)) return;
     crash = false; cell = M.start.slice(); hero.x = 0; hero.y = M.start[0] * 16; pet.x = 0; pet.y = hero.y + 6;
     if (tries >= maxTries) return guide();
-    say(petName(), esc(msg + back + (isFinite(maxTries) ? ` ${leftWord(maxTries - tries)} ${maxTries - tries} ${triesWord(maxTries - tries)}.` : " Popraw strzałki i spróbuj jeszcze raz.")));
+    say(petName(), msg + back + (isFinite(maxTries) ? ` ${leftWord(maxTries - tries)} ${maxTries - tries} ${triesWord(maxTries - tries)}.` : " Popraw strzałki i spróbuj jeszcze raz."));
     drawProg();
     busy = false;
   });
@@ -297,13 +303,13 @@ export function pathRoom() {
     for (const [r, c] of path) { const p0 = cell.slice(); cell = [r, c]; snd.step(); await Promise.all([tween(hero, c * 16, r * 16, 260, true), tween(pet, p0[1] * 16 - 2, p0[0] * 16 + 4, 260)]); if (left(run)) return; }
     const ex = M.exits.find((e) => e.cell[0] === cell[0] && e.cell[1] === cell[1]);
     GS.RUN.rooms[GS.RUN.i + 1] = ex.type;
-    say(petName(), esc(`Jesteśmy przy wyjściu. Idziemy: ${ROOM_NAME[ex.type]}.`));
+    say(petName(), `Jesteśmy przy wyjściu. Idziemy: ${ROOM_NAME[ex.type]}.`);
     nextRoom();
   }
   const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
   const intro = first
     ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. Z lasu prowadzą ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Monety liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
     : `Las się rozwidla. Wyjścia: ${exitsTxt}. Dokąd idziemy?`;
-  say(petName(), esc(intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
-    + (lv.slide && first ? ` Nowy klocek: „aż do przeszkody”. ${gw("Bohaterka idzie tak długo, dopóki nic jej nie zatrzyma.", "Bohater idzie tak długo, dopóki nic go nie zatrzyma.")}` : "")));
+  say(petName(), intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
+    + (lv.slide && first ? ` Nowy klocek: „aż do przeszkody”. ${gw("Bohaterka idzie tak długo, dopóki nic jej nie zatrzyma.", "Bohater idzie tak długo, dopóki nic go nie zatrzyma.")}` : ""));
 }

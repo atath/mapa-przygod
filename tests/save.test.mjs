@@ -109,6 +109,7 @@ test("a broken or hostile save is repaired instead of breaking the game", { time
     const bad = oneProfile({
       hero: { gender: "alien", name: '<img src=x onerror="window.__pwn=1">', hair: "mohawk", hairColor: "red;}", skin: "#f5d0b5", outfit: "#e2445c", pet: "unicornzilla", hat: "laser" },
       coins: -50, owned: ["laser", "crown"], pets: ["unicornzilla"], petNames: { cat: "<b>Kot</b>" }, level: 9,
+      stats: { answers: [{ k: "math.sub", ok: true, ms: 900, t: 1, d: "<b>x</b>".repeat(20) }, { k: "evil", ok: 1, t: 2 }, "junk"], trips: [{ t: 1, ms: -5, done: 1 }], days: { "2026-11-10": 300, "bad": 9 } },
       camp: { b: { house: 7 }, decor: [{ k: "flag", c: 99, r: 99 }, { k: "flag", c: 2, r: 2 }, { k: "flag", c: 2, r: 2 }], beds: [{ p: "carrot", s: 9 }] }
     });
     await startWith(p, srv.url, bad);
@@ -119,7 +120,9 @@ test("a broken or hostile save is repaired instead of breaking the game", { time
     assert.equal(pr.hero.gender, "girl"); assert.equal(pr.hero.hair, "tails"); assert.equal(pr.hero.hairColor, "#3b2a20");
     assert.equal(pr.hero.pet, "cat"); assert.deepEqual(pr.pets, ["cat"]); assert.equal(pr.hero.hat, "none"); assert.deepEqual(pr.owned, ["none", "crown"]);
     assert.equal(pr.coins, 0); assert.equal(pr.level, 1); assert.equal(pr.camp.b.house, 3);
-    assert.deepEqual(pr.camp.decor, [{ k: "flag", c: 2, r: 2 }]); assert.equal(pr.camp.beds.length, 0);
+    assert.deepEqual(pr.camp.decor, [{ k: "flag", c: 2, r: 2 }]);
+    assert.equal(pr.stats.answers.length, 1); assert.equal(pr.stats.answers[0].d.length, 40);
+    assert.deepEqual(pr.stats.trips, [{ t: 1, ms: 0, done: true, lv: 0 }]); assert.equal(pr.stats.days.bad, undefined); assert.equal(pr.camp.beds.length, 0);
     await p.click("#shopBtn"); await p.click("#tabPets"); // screens that draw the pet and the hat still work
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }

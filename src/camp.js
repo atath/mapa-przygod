@@ -81,11 +81,11 @@ export function camp() {
 
   function harvest(i, e) {
     const bed = C.beds[i];
-    if (bed.s < RIPE) { say(petName(), esc(`Ta grządka jeszcze rośnie. Po ${RIPE - bed.s === 1 ? "następnej wyprawie" : `${RIPE - bed.s} wyprawach`} będzie plon.`)); return; }
+    if (bed.s < RIPE) { say(petName(), `Ta grządka jeszcze rośnie. Po ${RIPE - bed.s === 1 ? "następnej wyprawie" : `${RIPE - bed.s} wyprawach`} będzie plon.`); return; }
     const got = PLANT_NAME[bed.p];
     GS.G.coins += 3; bed.p = pick(PLANTS); bed.s = 0; save();
     snd.coin(); burst(cv.c, 18); $("coinN").textContent = GS.G.coins;
-    say(heroName(), esc(`Zebrane: ${got}! +3 monety. Posiałam nowe nasionko.`.replace("Posiałam", gw("Posiałam", "Posiałem"))));
+    say(heroName(), `Zebrane: ${got}! +3 monety. Posiałam nowe nasionko.`.replace("Posiałam", gw("Posiałam", "Posiałem")));
   }
 
   // decorations: the bar lists what is in the bag; edit mode shows free tiles
@@ -113,8 +113,8 @@ export function camp() {
 
   const ripe = C.beds.filter((b) => b.s === RIPE).length;
   const lines = [`Cześć, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygodę?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wyprawę?`];
-  say(petName(), esc(ripe ? `W ogródku coś dojrzało! Dotknij grządki, żeby zebrać plon.`
-    : GS.G.trips ? pick(lines) : `Cześć, ${heroName()}! Jestem ${petName()}. W lesie są potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspaniały obóz!`));
+  say(petName(), ripe ? `W ogródku coś dojrzało! Dotknij grządki, żeby zebrać plon.`
+    : GS.G.trips ? pick(lines) : `Cześć, ${heroName()}! Jestem ${petName()}. W lesie są potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspaniały obóz!`);
   $("tripBtn").addEventListener("click", startTrip);
   $("buildBtn").addEventListener("click", buildScreen);
   $("shopBtn").addEventListener("click", shop);

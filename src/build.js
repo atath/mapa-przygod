@@ -9,6 +9,7 @@ import { ICON } from "./props.js";
 import { save } from "./save.js";
 import { dialogHTML, hudHTML, petName, say, wireHud, wireSay } from "./shell.js";
 import { url } from "./sprites.js";
+import { record, timer } from "./stats.js";
 import { $, app, esc, ri, shuffle } from "./util.js";
 
 /* ================== Camp building screen ==================
@@ -83,21 +84,22 @@ export function buildScreen() {
   function ask(price, label, apply, btn) {
     const have = GS.G.coins, ans = have - price;
     const opts = new Set([ans]); while (opts.size < 3) { const v = ans + ri(-3, 3); if (v >= 0) opts.add(v); }
-    asking = true;
+    asking = true; const took = timer();
     $("ask").hidden = false;
     $("ask").innerHTML = `<div class="sum">${have} − ${price} = ?</div><div class="opts">${shuffle([...opts]).map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>
       <button class="btn small" id="askCancel">Jednak nie kupuję</button>`;
-    say(petName(), esc(`Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowiedź to 1 moneta rabatu!`),
+    say(petName(), `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowiedź to 1 moneta rabatu!`,
       `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowiedź to jedna moneta rabatu.`);
     $("ask").scrollIntoView({ block: "nearest" });
     $("askCancel").addEventListener("click", () => { asking = null; $("ask").hidden = true; say(petName(), "Dobrze, zostawiamy monety na później."); });
     $("ask").querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => {
       if (!asking) return;
       const ok = +b.dataset.v === ans; b.classList.add(ok ? "right" : "wrong");
+      record("math.buy", ok, took(), `${have} − ${price} → ${b.dataset.v}${ok ? "" : ` (${ans})`}`);
       const paid = ok ? price - 1 : price;
       GS.G.coins -= paid; const done = apply(); save();
       ok ? snd.ok() : snd.coin(); burst(btn, 30); $("coinN").textContent = GS.G.coins;
-      say(petName(), esc((ok ? `Brawo, zostanie ${ans}! Z rabatem płacimy ${paid}. ` : `Zostanie ${ans}. Płacimy ${paid}. `) + done));
+      say(petName(), (ok ? `Brawo, zostanie ${ans}! Z rabatem płacimy ${paid}. ` : `Zostanie ${ans}. Płacimy ${paid}. `) + done);
       setTimeout(() => { asking = null; $("ask").hidden = true; render(); }, 900);
     }));
   }
@@ -106,6 +108,6 @@ export function buildScreen() {
   $("tabD").addEventListener("click", () => { if (!asking) { tab = "decor"; render(); } });
   $("backBtn").addEventListener("click", camp);
   render();
-  say(petName(), esc(`Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Każdy budynek pomaga na wyprawach.`));
+  say(petName(), `Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Każdy budynek pomaga na wyprawach.`);
   try { window.scrollTo({ top: 0 }); } catch (e) {}
 }
