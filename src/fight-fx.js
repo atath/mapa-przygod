@@ -173,55 +173,89 @@ export function wave(from, to, { hit = true, back = 0 } = {}) {
   } };
 }
 
-/* ---------- earth: roots racing through the ground ----------
-   A root crawls along the grass sprouting leaves; at the target thick roots shoot up around it.
-   hit without spikes (a shield in the way): the root crumbles into clods. Not hit: it withers on the way. */
+/* ---------- earth: curling vines ----------
+   Several vines burst from the ground by the caster and arch through the air towards the target,
+   curling into little spirals on the way. hit: they wind round the target in coils and thick roots
+   with curled tips shoot up around it. hit without spikes (a shield in the way): they crumble into clods.
+   Not hit: they wither and droop on the way. */
 export function roots(from, to, { hit = true, spikes = true, small = false, back = 0 } = {}) {
-  const C = FX_PAL.earth, P = particles(), dir = Math.sign(to.x - from.x) || 1, seed = rand(0, 6.3);
-  const reach = hit ? 1 : 0.66, endX = from.x + (to.x - from.x) * reach; let landed = false;
-  const yAt = (x) => Math.round(groundY(x) + 1 + Math.sin(x * 0.33 + seed) * 1.4);
-  const S = (small ? [[-9, 13], [-3, 18], [4, 16], [10, 12]] : [[-14, 17], [-6, 25], [6, 22], [14, 16]]).map(([o, h]) => ({ o, h, lean: -Math.sign(o) }));
-  return { draw(ctx, p, dt, dur) {
-    const go = clamp01(p / ARRIVE), hx = from.x + (endX - from.x) * easeOut(go), n = Math.abs(Math.round(hx - from.x));
-    const gone = hit ? clamp01((p - 0.86) / 0.14) : clamp01((p - ARRIVE) / 0.3);
+  const C = FX_PAL.earth, P = particles(), OUT = "#4a2a14", DRY = ["#7d7867", "#8c8672", "#a59f8c"];
+  const reach = hit ? 1 : 0.62, x0 = from.x, x1 = from.x + (to.x - from.x) * reach, k = small ? 0.7 : 1;
+  // brown roots and green vines in turn, each on its own arch so they read as separate strands
+  const TONES = [{ o: OUT, m: C.d, l: C.c, t: C.a }, { o: "#24461a", m: "#3f7d2a", l: "#8bb84a", t: "#c9e88a" }];
+  const NV = small ? 3 : 5, mid = (NV - 1) / 2, vines = Array.from({ length: NV }, (_, i) => ({
+    A: (2 + i * 5.5 + rand(-1, 1)) * k, dy: (i - mid) * 5 * k, sx: (i - mid) * 4, f: rand(11, 16), ph: rand(0, 6.3), w: rand(2.2, 3.4) * k,
+    tone: TONES[i % 2], delay: Math.abs(i - mid) * 0.03,
+    curls: (i % 2 ? [0.42, 0.74] : [0.55, 0.85]).slice(0, small ? 1 : 2).map((u, j) => ({ u: u + rand(-0.04, 0.04), side: (i + j) % 2 ? 1 : -1, spin: j % 2 ? 1 : -1 }))
+  }));
+  // a point of a vine at u (0 = by the caster's feet, 1 = at the target)
+  const pt = (v, u) => {
+    const xs = x0 + v.sx * (1 - u), x = xs + (x1 - xs) * u, ya = groundY(x0) + 1, yb = (hit ? to.y : groundY(x1) - 3) + v.dy;
+    const y = ya + (yb - ya) * u - Math.sin(Math.PI * u) * v.A + Math.sin(u * v.f + v.ph) * v.w * Math.sin(Math.PI * Math.min(1, u * 1.4));
+    return [x, y];
+  };
+  const coilsAt = small ? [-5, 1, 7] : [-9, -2, 5, 11], RX = small ? 9 : 13;
+  const S = (small ? [[-10, 11], [10, 10]] : [[-16, 15], [-7, 21], [8, 19], [16, 14]]).map(([o, h]) => ({ o, h, lean: -Math.sign(o) }));
+  let landed = false;
+  return { draw(ctx, p, dt, dur, now) {
+    const gone = hit ? clamp01((p - 0.86) / 0.14) : clamp01((p - ARRIVE - 0.05) / 0.3), live = hit || p < ARRIVE;
+    const droop = hit ? 0 : clamp01((p - ARRIVE) / 0.25) * 6;
     ctx.globalAlpha = 1 - gone;
-    const live = hit || go < 1, OUT = "#4a2a14";
-    for (let i = 0; i <= n; i++) {
-      const x = Math.round(from.x + dir * i), y = yAt(x), d = n - i; // d: how long ago the tip passed here
-      const th = d < 3 ? 2 : 3;
-      ctx.fillStyle = live ? OUT : "#7d7867"; dot(ctx, x, y - 1, 1, th + 1);
-      ctx.fillStyle = live ? C.d : "#8c8672"; dot(ctx, x, y - 1, 1, th);
-      if (i % 4 !== 3) { ctx.fillStyle = live ? C.c : "#a59f8c"; dot(ctx, x, y - 1, 1, 1); }
-      if (i > 4 && i % 10 === 5) { // a sprout: a stem that grows after the tip has passed, then leaves
-        const hgt = Math.min(6, Math.floor(d * 0.5)), lean = (i / 10) % 2 < 1 ? 1 : -1;
-        ctx.fillStyle = live ? C.d : "#8c8672"; for (let k = 1; k <= hgt; k++) dot(ctx, x + (k > 3 ? lean : 0), y - 1 - k);
-        if (hgt >= 5 && live) {
-          ctx.fillStyle = C.b; dot(ctx, x + lean, y - hgt - 3, 3, 2); dot(ctx, x - lean * 2, y - hgt, 2, 1);
-          ctx.fillStyle = C.a; dot(ctx, x + lean, y - hgt - 3, 2, 1); ctx.fillStyle = C.hot; dot(ctx, x + lean * 2, y - hgt - 4);
-        }
+    for (const v of vines) {
+      const T = live ? v.tone : { o: DRY[0], m: DRY[1], l: DRY[2], t: DRY[2] };
+      const head = easeOut(clamp01((p - v.delay) / (ARRIVE - v.delay))), steps = Math.ceil(Math.abs(x1 - x0) * 2.4);
+      for (let i = 0; i <= steps * head; i++) {
+        const u = i / steps; let [x, y] = pt(v, u); y += droop * u * u;
+        const w = u < 0.3 ? 2 : 1, tip = head - u < 0.035;
+        ctx.fillStyle = T.o; dot(ctx, x, y + 1, w, 1);
+        ctx.fillStyle = tip ? T.t : T.m; dot(ctx, x, y, w, 1);
+        if (w > 1 && i % 4 === 0) { ctx.fillStyle = T.l; dot(ctx, x, y, 1, 1); }
       }
-    }
-    if (go < 1 && Math.random() < 0.7) P.add({ x: hx, y: yAt(hx), vx: -dir * rand(0, 0.03), vy: -rand(0.02, 0.06), g: 0.0004, c: Math.random() < 0.6 ? C.c : C.d, life: 300 });
-    if (go >= 1 && !landed) {
-      landed = true;
-      const at = { x: endX, y: groundY(endX) - 2 };
-      if (hit) burstOf(P, at, [C.c, C.d, C.a, C.c, C.b], spikes ? 22 : 28, { up: spikes ? 0.1 : 0.08, spread: 0.08, g: 0.00045, life: 560, back });
-      else for (let i = 0; i < 6; i++) P.add({ x: endX - dir * rand(0, 30), y: yAt(endX) - 5, vy: rand(0.005, 0.02), vx: rand(-0.01, 0.01), c: i % 2 ? C.b : "#a59f8c", life: 600 });
-    }
-    if (hit && spikes && go >= 1) {
-      const up = easeBack(clamp01((p - ARRIVE) / 0.16)) * (1 - gone);
-      for (const s of S) {
-        const bx = endX + s.o, by = Math.round(groundY(bx)) + 2, H = Math.max(0, Math.round(s.h * up));
-        for (let k = 0; k < H; k++) {
-          const t = k / s.h, x = Math.round(bx + s.lean * Math.sin(t * 2.3) * 5), w = t < 0.3 ? 5 : t < 0.6 ? 4 : t < 0.85 ? 3 : 2, l = x - (w >> 1);
-          ctx.fillStyle = "#4a2a14"; dot(ctx, l, by - k, w, 1);
-          ctx.fillStyle = C.d; dot(ctx, l + 1, by - k, w - 2 || 1, 1);
-          if (w > 3) { ctx.fillStyle = C.c; dot(ctx, l + 1, by - k, 1, 1); }
-          if (k % 6 === 3) { ctx.fillStyle = "#4a2a14"; dot(ctx, k % 12 === 3 ? l + w : l - 1, by - k - 1, 1, 2); } // a thorn
+      // spiral tendrils unroll once the vine has grown past them
+      for (const c of v.curls) {
+        const grow = clamp01((head - c.u) / 0.2); if (grow <= 0) continue;
+        const [bx, by0] = pt(v, c.u), by = by0 + droop * c.u * c.u, R = (small ? 3.5 : 5) * (c.u < 0.6 ? 1 : 0.8), TURN = 1.7 * Math.PI * 2;
+        const cx = bx, cy = by + c.side * R, a0 = c.side > 0 ? -Math.PI / 2 : Math.PI / 2;
+        for (let t = 0; t <= TURN * grow; t += 0.22) {
+          const r = R * (1 - (t / TURN) * 0.8), a = a0 + c.spin * t, x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+          ctx.fillStyle = T.o; dot(ctx, x, y + 1); ctx.fillStyle = t < 3 ? T.m : T.l; dot(ctx, x, y);
         }
-        if (H >= s.h - 1) { // leaves open at the tip
-          const x = Math.round(bx + s.lean * Math.sin(2.3) * 5);
-          ctx.fillStyle = C.b; dot(ctx, x - 2, by - H - 1, 5, 2); ctx.fillStyle = C.a; dot(ctx, x - 1, by - H - 2, 3, 2); ctx.fillStyle = C.hot; dot(ctx, x, by - H - 3);
+        if (grow >= 1 && live) { ctx.fillStyle = T.t; dot(ctx, cx, cy); }
+      }
+      // a leaf or two on the green vines
+      if (head > 0.6 && live && v.tone === TONES[1]) for (const u of [0.33, 0.58]) { const [lx, ly] = pt(v, u); ctx.fillStyle = T.l; dot(ctx, lx - 1, ly - 3, 3, 2); ctx.fillStyle = T.t; dot(ctx, lx, ly - 3, 2, 1); ctx.fillStyle = T.m; dot(ctx, lx, ly - 1); }
+    }
+    if (p < ARRIVE && Math.random() < 0.6) P.add({ x: x0 + rand(-3, 3), y: groundY(x0) + 1, vx: rand(-0.02, 0.02), vy: -rand(0.02, 0.05), g: 0.0004, c: Math.random() < 0.6 ? C.c : C.d, life: 320 });
+    if (p >= ARRIVE && !landed) {
+      landed = true;
+      if (hit) burstOf(P, to, [C.c, C.d, C.a, C.c, C.b], spikes ? 18 : 28, { up: spikes ? 0.09 : 0.08, spread: 0.08, g: 0.00045, life: 560, back });
+      else for (let i = 0; i < 8; i++) P.add({ x: x1 - rand(0, 30), y: groundY(x1) - rand(2, 10), vy: rand(0.005, 0.02), vx: rand(-0.01, 0.01), c: i % 2 ? C.b : DRY[2], life: 650 });
+    }
+    if (hit && spikes && p >= ARRIVE) {
+      const g = clamp01((p - ARRIVE) / 0.16), up = easeBack(g) * (1 - gone);
+      // coils winding round the target: the back half dim, the front half bright
+      coilsAt.forEach((oy, j) => {
+        const span = Math.PI * 2.2 * clamp01((p - ARRIVE - j * 0.02) / 0.14), cy = to.y + oy * k;
+        for (let t = 0; t <= span; t += 0.12) {
+          const a = t + j * 1.3, x = to.x + Math.cos(a) * RX, y = cy + Math.sin(a) * 3 * k - (t / (Math.PI * 2)) * 3, front = Math.sin(a) > 0;
+          ctx.globalAlpha = (front ? 1 : 0.45) * (1 - gone);
+          ctx.fillStyle = front ? OUT : C.d; dot(ctx, x, y + 1, 2, 1); ctx.fillStyle = front ? C.d : C.c; dot(ctx, x, y, 2, 1);
+          if (front && Math.floor(t * 4) % 7 === 0) { ctx.fillStyle = C.a; dot(ctx, x, y - 1, 1, 1); }
+        }
+      });
+      ctx.globalAlpha = 1 - gone;
+      // thick roots round the target, their tips rolled into curls
+      for (const sp of S) {
+        const bx = to.x + sp.o * k, by = Math.round(groundY(bx)) + 2, H = Math.max(0, Math.round(sp.h * k * up));
+        for (let q = 0; q < H; q++) {
+          const t = q / (sp.h * k), x = Math.round(bx + sp.lean * Math.sin(t * 2.3) * 4), w = t < 0.35 ? 4 : t < 0.7 ? 3 : 2, l = x - (w >> 1);
+          ctx.fillStyle = OUT; dot(ctx, l, by - q, w, 1); ctx.fillStyle = C.d; dot(ctx, l + 1, by - q, Math.max(1, w - 2), 1);
+          if (w > 3) { ctx.fillStyle = C.c; dot(ctx, l + 1, by - q, 1, 1); }
+        }
+        if (H >= sp.h * k - 1) {
+          const tx = Math.round(bx + sp.lean * Math.sin(2.3) * 4), ty = by - H, R = 3;
+          for (let t = 0; t <= Math.PI * 3.2; t += 0.35) { const r = R * (1 - t / (Math.PI * 4)), a = Math.PI / 2 + sp.lean * t; ctx.fillStyle = t < 3 ? C.d : C.b; dot(ctx, tx + sp.lean * R + Math.cos(a) * r, ty - R + Math.sin(a) * r); }
+          ctx.fillStyle = C.a; dot(ctx, tx - sp.lean, ty - 1, 2, 1);
         }
       }
     }
