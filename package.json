@@ -1,6 +1,6 @@
 {
   "name": "mapa-przygod",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Gra edukacyjna dla dzieci",
   "scripts": {
     "test": "node build.mjs && node --test --test-concurrency=2 \"tests/*.test.mjs\"",

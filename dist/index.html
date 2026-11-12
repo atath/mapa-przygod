@@ -517,6 +517,66 @@ button.brick { border-style: dashed; cursor: pointer; }
 .opts.guess .opt { font-size: 1.2rem; font-weight: 800; }
 .timecard { font-weight: 700; font-size: .95rem; line-height: 1.3; padding: 6px 10px; border-radius: 12px; background: var(--surface); border: 2px solid var(--line); }
 @media (max-height: 700px) { body.room .gear { margin-bottom: 4px; } body.room .gear .btn { min-height: 40px; } .timecard { font-size: .85rem; } }
+/* sudoku */
+.sdk { display: grid; gap: 3px; width: min(220px, 70vw); padding: 4px; background: var(--wood-dark); border-radius: 8px; }
+.sdk .sc { aspect-ratio: 1; display: grid; place-items: center; font-size: 1.7rem; line-height: 1; border: 0; border-radius: 4px; background: #fffaf0; padding: 0; }
+.sdk .sc.given { background: #e7c98f; }
+.sdk button.sc { cursor: pointer; box-shadow: inset 0 0 0 2px var(--line); }
+.sdk .sc.sel { background: var(--gold); }
+.sdk .sc.bad { background: #fbebeb; box-shadow: inset 0 0 0 3px var(--bad); }
+.sdk.boxes { gap: 2px; } .sdk.boxes .sc:nth-child(4n + 2) { margin-right: 4px; } .sdk.boxes .sc:nth-child(n + 5):nth-child(-n + 8) { margin-bottom: 4px; }
+.sdk-pal { display: flex; gap: 8px; justify-content: center; }
+.sdk-p { width: 54px; height: 50px; font-size: 1.8rem; line-height: 1; border: 3px solid var(--wood-dark); border-radius: 12px; background: var(--surface); box-shadow: 0 3px 0 var(--wood-dark); padding: 0; cursor: pointer; }
+/* two bridges and their creatures */
+.brs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.br { display: grid; gap: 4px; align-content: start; }
+.bridge { min-height: 44px; font: 800 1rem var(--font-body); border: 3px solid var(--wood-dark); border-radius: 12px; background: #c99b6a; color: #24160a; box-shadow: 0 3px 0 var(--wood-dark); cursor: pointer; }
+.over { display: flex; flex-wrap: wrap; gap: 3px; min-height: 40px; padding: 3px; border-radius: 10px; background: var(--soft); }
+.crs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.cr { position: relative; display: grid; place-items: center; width: 50px; height: 50px; padding: 0; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; }
+.cr.in { width: 34px; height: 34px; border: 0; background: transparent; cursor: default; }
+.cr.in .crb { transform: scale(.68); }
+.cr.sel { background: var(--gold); border-color: var(--wood-dark); }
+.cr.noL::after, .cr.noR::after { position: absolute; top: -6px; font: 900 .7rem var(--font-body); color: #fff; background: var(--bad); border-radius: 6px; padding: 0 3px; }
+.cr.noL::after { content: "✗ L"; left: -4px; } .cr.noR::after { content: "✗ P"; right: -4px; }
+.crb { position: relative; display: flex; gap: 5px; align-items: center; justify-content: center; width: 34px; height: 30px; }
+.crb.round { border-radius: 50%; } .crb.square { border-radius: 5px; } .crb.tri { clip-path: polygon(50% 0, 100% 100%, 0 100%); height: 32px; padding-top: 12px; }
+.crb.red { background: #e2445c; } .crb.blue { background: #2b6cb0; } .crb.yellow { background: #f2c230; }
+.crb i { width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #1f2540; }
+.crb .hat { position: absolute; top: -9px; left: 50%; width: 16px; height: 10px; margin-left: -8px; background: #1f2540; border-radius: 3px 3px 0 0; box-shadow: 0 2px 0 -0px #1f2540, -5px 2px 0 -1px #1f2540, 5px 2px 0 -1px #1f2540; }
+.crb.tri .hat { top: -2px; }
+/* balance scale; signs */
+.scales { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.scale { display: grid; justify-items: center; }
+.beam { display: flex; justify-content: space-between; gap: 16px; min-width: 190px; padding: 4px 6px; border-bottom: 5px solid var(--wood-dark); transition: transform .5s; transform-origin: 50% 100%; }
+.side { display: flex; gap: 2px; align-items: flex-end; min-height: 40px; }
+.post { width: 8px; height: 20px; background: var(--wood-dark); border-radius: 0 0 4px 4px; }
+.itm { display: grid; justify-items: center; font-size: 1.8rem; line-height: 1; } .itm small { font: 900 .8rem var(--font-body); }
+.wgt { display: inline-grid; place-items: center; min-width: 34px; height: 30px; padding: 0 4px; border-radius: 6px 6px 3px 3px; background: #5d6f58; color: #fff; font: 900 1.1rem var(--font-body); }
+.eq { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font: 900 1.8rem var(--font-body); font-variant-numeric: tabular-nums; }
+.sg { width: 48px; height: 48px; padding: 0; font: 900 1.8rem var(--font-body); border: 3px dashed var(--wood); border-radius: 10px; background: #fffaf0; cursor: pointer; color: #24160a; }
+.sg.bad { border-color: var(--bad); }
+@media (max-height: 900px) {
+  body.room .sdk { width: min(180px, 56vw); } body.room .sdk .sc { font-size: 1.35rem; }
+  body.room .sdk-p { height: 42px; font-size: 1.5rem; }
+  body.room .cr { width: 42px; height: 42px; } body.room .crb { transform: scale(.85); }
+  body.room .itm { font-size: 1.5rem; }
+}
+@media (max-height: 700px) {
+  body.room .sdk { width: min(150px, 46vw); } body.room .sdk .sc { font-size: 1.1rem; }
+  body.room .cr { width: 38px; height: 38px; } body.room .over { min-height: 30px; }
+  body.room .bridge { min-height: 38px; }
+}
+/* day plan */
+.dayline { flex-wrap: nowrap; gap: 4px; }
+.day .pz-slot { width: auto; min-width: 64px; min-height: 76px; align-content: center; }
+.day .pz-slot .no { font-size: 1.2rem; color: var(--muted); }
+.ev { display: grid; justify-items: center; gap: 1px; }
+.ev .em { font-size: 1.4rem; line-height: 1; }
+.ev small { font-size: .62rem; font-weight: 800; white-space: nowrap; }
+.mclock { width: 34px; height: 34px; }
+.day .pz-piece { padding: 3px 4px; }
+@media (max-height: 700px) { body.room .day .pz-slot { min-height: 60px; min-width: 56px; } body.room .mclock { width: 28px; height: 28px; } }
 
 </style>
 </head>
@@ -2891,7 +2951,8 @@ button.brick { border-style: dashed; cursor: pointer; }
     return lvl === 1 ? [genHourOnly(), genSet(1), pick([genRead, genElapsed])(1)] : [genRead(lvl), genSet(lvl), genElapsed(lvl)];
   }
   function timeRoomTasks(lvl) {
-    return lvl === 3 ? [genHowLong(lvl), genLonger(lvl), genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), genLonger(lvl), genFeel(lvl)];
+    const mid = rnd() < 0.5 ? genDay(lvl) : genLonger(lvl);
+    return lvl === 3 ? [genHowLong(lvl), mid, genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), mid, genFeel(lvl)];
   }
   function tripTimeLine(ms) {
     const min = Math.round(ms / 6e4);
@@ -2923,6 +2984,39 @@ button.brick { border-style: dashed; cursor: pointer; }
       out.push(n <= 1 ? "Godzina to mniej wi\u0119cej tyle, co ta wyprawa." : `Godzina to tyle, co ${n} ${n <= 4 ? "takie wyprawy" : "takich wypraw"}.`);
     }
     return out;
+  }
+  var DAY_PARTS = [{ k: "rano", e: "\u{1F305}", to: 12 }, { k: "po po\u0142udniu", e: "\u2600\uFE0F", to: 18 }, { k: "wieczorem", e: "\u{1F306}", to: 21 }, { k: "w nocy", e: "\u{1F319}", to: 24 }];
+  var partOf = (t) => DAY_PARTS.find((p) => t / 60 < p.to);
+  var DAY_EVENTS = [
+    ["wake", "Pobudka", "\u23F0", [6, 7]],
+    ["breakfast", "\u015Aniadanie", "\u{1F963}", [7, 7.5, 8]],
+    ["school", "Szko\u0142a", "\u{1F3EB}", [8]],
+    ["lunch", "Obiad", "\u{1F372}", [13, 14, 14.5]],
+    ["walk", "Spacer z psem", "\u{1F415}", [16, 16.5, 17]],
+    ["supper", "Kolacja", "\u{1F35D}", [18, 18.5, 19]],
+    ["tale", "Bajka", "\u{1F4FA}", [19, 19.5, 20]],
+    ["bath", "K\u0105piel", "\u{1F6C1}", [20]],
+    ["sleep", "Sen", "\u{1F6CF}\uFE0F", [21, 21.5, 22]]
+  ];
+  function genDay(lvl) {
+    const n = lvl === 1 ? 3 : 4;
+    for (; ; ) {
+      const evs = shuffle(DAY_EVENTS).slice(0, n).map(([k, name, e, times]) => {
+        const ok = times.filter((t) => lvl > 1 || t % 1 === 0);
+        return ok.length ? { k, name, e, t: Math.round(pick(ok) * 60) } : null;
+      });
+      if (evs.some((x) => !x)) continue;
+      const sorted = evs.slice().sort((a, b) => a.t - b.t);
+      if (sorted.some((x, i) => i && x.t - sorted[i - 1].t < 60)) continue;
+      if (lvl === 3 && !evs.some((a) => evs.some((b) => a !== b && a.t % 720 === b.t % 720)) && rnd() < 0.7) continue;
+      return {
+        kind: "day",
+        title: "U\u0142\xF3\u017C plan dnia",
+        evs: evs.map((x) => ({ ...x, part: partOf(x.t), h: Math.floor(x.t / 60), m: x.t % 60 })),
+        ans: sorted.map((x) => x.k),
+        say: "U\u0142\xF3\u017C plan dnia: od rana do nocy. Popatrz na zegary i na to, czy jest rano, czy wieczorem."
+      };
+    }
   }
 
   // src/chest-room.js
@@ -4389,7 +4483,7 @@ button.brick { border-style: dashed; cursor: pointer; }
       onInput(v);
     } };
   }
-  function runChecks({ skill, max = 3, check, reveal, note: note2, onFail = () => {
+  function runChecks({ skill, max = 3, okFails = 0, check, reveal, note: note2, onFail = () => {
   }, lock = () => {
   } }) {
     return new Promise((resolve) => {
@@ -4408,9 +4502,9 @@ button.brick { border-style: dashed; cursor: pointer; }
           lock();
           snd.ok();
           burst($("checkBtn"));
-          record(skill, fails === 0, took(), note2(fails + 1));
+          record(skill, fails <= okFails, took(), note2(fails + 1));
           save();
-          resolve({ solved: true, perfect: fails === 0 });
+          resolve({ solved: true, perfect: fails <= okFails });
           return;
         }
         fails++;
@@ -4892,12 +4986,418 @@ button.brick { border-style: dashed; cursor: pointer; }
     });
   }
 
+  // src/puzzles/sudoku.js
+  var SUDOKU_ICONS = [["\u{1F34E}", "\u{1F34C}", "\u{1F347}", "\u{1F353}"], ["\u{1F431}", "\u{1F436}", "\u{1F42D}", "\u{1F430}"], ["\u2B50", "\u{1F319}", "\u2600\uFE0F", "\u2601\uFE0F"], ["\u{1F338}", "\u{1F344}", "\u{1F341}", "\u{1F332}"]];
+  function fullGrid(n, boxes) {
+    let g = n === 3 ? [[0, 1, 2], [1, 2, 0], [2, 0, 1]] : [[0, 1, 2, 3], [2, 3, 0, 1], [1, 0, 3, 2], [3, 2, 1, 0]];
+    const sym = shuffle([...Array(n).keys()]);
+    g = g.map((r) => r.map((v) => sym[v]));
+    if (!boxes) {
+      g = shuffle(g);
+      const cols = shuffle([...Array(n).keys()]);
+      g = g.map((r) => cols.map((c) => r[c]));
+    } else {
+      const rows = [...shuffle([0, 1]), ...shuffle([2, 3])], band = shuffle([0, 1]);
+      g = (band[0] ? [2, 3, 0, 1] : [0, 1, 2, 3]).map((i) => g[rows[i]]);
+      const cols = [...shuffle([0, 1]), ...shuffle([2, 3])], stack = shuffle([0, 1]), order = stack[0] ? [2, 3, 0, 1] : [0, 1, 2, 3];
+      g = g.map((r) => order.map((i) => r[cols[i]]));
+      if (pick([true, false])) g = g[0].map((_, c) => g.map((r) => r[c]));
+    }
+    return g;
+  }
+  function peers(n, boxes, r, c) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      if (i !== c) out.push([r, i]);
+      if (i !== r) out.push([i, c]);
+    }
+    if (boxes) {
+      const br = r - r % 2, bc = c - c % 2;
+      for (let i = br; i < br + 2; i++) for (let j = bc; j < bc + 2; j++) if ((i !== r || j !== c) && i !== r && j !== c) out.push([i, j]);
+    }
+    return out;
+  }
+  function solveSingles(grid, n, boxes) {
+    const g = grid.map((r) => r.slice());
+    for (; ; ) {
+      let empty = 0, moved = false;
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        if (g[r][c] != null) continue;
+        empty++;
+        const used = new Set(peers(n, boxes, r, c).map(([i, j]) => g[i][j]));
+        const cand = [...Array(n).keys()].filter((v) => !used.has(v));
+        if (cand.length === 1) {
+          g[r][c] = cand[0];
+          moved = true;
+        }
+      }
+      if (!empty) return g;
+      if (!moved) return null;
+    }
+  }
+  function genSudoku(lvl) {
+    const n = lvl === 1 ? 3 : 4, boxes = lvl === 3, holes = lvl === 1 ? 3 : lvl === 2 ? pick([6, 7]) : 8;
+    for (; ; ) {
+      const sol = fullGrid(n, boxes), puzzle = sol.map((r) => r.slice());
+      let removed = 0;
+      for (const k of shuffle([...Array(n * n).keys()])) {
+        if (removed === holes) break;
+        const r = Math.floor(k / n), c = k % n, keep = puzzle[r][c];
+        puzzle[r][c] = null;
+        if (solveSingles(puzzle, n, boxes)) removed++;
+        else puzzle[r][c] = keep;
+      }
+      if (removed === holes) return { kind: "sudoku", n, boxes, sol, puzzle, icons: pick(SUDOKU_ICONS).slice(0, n) };
+    }
+  }
+  function clashes(q, g) {
+    const bad = /* @__PURE__ */ new Set();
+    for (let r = 0; r < q.n; r++) for (let c = 0; c < q.n; c++) {
+      if (g[r][c] == null) continue;
+      for (const [i, j] of peers(q.n, q.boxes, r, c)) if (g[i][j] === g[r][c]) {
+        bad.add(r * q.n + c);
+        bad.add(i * q.n + j);
+      }
+    }
+    return [...bad];
+  }
+
+  // src/puzzles/sudoku-ui.js
+  function playSudoku(lvl) {
+    const q = genSudoku(lvl), g = q.puzzle.map((r) => r.slice());
+    let sel = null, locked = false;
+    const rule = q.boxes ? "w ka\u017Cdym rz\u0119dzie, w ka\u017Cdej kolumnie i w ka\u017Cdym kwadracie" : "w ka\u017Cdym rz\u0119dzie i w ka\u017Cdej kolumnie";
+    say("M\u0105dra Sowa", `Ka\u017Cdy obrazek ma by\u0107 raz ${rule}. Dotknij puste pole, potem obrazek.`, `Obrazkowe sudoku. Ka\u017Cdy obrazek ma by\u0107 dok\u0142adnie raz ${rule}. Dotknij puste pole, a potem obrazek.`);
+    $("ctl").innerHTML = `<div class="task pz"><div class="sdk n${q.n}${q.boxes ? " boxes" : ""}" style="grid-template-columns:repeat(${q.n},1fr)"></div>
+      <div class="sdk-pal">${q.icons.map((e, v) => `<button class="sdk-p" data-v="${v}" aria-label="obrazek ${v + 1}">${e}</button>`).join("")}</div></div>
+    <button class="btn main" id="checkBtn">Sprawd\u017A</button>`;
+    const grid = $("ctl").querySelector(".sdk");
+    const paint2 = (bad = []) => {
+      grid.innerHTML = g.map((row, r) => row.map((v, c) => {
+        const given = q.puzzle[r][c] != null, i = r * q.n + c;
+        return given ? `<span class="sc given">${q.icons[v]}</span>` : `<button class="sc${sel === i ? " sel" : ""}${bad.includes(i) ? " bad" : ""}" data-i="${i}" aria-label="pole ${r + 1}, ${c + 1}${v == null ? ", puste" : ""}">${v == null ? "" : q.icons[v]}</button>`;
+      }).join("")).join("");
+    };
+    grid.addEventListener("click", (e) => {
+      const b = e.target.closest("button.sc");
+      if (!b || locked) return;
+      const i = +b.dataset.i, r = Math.floor(i / q.n), c = i % q.n;
+      if (g[r][c] != null) {
+        g[r][c] = null;
+        sel = i;
+      } else sel = sel === i ? null : i;
+      snd.step();
+      paint2();
+    });
+    $("ctl").querySelector(".sdk-pal").addEventListener("click", (e) => {
+      const b = e.target.closest(".sdk-p");
+      if (!b || locked || sel == null) return;
+      g[Math.floor(sel / q.n)][sel % q.n] = +b.dataset.v;
+      sel = null;
+      snd.letter();
+      paint2();
+    });
+    paint2();
+    const empty = [];
+    q.puzzle.forEach((row, r) => row.forEach((v, c) => {
+      if (v == null) empty.push([r, c]);
+    }));
+    testHook("sudoku", empty.map(([r, c]) => ({ r, c, v: q.sol[r][c] })), empty.flatMap(([r, c]) => [`.sc[data-i="${r * q.n + c}"]`, `.sdk-p[data-v="${q.sol[r][c]}"]`]).concat("#checkBtn"));
+    return runChecks({
+      skill: "logic.sudoku",
+      check: () => {
+        if (empty.some(([r, c]) => g[r][c] == null)) return { ready: false, msg: "Najpierw wype\u0142nij wszystkie puste pola." };
+        const bad = clashes(q, g);
+        paint2(bad);
+        if (!bad.length) return { ok: true };
+        return { ok: false, msg: "Te same obrazki si\u0119 spotka\u0142y. Popatrz na czerwone pola." };
+      },
+      reveal: () => {
+        empty.forEach(([r, c]) => g[r][c] = q.sol[r][c]);
+        sel = null;
+        paint2();
+      },
+      lock: () => {
+        locked = true;
+        sel = null;
+        paint2();
+      },
+      note: (n) => `${q.n}\xD7${q.n}${q.boxes ? " z kwadratami" : ""}, puste: ${empty.length}${n > 1 ? `, pr\xF3by: ${n}` : ""}`
+    });
+  }
+
+  // src/puzzles/bridges.js
+  var FEATS2 = {
+    color: { vals: ["red", "blue", "yellow"], word: { red: "czerwone", blue: "niebieskie", yellow: "\u017C\xF3\u0142te" }, gen: { red: "czerwonych", blue: "niebieskich", yellow: "\u017C\xF3\u0142tych" } },
+    shape: { vals: ["round", "square", "tri"], word: { round: "okr\u0105g\u0142e", square: "kwadratowe", tri: "tr\xF3jk\u0105tne" }, gen: { round: "okr\u0105g\u0142ych", square: "kwadratowych", tri: "tr\xF3jk\u0105tnych" } },
+    hat: { vals: ["hat", "none"], word: { hat: "w czapce", none: "bez czapki" }, gen: { hat: "w czapce", none: "bez czapki" } }
+  };
+  var passes = (rule, cr) => rule.not ? cr[rule.not[0]] !== rule.not[1] : rule.all.every(([f, v]) => cr[f] === v);
+  function ruleWords(rule) {
+    if (rule.not) return `wszystkie opr\xF3cz ${FEATS2[rule.not[0]].gen[rule.not[1]]}`;
+    const parts2 = rule.all.slice().sort((a, b) => (a[0] === "hat") - (b[0] === "hat")).map(([f, v]) => FEATS2[f].word[v]);
+    return `tylko ${parts2.join(" ")}`;
+  }
+  function rulesFor(lvl, feats) {
+    const one = feats.flatMap((f) => FEATS2[f].vals.map((v) => ({ all: [[f, v]] })));
+    const not = lvl >= 2 ? feats.flatMap((f) => FEATS2[f].vals.map((v) => ({ not: [f, v] }))) : [];
+    const two = [];
+    if (lvl === 3) for (let i = 0; i < feats.length; i++) for (let j = i + 1; j < feats.length; j++) for (const a of FEATS2[feats[i]].vals) for (const b of FEATS2[feats[j]].vals) two.push({ all: [[feats[i], a], [feats[j], b]] });
+    return [...one, ...not, ...two];
+  }
+  function genBridges(lvl) {
+    const feats = lvl === 3 ? ["color", "shape", "hat"] : ["color", "shape"];
+    const n = lvl === 3 ? 10 : 8, all = rulesFor(lvl, feats);
+    const kinds = lvl === 1 ? all.filter((r) => r.all && r.all.length === 1) : lvl === 2 ? all.filter((r) => r.not || r.all.length === 1) : all.filter((r) => r.all && r.all.length === 2);
+    const combos = feats.reduce((acc, f) => acc.flatMap((c) => FEATS2[f].vals.map((v) => ({ ...c, [f]: v }))), [{}]);
+    for (; ; ) {
+      const rule = pick(kinds), crs = shuffle(combos).slice(0, n).map((c, i) => ({ ...c, id: i }));
+      const left2 = crs.filter((c) => passes(rule, c)).length;
+      if (left2 < 3 || n - left2 < 3) continue;
+      const key2 = (r) => crs.map((c) => passes(r, c) ? 1 : 0).join("");
+      if (all.filter((r) => key2(r) === key2(rule)).length !== 1) continue;
+      return { kind: "bridges", rule, crs, words: ruleWords(rule), ans: crs.map((c) => passes(rule, c) ? "L" : "R") };
+    }
+  }
+
+  // src/puzzles/bridges-ui.js
+  var FREE = 3;
+  var crHTML = (c) => `<span class="crb ${c.color} ${c.shape}">${c.hat === "hat" ? `<b class="hat"></b>` : ""}<i></i><i></i></span>`;
+  function playBridges(lvl) {
+    return new Promise((resolve) => {
+      const q = genBridges(lvl), run = GS.RUN, took = timer();
+      const where = q.crs.map(() => null), wrong = q.crs.map(() => null);
+      let sel = null, fails = 0, done = false;
+      say(
+        "M\u0105dra Sowa",
+        "Lewy most przepuszcza tylko niekt\xF3re stworki, prawy wszystkie inne. Kt\xF3r\u0119dy kto przejdzie? Dotknij stworka, potem most.",
+        "Dwa mosty! Lewy most przepuszcza tylko niekt\xF3re stworki, a prawy wszystkie inne. Nie powiem, kt\xF3re. Wysy\u0142aj stworki i patrz, co si\u0119 stanie. Dotknij stworka, a potem most."
+      );
+      $("ctl").innerHTML = `<div class="task pz"><div class="brs">
+        <div class="br"><button class="bridge" data-b="L" aria-label="lewy most">\u{1F309} lewy</button><div class="over" id="overL"></div></div>
+        <div class="br"><button class="bridge" data-b="R" aria-label="prawy most">prawy \u{1F309}</button><div class="over" id="overR"></div></div>
+      </div><div class="crs" id="crs"></div></div>`;
+      const paint2 = () => {
+        const cr = (c) => `<button class="cr${sel === c.id ? " sel" : ""}${wrong[c.id] ? " no" + wrong[c.id] : ""}" data-i="${c.id}" aria-pressed="${sel === c.id}" aria-label="stworek ${c.id + 1}">${crHTML(c)}</button>`;
+        $("crs").innerHTML = q.crs.filter((c) => !where[c.id]).map(cr).join("");
+        for (const b of ["L", "R"]) $("over" + b).innerHTML = q.crs.filter((c) => where[c.id] === b).map((c) => `<span class="cr in">${crHTML(c)}</span>`).join("");
+      };
+      paint2();
+      testHook("bridges", q.ans, q.crs.flatMap((c) => [`.cr[data-i="${c.id}"]`, `.bridge[data-b="${q.ans[c.id]}"]`]));
+      const finish2 = async (solved) => {
+        done = true;
+        record("logic.bridges", solved && fails <= 2, took(), `${q.words}, pomy\u0142ki: ${fails}`.slice(0, 40));
+        save();
+        if (solved) {
+          snd.ok();
+          burst($("overL"));
+          say(petName(), `Mamy to! Lewy most przepuszcza\u0142 ${q.words}.`);
+          await sleep(2200);
+        }
+        if (left(run)) return;
+        resolve({ solved, perfect: solved && fails <= 2 });
+      };
+      $("ctl").querySelector(".crs").addEventListener("click", (e) => {
+        const b = e.target.closest(".cr");
+        if (!b || done) return;
+        sel = sel === +b.dataset.i ? null : +b.dataset.i;
+        snd.step();
+        paint2();
+      });
+      $("ctl").querySelector(".brs").addEventListener("click", async (e) => {
+        const b = e.target.closest(".bridge");
+        if (!b || done) return;
+        if (sel == null) {
+          say(petName(), "Najpierw dotknij stworka, a potem most.");
+          return;
+        }
+        const c = q.crs[sel], side = b.dataset.b;
+        sel = null;
+        if (q.ans[c.id] === side) {
+          where[c.id] = side;
+          wrong[c.id] = null;
+          snd.letter();
+          paint2();
+          if (where.every(Boolean)) await finish2(true);
+          return;
+        }
+        fails++;
+        wrong[c.id] = side;
+        snd.bad();
+        paint2();
+        if (fails <= FREE) {
+          say(petName(), side === "L" ? "Lewy most nie przepu\u015Bci\u0142 tego stworka. Czym on si\u0119 r\xF3\u017Cni od tych, kt\xF3re przesz\u0142y?" : "Prawy most nie chce tego stworka. Mo\u017Ce przejdzie lewym?");
+          return;
+        }
+        done = true;
+        const fainted = await hurt();
+        if (left(run)) return;
+        q.crs.forEach((x) => where[x.id] = q.ans[x.id]);
+        paint2();
+        if (!fainted) say(petName(), `Zdradz\u0119 ci tajemnic\u0119: lewy most przepuszcza\u0142 ${q.words}.`);
+        await sleep(3200);
+        if (left(run)) return;
+        done = false;
+        await finish2(false);
+      });
+    });
+  }
+
+  // src/puzzles/scale.js
+  var ITEMS = [
+    { e: "\u{1F34E}", one: "jab\u0142ko", few: "jab\u0142ka", two: "dwa" },
+    { e: "\u{1F350}", one: "gruszka", few: "gruszki", two: "dwie" },
+    { e: "\u{1F383}", one: "dynia", few: "dynie", two: "dwie" },
+    { e: "\u{1F34B}", one: "cytryna", few: "cytryny", two: "dwie" }
+  ];
+  var NUM = { 3: "trzy", 4: "cztery" };
+  var howMany = (it, n) => `${n === 2 ? it.two : NUM[n]} ${it.few}`;
+  function genScale(lvl) {
+    if (lvl === 3) {
+      const [a, b] = [pick(ITEMS), pick(ITEMS)];
+      if (a === b) return genScale(lvl);
+      const A2 = ri(2, 6), B = ri(2, 9);
+      if (A2 === B) return genScale(lvl);
+      return { kind: "scale", two: true, a, b, A: A2, B, S1: 2 * A2, S2: A2 + B, ans: B };
+    }
+    const it = pick(ITEMS);
+    if (lvl === 1 && pick([true, false])) {
+      const A2 = ri(2, 8), k = ri(1, 6);
+      if (A2 + k > 12) return genScale(lvl);
+      return { kind: "scale", it, n: 1, k, A: A2, S: A2 + k, ans: A2 };
+    }
+    const n = lvl === 1 ? 2 : pick([3, 4]), A = ri(2, lvl === 1 ? 6 : 5);
+    if (n * A > 20) return genScale(lvl);
+    return { kind: "scale", it, n, k: 0, A, S: n * A, ans: A };
+  }
+  var weigh = (q, x) => q.two ? [q.A + x, q.S2] : [q.n * x + q.k, q.S];
+  function genSigns(lvl) {
+    const k = lvl === 3 ? 3 : 2, max = lvl === 1 ? 10 : 20;
+    for (; ; ) {
+      const nums = Array.from({ length: k + 1 }, () => ri(1, max)), signs = Array.from({ length: k }, () => pick(["+", "\u2212"]));
+      let v = nums[0], ok = true;
+      for (let i = 0; i < k; i++) {
+        v = signs[i] === "+" ? v + nums[i + 1] : v - nums[i + 1];
+        if (v < 0 || v > max) ok = false;
+      }
+      if (!ok) continue;
+      const res = v, fits = [];
+      for (let m = 0; m < 1 << k; m++) {
+        const s = Array.from({ length: k }, (_, i) => m & 1 << i ? "\u2212" : "+");
+        if (calc(nums, s) === res) fits.push(s);
+      }
+      if (fits.length !== 1) continue;
+      return { kind: "signs", nums, res, ans: signs };
+    }
+  }
+  function calc(nums, signs) {
+    let v = nums[0];
+    signs.forEach((s, i) => {
+      v = s === "+" ? v + nums[i + 1] : v - nums[i + 1];
+    });
+    return v;
+  }
+
+  // src/puzzles/scale-ui.js
+  var cap4 = (s) => s[0].toUpperCase() + s.slice(1);
+  var pan = (items, label) => `<span class="pan">${items}</span>${label != null ? `<b class="wgt">${label}</b>` : ""}`;
+  function scaleHTML(left2, right, id, tilt = 0) {
+    return `<div class="scale" id="${id}"><div class="beam" style="transform:rotate(${tilt}deg)"><span class="side l">${left2}</span><span class="side r">${right}</span></div><div class="post"></div></div>`;
+  }
+  function playScale(lvl) {
+    const q = genScale(lvl);
+    const items = (it, n, lbl) => Array.from({ length: n }, () => `<span class="itm">${it.e}<small>${lbl}</small></span>`).join("");
+    let draw2;
+    if (q.two) {
+      say("M\u0105dra Sowa", `Ile wa\u017Cy ${q.b.one}? Popatrz najpierw na pierwsz\u0105 wag\u0119.`, `Dwie wagi s\u0105 w r\xF3wnowadze. Na pierwszej dwa razy ${q.a.one} i odwa\u017Cnik ${q.S1}. Na drugiej ${q.a.one}, ${q.b.one} i odwa\u017Cnik ${q.S2}. Ile wa\u017Cy ${q.b.one}?`);
+      draw2 = (x, tilt) => scaleHTML(items(q.a, 2, ""), pan("", q.S1), "sc1") + scaleHTML(items(q.a, 1, "") + items(q.b, 1, x != null ? x : "?"), pan("", q.S2), "sc2", tilt);
+    } else {
+      const what = q.n === 1 ? `${q.it.one} i odwa\u017Cnik ${q.k}` : howMany(q.it, q.n);
+      say("M\u0105dra Sowa", `Waga stoi r\xF3wno. Ile wa\u017Cy ${q.it.one}?`, `Waga stoi r\xF3wno. Po jednej stronie ${what}, po drugiej odwa\u017Cnik ${q.S}. Ile wa\u017Cy ${q.it.one}?`);
+      draw2 = (x, tilt) => scaleHTML(items(q.it, q.n, x != null ? x : "?") + (q.k ? `<b class="wgt">${q.k}</b>` : ""), pan("", q.S), "sc1", tilt);
+    }
+    $("ctl").innerHTML = `<div class="task pz"><div class="scales" id="scales">${draw2(null, 0)}</div>
+      <p class="task-q">${cap4(q.two ? q.b.one : q.it.one)} wa\u017Cy: <b class="ans" id="ansBox">?</b></p><div id="pad"></div></div>
+    <button class="btn main" id="checkBtn">\u2696\uFE0F Zwa\u017C</button>`;
+    const pad = numPad($("pad"), { onInput: (v) => {
+      $("ansBox").textContent = v || "?";
+    } });
+    testHook("scale", q.ans, [...String(q.ans)].map((d) => `[data-d="${d}"]`).concat("#checkBtn"));
+    const show = (x) => {
+      const [l, r] = weigh(q, x);
+      $("scales").innerHTML = draw2(x, l > r ? -8 : l < r ? 8 : 0);
+      return [l, r];
+    };
+    return runChecks({
+      skill: "math.scale",
+      max: 5,
+      okFails: 1,
+      check: () => {
+        const x = pad.value;
+        if (x == null) return { ready: false, msg: "Wpisz, ile wa\u017Cy jedna rzecz." };
+        const [l, r] = show(x);
+        if (l === r) return { ok: true };
+        const side = l < r ? "Za lekko!" : "Za ci\u0119\u017Cko!";
+        if (q.two) return { ok: false, msg: `${side} Druga waga si\u0119 przechyla.` };
+        const sum = q.n === 1 ? `${cap4(q.it.one)} ${x} i odwa\u017Cnik ${q.k} to ${l}.` : `${cap4(howMany(q.it, q.n))} po ${x} to ${l}.`;
+        return { ok: false, msg: `${sum} ${side}` };
+      },
+      reveal: () => {
+        show(q.ans);
+        $("ansBox").textContent = q.ans;
+      },
+      note: (n) => `${q.two ? `A+A=${q.S1}, A+B=${q.S2}` : `${q.n}\xD7A${q.k ? `+${q.k}` : ""}=${q.S}`} \u2192 ${q.ans}${n > 1 ? `, wa\u017Cenia: ${n}` : ""}`
+    });
+  }
+  function playSigns(lvl) {
+    const q = genSigns(lvl), cur = q.ans.map(() => "");
+    say("M\u0105dra Sowa", "Wstaw plus albo minus, \u017Ceby wynik si\u0119 zgadza\u0142. Dotknij okienka, \u017Ceby zmieni\u0107 znak.", `Wstaw plus albo minus mi\u0119dzy liczby, \u017Ceby wysz\u0142o ${q.res}. Dotykaj okienek, \u017Ceby zmienia\u0107 znak.`);
+    const paint2 = (bad = false) => {
+      $("eq").innerHTML = q.nums.map((n, i) => `<b class="n">${n}</b>${i < cur.length ? `<button class="sg${bad ? " bad" : ""}" data-i="${i}" aria-label="znak ${i + 1}: ${cur[i] || "pusty"}">${cur[i] || "?"}</button>` : ""}`).join("") + `<b class="eqs">=</b><b class="n">${q.res}</b>`;
+    };
+    $("ctl").innerHTML = `<div class="task pz"><p class="task-q">Jakie znaki pasuj\u0105?</p><div class="eq" id="eq"></div></div><button class="btn main" id="checkBtn">Sprawd\u017A</button>`;
+    paint2();
+    let locked = false;
+    $("eq").addEventListener("click", (e) => {
+      const b = e.target.closest(".sg");
+      if (!b || locked) return;
+      const i = +b.dataset.i;
+      cur[i] = cur[i] === "" ? "+" : cur[i] === "+" ? "\u2212" : "";
+      snd.step();
+      paint2();
+    });
+    testHook("signs", q.ans, q.ans.flatMap((s, i) => s === "+" ? [`.sg[data-i="${i}"]`] : [`.sg[data-i="${i}"]`, `.sg[data-i="${i}"]`]).concat("#checkBtn"));
+    const expr = () => q.nums.map((n, i) => `${n}${i < cur.length ? ` ${cur[i]} ` : ""}`).join("");
+    return runChecks({
+      skill: "math.signs",
+      check: () => {
+        if (cur.some((s) => !s)) return { ready: false, msg: "Wstaw znak do ka\u017Cdego okienka." };
+        const v = calc(q.nums, cur);
+        if (v === q.res) return { ok: true };
+        paint2(true);
+        return { ok: false, msg: `${expr()} to ${v}, a ma by\u0107 ${q.res}.` };
+      },
+      reveal: () => {
+        q.ans.forEach((s, i) => cur[i] = s);
+        paint2();
+      },
+      lock: () => {
+        locked = true;
+      },
+      note: (n) => `${q.nums.join(" \u25A1 ")} = ${q.res}${n > 1 ? `, pr\xF3by: ${n}` : ""}`
+    });
+  }
+
   // src/logic-room.js
   var LOGIC_KINDS = {
     houses: { play: () => playHouses(levelFor("logic")) },
     patterns: { play: () => playPatterns(levelFor("logic")) },
     tiles: { play: () => playTiles(levelFor("logic")) },
-    pyramid: { play: () => playPyramid(levelFor("math")) }
+    pyramid: { play: () => playPyramid(levelFor("math")) },
+    sudoku: { play: () => playSudoku(levelFor("logic")) },
+    bridges: { play: () => playBridges(levelFor("logic")) },
+    scale: { play: () => playScale(levelFor("math")) },
+    signs: { play: () => playSigns(levelFor("math")) }
   };
   function nextLogicKind(seen) {
     const all = Object.keys(LOGIC_KINDS);
@@ -5160,11 +5660,14 @@ button.brick { border-style: dashed; cursor: pointer; }
     sceneFor("Kamie\u0144 czasu", msprites().hourglass, run.seed + run.i * 19);
     say(petName(), "Kamie\u0144 czasu! Sprawdzimy, ile co trwa: sekunda, minuta, godzina.");
     let good = 0;
-    for (const q of timeRoomTasks(lvl)) {
+    const tasks = timeRoomTasks(lvl);
+    if (window.__LW_TEST && window.__LW_TEST.day) tasks[1] = genDay(lvl);
+    for (const q of tasks) {
       await sleep(500);
       if (left(run)) return;
       let r;
       if (q.kind === "feel") r = await feel(q);
+      else if (q.kind === "day") r = await playDay(q);
       else {
         say(petName(), q.title, q.say);
         r = await askChoice(q, {
@@ -5178,6 +5681,38 @@ button.brick { border-style: dashed; cursor: pointer; }
       if (r.ok) good++;
     }
     finish(run, good, "Czujemy ju\u017C, ile trwa czas!");
+  }
+  function clockSVG(h, m) {
+    const a = (v) => v * Math.PI * 2, hh = (h % 12 + m / 60) / 12, mm = m / 60;
+    const ticks = Array.from({ length: 12 }, (_, i) => {
+      const t = a(i / 12);
+      return `<line x1="${20 + Math.sin(t) * 15}" y1="${20 - Math.cos(t) * 15}" x2="${20 + Math.sin(t) * 17}" y2="${20 - Math.cos(t) * 17}" stroke="#2a1d2e" stroke-width="${i % 3 ? 1 : 2}"/>`;
+    }).join("");
+    return `<svg class="mclock" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#fff6dc" stroke="#7a4b2a" stroke-width="2"/>${ticks}<line x1="20" y1="20" x2="${20 + Math.sin(a(hh)) * 9}" y2="${20 - Math.cos(a(hh)) * 9}" stroke="#2b6cb0" stroke-width="3" stroke-linecap="round"/><line x1="20" y1="20" x2="${20 + Math.sin(a(mm)) * 14}" y2="${20 - Math.cos(a(mm)) * 14}" stroke="#e8442c" stroke-width="2" stroke-linecap="round"/></svg>`;
+  }
+  function playDay(q) {
+    const E = Object.fromEntries(q.evs.map((x) => [x.k, x]));
+    say(petName(), q.title + ": od rana do nocy.", q.say);
+    $("ctl").innerHTML = `<div class="task pz day"><p class="task-q">\u{1F305} rano \u2192 noc \u{1F319}</p><div class="pl-slots dayline"></div><div class="pl-tray"></div></div>
+    <button class="btn main" id="checkBtn">Sprawd\u017A</button>`;
+    const ev = (k) => `<span class="ev"><span class="em">${E[k].e}</span>${clockSVG(E[k].h, E[k].m)}<small>${E[k].part.e} ${esc(E[k].part.k)}</small></span>`;
+    const pl = placer($("ctl").querySelector(".pz"), { keys: q.evs.map((x) => x.k), n: q.evs.length, pieceHTML: ev, slotHTML: (i, k) => k ? ev(k) : `<b class="no">${i + 1}</b>` });
+    testHook("day", q.ans, q.ans.flatMap((k, i) => [`.pz-piece[data-k="${k}"]`, `.pz-slot[data-i="${i}"]`]).concat("#checkBtn"));
+    return runChecks({
+      skill: "time.day",
+      check: () => {
+        const at = pl.get();
+        if (at.some((k2) => !k2)) return { ready: false, msg: "Najpierw u\u0142\xF3\u017C wszystkie obrazki." };
+        const bad = at.map((k2, i) => k2 === q.ans[i] ? -1 : i).filter((i) => i >= 0);
+        pl.mark(bad);
+        if (!bad.length) return { ok: true };
+        const k = at[bad[0]];
+        return { ok: false, msg: `${E[k].name} jest ${E[k].part.k}, o ${wordsAt(E[k].h, E[k].m)}. Popraw czerwone miejsca.` };
+      },
+      reveal: () => pl.set(q.ans),
+      lock: () => pl.lock(),
+      note: (n) => `${q.evs.length} zdarzenia${n > 1 ? `, pr\xF3by: ${n}` : ""}`
+    }).then((r) => ({ ok: r.perfect }));
   }
   function feel(q) {
     return new Promise((resolve) => {

@@ -7,6 +7,10 @@ import { genShield, explain } from "../src/math-data.js";
 import { genHouses, holds, perms } from "../src/puzzles/houses.js";
 import { genFloor, genPiece, placePiece, connected, same } from "../src/puzzles/tiles.js";
 import { genPyramid, layout, propagate, badTriples } from "../src/puzzles/pyramid.js";
+import { genSudoku, solveSingles, clashes } from "../src/puzzles/sudoku.js";
+import { genBridges, passes, ruleWords } from "../src/puzzles/bridges.js";
+import { genScale, weigh, genSigns, calc } from "../src/puzzles/scale.js";
+import { genDay, partOf } from "../src/time-data.js";
 import { genHourOnly, rough, wordsAcc, wordsAt, durWord, guessHit, guessLines, labelFor, clockRoomTasks } from "../src/time-data.js";
 import { genRead, genSet, genElapsed, genHowLong, genLonger, genFeel, words, digital, tripTimeLine, ACTS, SPANS } from "../src/time-data.js";
 
@@ -205,4 +209,58 @@ test("guessing the trip length: the nearest guess counts, the card reads well", 
   assert.equal(guessLines(60, 9 * 60000, [2, 10, 60], true)[0], "Myślałaś, że potrwa godzinę. Trwała 9 minut.");
   assert.equal(guessLines(null, 20 * 60000, [], true).at(-1), "Godzina to tyle, co 3 takie wyprawy.");
   assert.equal(guessLines(null, 20 * 60000, [], true)[0], "Ta wyprawa trwała 20 minut. To tyle, co 7 piosenek.");
+});
+
+test("picture sudoku: solvable by sure moves only, so the solution is the only one", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genSudoku(lvl), n = q.n;
+    assert.equal(n, lvl === 1 ? 3 : 4);
+    assert.deepEqual(solveSingles(q.puzzle, n, q.boxes), q.sol);
+    assert.equal(clashes(q, q.sol).length, 0, "the solution breaks its own rules");
+    const holes = q.puzzle.flat().filter((v) => v == null).length; assert.ok(lvl === 1 ? holes === 3 : lvl === 2 ? holes === 6 || holes === 7 : holes === 8);
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.puzzle[r][c] != null) assert.equal(q.puzzle[r][c], q.sol[r][c]);
+    if (q.boxes) for (const [br, bc] of [[0, 0], [0, 2], [2, 0], [2, 2]]) assert.equal(new Set([q.sol[br][bc], q.sol[br][bc + 1], q.sol[br + 1][bc], q.sol[br + 1][bc + 1]]).size, 4);
+  }
+});
+
+test("two bridges: one rule of the level splits the creatures, each bridge gets three or more", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < 800; i++) {
+    const q = genBridges(lvl), L = q.ans.filter((x) => x === "L").length;
+    assert.equal(q.crs.length, lvl === 3 ? 10 : 8);
+    assert.ok(L >= 3 && q.crs.length - L >= 3);
+    assert.equal(new Set(q.crs.map((c) => `${c.color}${c.shape}${c.hat || ""}`)).size, q.crs.length, "two creatures look the same");
+    q.crs.forEach((c, j) => assert.equal(passes(q.rule, c) ? "L" : "R", q.ans[j]));
+    if (lvl === 1) assert.ok(q.rule.all && q.rule.all.length === 1);
+    if (lvl === 3) assert.equal(q.rule.all.length, 2);
+  }
+  assert.equal(ruleWords({ all: [["color", "red"]] }), "tylko czerwone");
+  assert.equal(ruleWords({ not: ["color", "blue"] }), "wszystkie oprócz niebieskich");
+  assert.equal(ruleWords({ all: [["hat", "hat"], ["color", "red"]] }), "tylko czerwone w czapce");
+});
+
+test("balance scale and signs: the answer balances, exactly one set of signs works", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genScale(lvl), [l, r] = weigh(q, q.ans);
+    assert.equal(l, r); assert.ok(q.ans >= 2 && q.ans <= 9);
+    assert.ok(weigh(q, q.ans + 1)[0] > r && weigh(q, q.ans - 1)[0] < r, "the scale does not tip the right way");
+    if (!q.two) assert.ok(q.S <= 20); else assert.equal(q.S1, 2 * q.A);
+    const s = genSigns(lvl);
+    assert.equal(s.nums.length, lvl === 3 ? 4 : 3); assert.equal(calc(s.nums, s.ans), s.res);
+    let n = 0; for (let m = 0; m < 1 << s.ans.length; m++) if (calc(s.nums, s.ans.map((_, j) => (m & (1 << j) ? "−" : "+"))) === s.res) n++;
+    assert.equal(n, 1);
+  }
+});
+
+test("day plan: events at least an hour apart, the clock and the part of day give the order", () => {
+  seedRandom(seed);
+  assert.equal(partOf(7 * 60).k, "rano"); assert.equal(partOf(19 * 60).k, "wieczorem"); assert.equal(partOf(21 * 60).k, "w nocy"); assert.equal(partOf(14 * 60).k, "po południu");
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genDay(lvl), t = q.ans.map((k) => q.evs.find((x) => x.k === k).t);
+    assert.equal(q.evs.length, lvl === 1 ? 3 : 4);
+    assert.ok(t.every((x, j) => j === 0 || x - t[j - 1] >= 60));
+    if (lvl === 1) assert.ok(q.evs.every((x) => x.m === 0));
+  }
 });

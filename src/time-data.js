@@ -135,7 +135,7 @@ export function genFeel(lvl) {
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
 export function clockRoomTasks(lvl) { return lvl === 1 ? [genHourOnly(), genSet(1), pick([genRead, genElapsed])(1)] : [genRead(lvl), genSet(lvl), genElapsed(lvl)]; }
-export function timeRoomTasks(lvl) { return lvl === 3 ? [genHowLong(lvl), genLonger(lvl), genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), genLonger(lvl), genFeel(lvl)]; }
+export function timeRoomTasks(lvl) { const mid = rnd() < 0.5 ? genDay(lvl) : genLonger(lvl); return lvl === 3 ? [genHowLong(lvl), mid, genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), mid, genFeel(lvl)]; }
 
 // "This trip took 12 minutes — as long as four songs": real time the child has just lived through
 export function tripTimeLine(ms) {
@@ -171,4 +171,31 @@ export function guessLines(guess, ms, opts, fem) {
     out.push(n <= 1 ? "Godzina to mniej więcej tyle, co ta wyprawa." : `Godzina to tyle, co ${n} ${n <= 4 ? "takie wyprawy" : "takich wypraw"}.`);
   }
   return out;
+}
+
+/* ---------- the plan of a day: put the day's events in order, morning to night ----------
+   The clock alone cannot tell 7 in the morning from 7 in the evening, so every event also shows
+   the part of the day. Times are on a 24-hour scale here; the clocks show them on 12 hours. */
+export const DAY_PARTS = [{ k: "rano", e: "🌅", to: 12 }, { k: "po południu", e: "☀️", to: 18 }, { k: "wieczorem", e: "🌆", to: 21 }, { k: "w nocy", e: "🌙", to: 24 }];
+export const partOf = (t) => DAY_PARTS.find((p) => t / 60 < p.to);
+const DAY_EVENTS = [
+  ["wake", "Pobudka", "⏰", [6, 7]], ["breakfast", "Śniadanie", "🥣", [7, 7.5, 8]], ["school", "Szkoła", "🏫", [8]],
+  ["lunch", "Obiad", "🍲", [13, 14, 14.5]], ["walk", "Spacer z psem", "🐕", [16, 16.5, 17]], ["supper", "Kolacja", "🍝", [18, 18.5, 19]],
+  ["tale", "Bajka", "📺", [19, 19.5, 20]], ["bath", "Kąpiel", "🛁", [20]], ["sleep", "Sen", "🛏️", [21, 21.5, 22]]
+];
+export function genDay(lvl) {
+  const n = lvl === 1 ? 3 : 4;
+  for (;;) {
+    const evs = shuffle(DAY_EVENTS).slice(0, n).map(([k, name, e, times]) => {
+      const ok = times.filter((t) => lvl > 1 || t % 1 === 0);
+      return ok.length ? { k, name, e, t: Math.round(pick(ok) * 60) } : null;
+    });
+    if (evs.some((x) => !x)) continue;
+    const sorted = evs.slice().sort((a, b) => a.t - b.t);
+    if (sorted.some((x, i) => i && x.t - sorted[i - 1].t < 60)) continue; // an hour apart at least, so the order is clear
+    // at level 3 two events show the same number on the clock (7 in the morning and 7 in the evening)
+    if (lvl === 3 && !evs.some((a) => evs.some((b) => a !== b && a.t % 720 === b.t % 720)) && rnd() < 0.7) continue;
+    return { kind: "day", title: "Ułóż plan dnia", evs: evs.map((x) => ({ ...x, part: partOf(x.t), h: Math.floor(x.t / 60), m: x.t % 60 })), ans: sorted.map((x) => x.k),
+      say: "Ułóż plan dnia: od rana do nocy. Popatrz na zegary i na to, czy jest rano, czy wieczorem." };
+  }
 }

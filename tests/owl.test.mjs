@@ -6,7 +6,7 @@ import { serve, open, startWith, oneProfile, go, playRoom, label, readDB, passGu
 
 let srv; before(async () => { srv = await serve(); }); after(() => srv.close());
 
-export const OWL_KINDS = ["houses", "patterns", "tiles", "pyramid"];
+export const OWL_KINDS = ["houses", "patterns", "tiles", "pyramid", "sudoku", "bridges", "scale", "signs"];
 const SCREENS = [["small phone", 360, 640], ["phone", 390, 844], ["tablet upright", 768, 1024], ["tablet lying", 1024, 768]];
 
 async function owlOnly(p, kind, level, extra = {}) {
@@ -147,4 +147,50 @@ test("clock tower on level 1: the short hand alone, answers in words, both hands
     assert.deepEqual(r.asked.slice(0, 2), ["hour", "set"]);
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }
+});
+
+test("two bridges: three wrong moves are free, the fourth costs a heart and tells the rule", { timeout: 120000 }, async () => {
+  const o = await open(); const p = o.p;
+  try {
+    await owlOnly(p, "bridges", 1);
+    await p.waitForSelector(".cr");
+    const ans = await p.evaluate(() => window.__LW_TEST.q.ans);
+    const hearts = () => p.$$eval(".hearts img:not(.empty)", (x) => x.length), h0 = await hearts();
+    const i = 0, wrongSide = ans[i] === "L" ? "R" : "L";
+    for (let k = 0; k < 3; k++) { await p.click(`.cr[data-i="${i}"]`); await p.click(`.bridge[data-b="${wrongSide}"]`); }
+    assert.equal(await hearts(), h0, "free mistakes cost a heart");
+    assert.ok(await p.$(`.cr[data-i="${i}"].no${wrongSide}`), "a rejected creature is marked");
+    await p.click(`.cr[data-i="${i}"]`); await p.click(`.bridge[data-b="${wrongSide}"]`);
+    await p.waitForTimeout(900);
+    assert.equal(await hearts(), h0 - 1);
+    assert.match(await p.textContent("#txt"), /lewy most przepuszczał (tylko|wszystkie)/);
+    await p.waitForFunction(() => document.querySelector("#sc canvas")?.getAttribute("aria-label") === "Skrzynia ze skarbem", null, { timeout: 15000 });
+    const a = (await readDB(p)).profiles.p1.stats.answers.find((x) => x.k === "logic.bridges");
+    assert.equal(a.ok, false);
+    assert.deepEqual(o.errs, []);
+  } finally { await o.close(); }
+});
+
+test("time stone: the day plan fits a small phone and a wrong order explains", { timeout: 120000 }, async () => {
+  for (const level of [1, 3]) {
+    const o = await open({ viewport: { width: 360, height: 640 } }); const p = o.p;
+    try {
+      await p.addInitScript(() => { window.__LW_TEST.rooms = ["time", "chest"]; window.__LW_TEST.day = true; });
+      await startWith(p, srv.url, oneProfile({ level, lands: ["forest", "mountains"] }));
+      await go(p, "mountains");
+      await p.waitForFunction(() => window.__LW_TEST.q && window.__LW_TEST.q.kind === "day", null, { timeout: 20000 }).catch(async () => {
+        // the first task (how long) comes before the day plan: answer it
+        const a = await p.evaluate(() => window.__LW_TEST.q.ans); await p.click(`#ctl .opt[data-a="${a}"]`);
+        await p.waitForFunction(() => window.__LW_TEST.q && window.__LW_TEST.q.kind === "day", null, { timeout: 20000 });
+      });
+      const m = await p.evaluate(() => ({ over: document.documentElement.scrollHeight - innerHeight, btn: document.querySelector("#checkBtn").getBoundingClientRect().bottom, H: innerHeight }));
+      assert.ok(m.over <= 1 && m.btn <= m.H, `level ${level}: the day plan does not fit (${JSON.stringify(m)})`);
+      const ans = await p.evaluate(() => window.__LW_TEST.q.ans);
+      for (const [i, k] of [...ans].reverse().entries()) { await p.click(`.pz-piece[data-k="${k}"]`); await p.click(`.pz-slot[data-i="${i}"]`); }
+      await p.click("#checkBtn");
+      assert.match(await p.textContent("#txt"), /jest (rano|po południu|wieczorem|w nocy), o /);
+      assert.ok(await p.$(".pz-slot.bad"));
+      assert.deepEqual(o.errs, []);
+    } finally { await o.close(); }
+  }
 });

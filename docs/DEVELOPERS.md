@@ -28,7 +28,8 @@ Testy grają w prawdziwą grę w przeglądarce Chromium:
 | `tests/camp.test.mjs` | Płacenie monetami i banknotami z resztą, skarbonka (100 gr = 1 zł), ozdoby, ogródek, sklep, działanie budynków na wyprawie |
 | `tests/layout.test.mjs` | Każdy rodzaj pokoju mieści się na ekranie bez przewijania: mały telefon 360×640, telefon 390×844, tablet pionowo i poziomo |
 | `tests/offline.test.mjs` | Gra bez internetu, otwarcie pliku z dysku, brak zapytań poza grę |
-| `tests/puzzles.test.mjs` | Zagadki logiczne i zadania z zegarem, sprawdzane tysiące razy bez przeglądarki: jedno rozwiązanie, żadna wskazówka nie wystarcza sama, polskie nazwy godzin |
+| `tests/puzzles.test.mjs` | Generatory zagadek, sprawdzane tysiące razy bez przeglądarki: dokładnie jedno rozwiązanie, rozwiązywalność bez zgadywania, zakresy liczb, polskie nazwy godzin |
+| `tests/owl.test.mjs` | Każda zagadka Sowy na każdym poziomie i każdym ekranie, zasada trzech sprawdzeń, rotacja rodzajów, wyjaśnienie po błędzie w walce, zgadywanie czasu wyprawy, zegar i plan dnia |
 | `tests/unit.test.mjs` | SHA-256 dla PIN-u, nazwy kluczy zapisu, wersja w pamięci offline |
 
 Każdy test kończy się błędem, gdy na stronie wystąpi jakikolwiek nieobsłużony wyjątek.
@@ -50,6 +51,9 @@ SEED=561586849 node --test tests/expedition.test.mjs
 | `src/parent.js` | Panel rodzica |
 | `src/sprites.js`, `hero.js`, `pets.js`, `monsters.js`, `props.js` | Grafika rysowana kodem |
 | `src/*-room.js`, `expedition.js` | Wyprawa i jej pokoje |
+| `src/puzzles/` | Zagadki Sowy: generator bez DOM (`*.js`, testowany w Node) i ekran (`*-ui.js`) |
+| `src/puzzle-ui.js` | Wspólne części zagadek: układanie na dwa dotknięcia, klawiatura liczb, przycisk „Sprawdź” z trzema próbami |
+| `src/math-data.js`, `explain-ui.js` | Tarcza w walce: odpowiedzi z typowych pomyłek i obrazkowe wyjaśnienie |
 | `src/styles.css`, `src/index.html` | Wygląd i szablon strony |
 | `public/` | Manifest, service worker (tryb offline), ikony |
 | `tests/` | Testy (patrz wyżej) |

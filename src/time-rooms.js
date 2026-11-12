@@ -9,8 +9,8 @@ import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { record, timer } from "./stats.js";
-import { clockRoomTasks, digital, durWord, h12, labelFor, timeRoomTasks, words, wordsAcc, wordsAt } from "./time-data.js";
-import { testHook } from "./puzzle-ui.js";
+import { clockRoomTasks, digital, durWord, genDay, h12, labelFor, timeRoomTasks, words, wordsAcc, wordsAt } from "./time-data.js";
+import { placer, runChecks, testHook } from "./puzzle-ui.js";
 import { $, app, esc, reduced, ri, rnd, sleep } from "./util.js";
 
 /* ================== Clock face ==================
@@ -141,10 +141,13 @@ export async function timeRoom() {
   sceneFor("Kamień czasu", msprites().hourglass, run.seed + run.i * 19);
   say(petName(), "Kamień czasu! Sprawdzimy, ile co trwa: sekunda, minuta, godzina.");
   let good = 0;
-  for (const q of timeRoomTasks(lvl)) {
+  const tasks = timeRoomTasks(lvl);
+  if (window.__LW_TEST && window.__LW_TEST.day) tasks[1] = genDay(lvl); // tests: always the day plan
+  for (const q of tasks) {
     await sleep(500); if (left(run)) return;
     let r;
     if (q.kind === "feel") r = await feel(q);
+    else if (q.kind === "day") r = await playDay(q);
     else {
       say(petName(), q.title, q.say);
       r = await askChoice(q, {
@@ -157,6 +160,38 @@ export async function timeRoom() {
     if (r.ok) good++;
   }
   finish(run, good, "Czujemy już, ile trwa czas!");
+}
+
+// A small clock for the day plan: plain SVG, so it survives the placer redrawing the pieces
+export function clockSVG(h, m) {
+  const a = (v) => v * Math.PI * 2, hh = ((h % 12) + m / 60) / 12, mm = m / 60;
+  const ticks = Array.from({ length: 12 }, (_, i) => { const t = a(i / 12); return `<line x1="${20 + Math.sin(t) * 15}" y1="${20 - Math.cos(t) * 15}" x2="${20 + Math.sin(t) * 17}" y2="${20 - Math.cos(t) * 17}" stroke="#2a1d2e" stroke-width="${i % 3 ? 1 : 2}"/>`; }).join("");
+  return `<svg class="mclock" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="19" fill="#fff6dc" stroke="#7a4b2a" stroke-width="2"/>${ticks}`
+    + `<line x1="20" y1="20" x2="${20 + Math.sin(a(hh)) * 9}" y2="${20 - Math.cos(a(hh)) * 9}" stroke="#2b6cb0" stroke-width="3" stroke-linecap="round"/>`
+    + `<line x1="20" y1="20" x2="${20 + Math.sin(a(mm)) * 14}" y2="${20 - Math.cos(a(mm)) * 14}" stroke="#e8442c" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+
+function playDay(q) {
+  const E = Object.fromEntries(q.evs.map((x) => [x.k, x]));
+  say(petName(), q.title + ": od rana do nocy.", q.say);
+  $("ctl").innerHTML = `<div class="task pz day"><p class="task-q">🌅 rano → noc 🌙</p><div class="pl-slots dayline"></div><div class="pl-tray"></div></div>
+    <button class="btn main" id="checkBtn">Sprawdź</button>`;
+  const ev = (k) => `<span class="ev"><span class="em">${E[k].e}</span>${clockSVG(E[k].h, E[k].m)}<small>${E[k].part.e} ${esc(E[k].part.k)}</small></span>`;
+  const pl = placer($("ctl").querySelector(".pz"), { keys: q.evs.map((x) => x.k), n: q.evs.length, pieceHTML: ev, slotHTML: (i, k) => (k ? ev(k) : `<b class="no">${i + 1}</b>`) });
+  testHook("day", q.ans, q.ans.flatMap((k, i) => [`.pz-piece[data-k="${k}"]`, `.pz-slot[data-i="${i}"]`]).concat("#checkBtn"));
+  return runChecks({
+    skill: "time.day",
+    check: () => {
+      const at = pl.get(); if (at.some((k) => !k)) return { ready: false, msg: "Najpierw ułóż wszystkie obrazki." };
+      const bad = at.map((k, i) => (k === q.ans[i] ? -1 : i)).filter((i) => i >= 0); pl.mark(bad);
+      if (!bad.length) return { ok: true };
+      const k = at[bad[0]];
+      return { ok: false, msg: `${E[k].name} jest ${E[k].part.k}, o ${wordsAt(E[k].h, E[k].m)}. Popraw czerwone miejsca.` };
+    },
+    reveal: () => pl.set(q.ans),
+    lock: () => pl.lock(),
+    note: (n) => `${q.evs.length} zdarzenia${n > 1 ? `, próby: ${n}` : ""}`
+  }).then((r) => ({ ok: r.perfect }));
 }
 
 function feel(q) {

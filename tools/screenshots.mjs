@@ -20,10 +20,10 @@ const showcase = (over = {}) => oneProfile(Object.assign({
 
 const srv = await serve();
 const browser = await chromium.launch();
-async function shot(name, { viewport = PHONE, rooms, seed = 7, save = showcase(), prepare, scale = 1.5 } = {}) {
+async function shot(name, { viewport = PHONE, rooms, seed = 7, save = showcase(), prepare, scale = 1.5, logic } = {}) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: scale }), p = await ctx.newPage(), errs = [];
   p.on("pageerror", (e) => errs.push(e.message));
-  await p.addInitScript(({ s, r }) => { window.__LW_TEST = { seed: s }; if (r) window.__LW_TEST.rooms = r; }, { s: seed, r: rooms || null });
+  await p.addInitScript(({ s, r, l }) => { window.__LW_TEST = { seed: s }; if (r) window.__LW_TEST.rooms = r; if (l) window.__LW_TEST.logic = l; }, { s: seed, r: rooms || null, l: logic || null });
   await startWith(p, srv.url, save);
   if (prepare) await prepare(p);
   await p.waitForTimeout(900);
@@ -53,7 +53,8 @@ await shot("potwor", {
   }
 });
 await shot("zegar", { rooms: ["clock", "chest"], seed: 5, prepare: async (p) => { await go(p, "mountains"); await p.waitForSelector(".clock"); } });
-await shot("sowa", { rooms: ["logic", "chest"], seed: 9, save: showcase({ level: 2 }), prepare: async (p) => { await go(p, "forest"); await p.waitForSelector(".clues"); } });
+await shot("sowa", { rooms: ["logic", "chest"], logic: "houses", seed: 9, save: showcase({ level: 2 }), prepare: async (p) => { await go(p, "forest"); await p.waitForSelector(".hclues"); } });
+await shot("piramida", { rooms: ["logic", "chest"], logic: "pyramid", seed: 4, save: showcase({ level: 2 }), prepare: async (p) => { await go(p, "forest"); await p.waitForSelector(".pyr"); } });
 await shot("zakupy", {
   save: showcase({ coins: 37 }),
   prepare: async (p) => { await p.click("#buildBtn"); await p.click("#tabD"); await p.click('.item.build[data-k="lantern"]'); await p.waitForSelector(".payov"); await p.click('.payov [data-w="20"]'); }

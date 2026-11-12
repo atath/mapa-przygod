@@ -66,6 +66,9 @@ export async function startWith(p, url, db) {
   await p.evaluate((d) => { localStorage.clear(); if (d) localStorage.setItem("lesna-wyprawa-v2", JSON.stringify(d)); }, db);
   await p.reload();
   await p.waitForSelector("h1");
+  // Under heavy load the page from before the reload can still deliver a storage event to the new one,
+  // which shows the "open somewhere else" warning. That is the test setting up, not the game: start clean.
+  if (await p.$("#staleBox")) { await p.reload(); await p.waitForSelector("h1"); }
 }
 
 export async function openPanel(p, pin = PIN) {

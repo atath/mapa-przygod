@@ -57,8 +57,8 @@ export function numPad(host, { max = 2, onInput = () => {} } = {}) {
    check() → { ready: false, msg } | { ok: true } | { ok: false, msg }
    The first two failed checks only say what does not fit; the third costs a heart and reveal() shows the solution.
    note(checks) describes the task for the parent's report; checks = how many times the child pressed the button.
-   Resolves { solved, perfect }: perfect = solved without a single failed check. */
-export function runChecks({ skill, max = 3, check, reveal, note, onFail = () => {}, lock = () => {} }) {
+   Resolves { solved, perfect }: perfect = solved with at most `okFails` failed checks (normally none). */
+export function runChecks({ skill, max = 3, okFails = 0, check, reveal, note, onFail = () => {}, lock = () => {} }) {
   return new Promise((resolve) => {
     const run = GS.RUN, took = timer(); let fails = 0, busy = false;
     $("checkBtn").addEventListener("click", async () => {
@@ -67,8 +67,8 @@ export function runChecks({ skill, max = 3, check, reveal, note, onFail = () => 
       if (r.ready === false) { snd.bad(); say(petName(), r.msg); return; }
       if (r.ok) {
         busy = true; lock(); snd.ok(); burst($("checkBtn"));
-        record(skill, fails === 0, took(), note(fails + 1)); save();
-        resolve({ solved: true, perfect: fails === 0 }); return;
+        record(skill, fails <= okFails, took(), note(fails + 1)); save();
+        resolve({ solved: true, perfect: fails <= okFails }); return;
       }
       fails++; onFail();
       if (fails < max) { snd.bad(); say(petName(), r.msg); return; }

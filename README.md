@@ -15,7 +15,7 @@
 
 ## 🗺️ O co chodzi w grze
 
-Dziecko z ulubionym zwierzakiem wyrusza na wyprawę. Każda wyprawa to kilka pokoi: najpierw trzeba **zaprogramować drogę** strzałkami, potem wybrać wyjście i zmierzyć się z tym, co za nim czeka: **potworem** pokonywanym liczeniem, **zaczarowanymi drzwiami** otwieranymi słowem albo **rozdrożem** z podobnymi drogowskazami. Przed skrzynią ze skarbem **Mądra Sowa** zadaje zagadki logiczne. Za zarobione złotówki dziecko rozbudowuje **obóz**: dom, studnię, ogródek, biblioteczkę i zagrodę dla zwierzaków.
+Dziecko z ulubionym zwierzakiem wyrusza na wyprawę. Każda wyprawa to kilka pokoi: najpierw trzeba **zaprogramować drogę** strzałkami, potem wybrać wyjście i zmierzyć się z tym, co za nim czeka: **potworem** pokonywanym liczeniem, **zaczarowanymi drzwiami** otwieranymi słowem albo **rozdrożem** z podobnymi drogowskazami. Przed skrzynią ze skarbem **Mądra Sowa** daje zagadkę do ułożenia: kto gdzie mieszka, płytki, piramidę liczbową, obrazkowe sudoku, dwa mosty z ukrytą regułą albo wagę. Za zarobione złotówki dziecko rozbudowuje **obóz**: dom, studnię, ogródek, biblioteczkę i zagrodę dla zwierzaków.
 
 Gra **wspiera szkołę, ale jej nie zastępuje**. Wyprawa trwa 10–15 minut i ma wyraźny koniec, a gra nie ma codziennych nagród za logowanie ani losowych skrzynek.
 
@@ -29,8 +29,8 @@ Gra **wspiera szkołę, ale jej nie zastępuje**. Wyprawa trwa 10–15 minut i m
   </tr>
   <tr>
     <td align="center"><img src="docs/img/potwor.png" alt="Walka z potworem"><br><b>Potwór</b><br><sub>Dobierz czar i karty, które dają jego moc</sub></td>
-    <td align="center"><img src="docs/img/zegar.png" alt="Wieża zegarowa"><br><b>Wieża zegarowa</b><br><sub>Odczytaj, ustaw, policz, o której koniec</sub></td>
-    <td align="center"><img src="docs/img/sowa.png" alt="Mądra Sowa"><br><b>Mądra Sowa</b><br><sub>Połącz wskazówki i rozwiąż zagadkę</sub></td>
+    <td align="center"><img src="docs/img/zegar.png" alt="Wieża zegarowa"><br><b>Wieża zegarowa</b><br><sub>Kręć wskazówkami, które chodzą razem</sub></td>
+    <td align="center"><img src="docs/img/sowa.png" alt="Mądra Sowa"><br><b>Mądra Sowa</b><br><sub>Ustaw zwierzaki tak, żeby pasowały wskazówki</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/img/zakupy.png" alt="Płacenie monetami"><br><b>Zakupy</b><br><sub>Odlicz monety, policz resztę</sub></td>
@@ -44,11 +44,11 @@ Gra **wspiera szkołę, ale jej nie zastępuje**. Wyprawa trwa 10–15 minut i m
 | | W grze |
 | --- | --- |
 | 🧭 **Programowanie** | Kolejność kroków, pętle (×2, ×3, ×4), klocek „aż do przeszkody”, szukanie najkrótszej drogi |
-| ➕ **Matematyka** | Dodawanie i odejmowanie, brakująca liczba, „3 × 5 gr = 15 gr” |
+| ➕ **Matematyka** | Dodawanie i odejmowanie z obrazkiem po błędzie (ramka dziesiątkowa, oś liczbowa), brakująca liczba, piramida liczbowa, waga jako równanie, wstawianie znaków, liczenie co 2, co 5 |
 | 🪙 **Pieniądze** | Prawdziwe monety i banknoty, płacenie, reszta, wymiana 100 gr na 1 zł |
-| ⏰ **Czas** | Zegar ze wskazówkami (pełne godziny i połówki), „o której się skończy”, ile co trwa, wyczucie sekund |
+| ⏰ **Czas** | Najpierw sama mała wskazówka, potem zegar, na którym obie wskazówki chodzą razem; „o której się skończy”, plan dnia, ile co trwa, wyczucie sekund, zgadywanie, ile potrwa wyprawa |
 | 📖 **Polski** | Układanie słów z liter, czytanie podobnych wyrazów, zagadki do hasła skrzyni |
-| 🦉 **Logika** | „Kto to zrobił?” z kilku wskazówek, ciągi, co nie pasuje, „jeśli… to…” |
+| 🦉 **Logika** | Łączenie wskazówek (kto gdzie mieszka), wyobraźnia przestrzenna (płytki, pasujący kawałek), obrazkowe sudoku, odkrywanie ukrytej reguły (dwa mosty), ciągi i rosnące figury |
 
 Kolejne zadania powstają z myślą o [nowej podstawie programowej](https://mscdn.pl/wp-content/uploads/2026/05/edukacja_wczesnoszkolna.pdf) dla klas 1–3, obowiązującej od września 2026 roku. Gra nie przerabia jej całej: ćwiczy to, w czym zabawa naprawdę pomaga. Każde zadanie czyta na głos zwierzak, więc dziecko, które dopiero uczy się czytać, też sobie poradzi.
 
