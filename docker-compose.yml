@@ -1,0 +1,9 @@
+# Mapa Przygód on a home server: docker compose up -d --build
+# The game opens at http://<server address>:8080 (change the left number to use another port).
+services:
+  mapa-przygod:
+    build: .
+    container_name: mapa-przygod
+    ports:
+      - "8080:80"
+    restart: unless-stopped

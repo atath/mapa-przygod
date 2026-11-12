@@ -327,7 +327,7 @@ body.room .ctl { gap: 8px; }
 
 /* landscape tablets and phones: scene on the left, conversation and controls on the right */
 @media (orientation: landscape) and (min-width: 700px) {
-  body.room main { max-width: 1200px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "hud hud" "sc dlg" "sc ctl"; column-gap: 16px; }
+  body.room main { max-width: 1240px; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "hud hud" "sc dlg" "sc ctl"; column-gap: 16px; }
   body.room .hud { grid-area: hud; flex-wrap: nowrap; }
   body.room .hud .trail { width: auto; flex: 1; }
   body.room .hud .runes { width: auto; }

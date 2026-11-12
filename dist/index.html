@@ -350,7 +350,7 @@ body.room .ctl { gap: 8px; }
 
 /* landscape tablets and phones: scene on the left, conversation and controls on the right */
 @media (orientation: landscape) and (min-width: 700px) {
-  body.room main { max-width: 1200px; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "hud hud" "sc dlg" "sc ctl"; column-gap: 16px; }
+  body.room main { max-width: 1240px; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: "hud hud" "sc dlg" "sc ctl"; column-gap: 16px; }
   body.room .hud { grid-area: hud; flex-wrap: nowrap; }
   body.room .hud .trail { width: auto; flex: 1; }
   body.room .hud .runes { width: auto; }
@@ -1813,6 +1813,31 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   // src/scene.js
   var S = 4;
   GS.scene = null;
+  function fitWhenPlaced(c) {
+    if (typeof ResizeObserver !== "function") return;
+    requestAnimationFrame(() => {
+      const box = c.parentElement;
+      if (!box) return;
+      const fit = () => {
+        if (!c.isConnected) {
+          ro.disconnect();
+          return;
+        }
+        if (!document.body.classList.contains("room")) {
+          c.style.width = c.style.height = "";
+          return;
+        }
+        const ar = c.width / c.height, w = Math.floor(Math.min(box.clientWidth, box.clientHeight * ar));
+        if (w > 0) {
+          c.style.width = w + "px";
+          c.style.height = Math.floor(w / ar) + "px";
+        }
+      };
+      const ro = new ResizeObserver(fit);
+      ro.observe(box);
+      fit();
+    });
+  }
   function mountCanvas(cols, rows) {
     const c = document.createElement("canvas");
     c.className = "pixel-canvas";
@@ -1822,6 +1847,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const x = c.getContext("2d");
     x.imageSmoothingEnabled = false;
     x.setTransform(S, 0, 0, S, 0, 0);
+    fitWhenPlaced(c);
     return { c, x, cols, rows };
   }
   function draw(ctx, spr, lx, ly, scale = 1, noShadow) {
@@ -3021,19 +3047,20 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
           if (!okSum) msg = total < N ? `${total} to za ma\u0142o! Moc potwora to ${N}.` : `${total} to za du\u017Co! Moc potwora to dok\u0142adnie ${N}.`;
           else {
             wrongSpells++;
-            msg = `${ELEM[spell].name} nie dzia\u0142a na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora dzia\u0142a ${ELEM[counter].name}.` : "Zajrzyj do ksi\u0119gi czar\xF3w.");
+            msg = `${ELEM[spell].name} nie dzia\u0142a na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora dzia\u0142a ${ELEM[counter].name}.` : "Sprawd\u017A, co pokonuje ka\u017Cdy czar.");
           }
-          if (!okSum && !okEl) msg += " I sprawd\u017A czar w ksi\u0119dze.";
+          if (!okSum && !okEl) msg += " I sprawd\u017A, co pokonuje ka\u017Cdy czar.";
           say(mon.name, "Hi hi! " + msg);
         }
         await sleep(1800);
         if (left(run)) return;
         monsterTurn();
       });
+      const show = prefix && typeof prefix === "object" ? prefix.show : prefix, spoken = prefix && typeof prefix === "object" ? prefix.speak : prefix;
       say(
         petName(),
-        (prefix ? prefix + " " : "") + `Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`,
-        (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`
+        (show ? show + " " : "") + `Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`,
+        (spoken ? spoken + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, kt\xF3re razem daj\u0105 ${N}.`
       );
     }
     function monsterTurn() {
@@ -3088,7 +3115,10 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       say(heroName(), `${pick(PRAISE)} ${mon.name} uciek\u0142 i zostawi\u0142 ${zl(loot)}!`);
       nextRoom();
     }
-    const intro = GS.G.fights === 0 ? `Uwaga! ${mon.name} to potw\xF3r ${E.adj}. Ka\u017Cdy potw\xF3r boi si\u0119 innego czaru, to jest w ksi\u0119dze czar\xF3w. Wybierz dobry czar i karty, kt\xF3re razem daj\u0105 jego moc. Potem potw\xF3r zaatakuje, a ty os\u0142onisz si\u0119 tarcz\u0105.` : `Grrr! ${mon.name} zagradza drog\u0119!`;
+    const intro = GS.G.fights === 0 ? {
+      show: `Uwaga! ${mon.name} to potw\xF3r ${E.adj}. Pod ka\u017Cdym czarem wida\u0107, kogo pokonuje.`,
+      speak: `Uwaga! ${mon.name} to potw\xF3r ${E.adj}. Ka\u017Cdy potw\xF3r boi si\u0119 innego czaru: pod ka\u017Cdym czarem wida\u0107, kogo pokonuje. Wybierz dobry czar i karty, kt\xF3re razem daj\u0105 jego moc. Potem potw\xF3r zaatakuje, a ty os\u0142onisz si\u0119 tarcz\u0105.`
+    } : `Grrr! ${mon.name} zagradza drog\u0119!`;
     playerTurn(intro);
   }
 

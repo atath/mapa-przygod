@@ -1,0 +1,71 @@
+# Mapa Przygód — dla programistów
+
+Gra to zwykły JavaScript (moduły ES) bez frameworka, budowany przez esbuild do jednego pliku `dist/index.html` z wbudowanymi czcionkami i grafiką rysowaną kodem.
+
+## Budowanie
+
+```bash
+npm install
+npm run build        # tworzy dist/: jeden plik index.html + pliki aplikacji (PWA)
+```
+
+`dist/index.html` działa samodzielnie: otwarty z dysku, z dowolnego hostingu plików statycznych albo z serwera.
+
+## Testy
+
+```bash
+npx playwright install chromium   # raz: przeglądarka do testów
+npm test                          # buduje grę i uruchamia wszystkie testy (ok. 2,5 min)
+npm run test:quick                # tylko szybkie testy bez przeglądarki
+```
+
+Testy grają w prawdziwą grę w przeglądarce Chromium:
+
+| Plik | Co sprawdza |
+| --- | --- |
+| `tests/expedition.test.mjs` | Pełne wyprawy w lesie i w górach na poziomach 1–3, odblokowanie gór, czy da się zebrać wszystkie monety w limicie klocków, limit prób na poziomie 3, wyjście z wyprawy w trakcie animacji, szerokość telefonu |
+| `tests/save.test.mjs` | Przeniesienie zapisu z pierwszej wersji, PIN, gracze, kopia zapisu, cofanie, uszkodzone pliki, dwie otwarte karty |
+| `tests/camp.test.mjs` | Płacenie monetami i banknotami z resztą, skarbonka (100 gr = 1 zł), ozdoby, ogródek, sklep, działanie budynków na wyprawie |
+| `tests/layout.test.mjs` | Każdy rodzaj pokoju mieści się na ekranie bez przewijania: mały telefon 360×640, telefon 390×844, tablet pionowo i poziomo |
+| `tests/offline.test.mjs` | Gra bez internetu, otwarcie pliku z dysku, brak zapytań poza grę |
+| `tests/puzzles.test.mjs` | Zagadki logiczne i zadania z zegarem, sprawdzane tysiące razy bez przeglądarki: jedno rozwiązanie, żadna wskazówka nie wystarcza sama, polskie nazwy godzin |
+| `tests/unit.test.mjs` | SHA-256 dla PIN-u, nazwy kluczy zapisu, wersja w pamięci offline |
+
+Każdy test kończy się błędem, gdy na stronie wystąpi jakikolwiek nieobsłużony wyjątek.
+
+Gra jest losowa (mapy, potwory, słowa), więc każde uruchomienie sprawdza inne przypadki. Na początku wyników każdy plik wypisuje swoje ziarno losowania, np. `SEED=561586849`. Gdy test się wywróci, ten sam przebieg powtórzysz poleceniem:
+
+```bash
+SEED=561586849 node --test tests/expedition.test.mjs
+```
+
+## Struktura
+
+| Katalog / plik | Co zawiera |
+| --- | --- |
+| `src/main.js` | Start gry |
+| `src/state.js` | Wspólny stan: zapis, wyprawa, scena |
+| `src/save.js` | Zapis w wersji 2, migracja ze starszej wersji, profile, eksport i import |
+| `src/profiles.js` | PIN przy pierwszym uruchomieniu, ekran „Kto gra?” |
+| `src/parent.js` | Panel rodzica |
+| `src/sprites.js`, `hero.js`, `pets.js`, `monsters.js`, `props.js` | Grafika rysowana kodem |
+| `src/*-room.js`, `expedition.js` | Wyprawa i jej pokoje |
+| `src/styles.css`, `src/index.html` | Wygląd i szablon strony |
+| `public/` | Manifest, service worker (tryb offline), ikony |
+| `tests/` | Testy (patrz wyżej) |
+| `tools/` | Generator ikon i zrzutów ekranu do README (`npm run screenshots`) |
+
+## Zapis gry
+
+Postęp zapisuje się w przeglądarce (`localStorage`, klucz `lesna-wyprawa-v2`: klucze zachowały pierwszą nazwę gry, żeby nie zgubić zapisów). Rodzic może zrobić kopię zapisu i wczytać ją na innym urządzeniu w panelu „Dla rodzica”.
+
+## Licencje
+
+Kod: MIT. Czcionki Pixelify Sans i Nunito: SIL Open Font License 1.1.
+
+## Wydanie nowej wersji
+
+1. Zmień `version` w `package.json` (trafia do nazwy pamięci offline, więc urządzenia pobiorą nową wersję).
+2. `npm test` — wszystkie testy muszą przejść.
+3. Jeśli zmienił się wygląd: `npm run screenshots` odświeża obrazki w `docs/img/`.
+4. Zatwierdź także folder `dist/`: z niego korzystają GitHub Pages, Docker i osoby pobierające jeden plik.

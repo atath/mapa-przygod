@@ -1,11 +1,12 @@
 {
   "name": "mapa-przygod",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Gra edukacyjna dla dzieci",
   "scripts": {
     "test": "node build.mjs && node --test --test-concurrency=2 \"tests/*.test.mjs\"",
     "build": "node build.mjs",
-    "test:quick": "node --test tests/unit.test.mjs"
+    "test:quick": "node --test tests/unit.test.mjs",
+    "screenshots": "node build.mjs && node tools/screenshots.mjs"
   },
   "keywords": [],
   "author": "",

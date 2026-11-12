@@ -101,15 +101,17 @@ export function monsterRoom() {
         snd.bad();
         let msg;
         if (!okSum) msg = total < N ? `${total} to za mało! Moc potwora to ${N}.` : `${total} to za dużo! Moc potwora to dokładnie ${N}.`;
-        else { wrongSpells++; msg = `${ELEM[spell].name} nie działa na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora działa ${ELEM[counter].name}.` : "Zajrzyj do księgi czarów."); }
-        if (!okSum && !okEl) msg += " I sprawdź czar w księdze.";
+        else { wrongSpells++; msg = `${ELEM[spell].name} nie działa na ${mon.name}! ` + (wrongSpells >= 2 || GS.G.level === 1 ? `Na ${adjGen} potwora działa ${ELEM[counter].name}.` : "Sprawdź, co pokonuje każdy czar."); }
+        if (!okSum && !okEl) msg += " I sprawdź, co pokonuje każdy czar.";
         say(mon.name, "Hi hi! " + msg);
       }
       await sleep(1800); if (left(run)) return;
       monsterTurn();
     });
-    say(petName(), (prefix ? prefix + " " : "") + `Wybierz czar i karty, które razem dają ${N}.`,
-      (prefix ? prefix + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`);
+    // prefix: a string, or {show, speak} when the spoken version is longer than what fits on screen
+    const show = prefix && typeof prefix === "object" ? prefix.show : prefix, spoken = prefix && typeof prefix === "object" ? prefix.speak : prefix;
+    say(petName(), (show ? show + " " : "") + `Wybierz czar i karty, które razem dają ${N}.`,
+      (spoken ? spoken + " " : "") + `Twoja tura! ${mon.name} ma moc ${N}. Wybierz czar i karty, które razem dają ${N}.`);
   }
 
   function monsterTurn() {
@@ -147,7 +149,8 @@ export function monsterRoom() {
   }
 
   const intro = GS.G.fights === 0
-    ? `Uwaga! ${mon.name} to potwór ${E.adj}. Każdy potwór boi się innego czaru, to jest w księdze czarów. Wybierz dobry czar i karty, które razem dają jego moc. Potem potwór zaatakuje, a ty osłonisz się tarczą.`
+    ? { show: `Uwaga! ${mon.name} to potwór ${E.adj}. Pod każdym czarem widać, kogo pokonuje.`,
+        speak: `Uwaga! ${mon.name} to potwór ${E.adj}. Każdy potwór boi się innego czaru: pod każdym czarem widać, kogo pokonuje. Wybierz dobry czar i karty, które razem dają jego moc. Potem potwór zaatakuje, a ty osłonisz się tarczą.` }
     : `Grrr! ${mon.name} zagradza drogę!`;
   playerTurn(intro);
 }

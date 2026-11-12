@@ -5,10 +5,26 @@ import { mulberry, reduced } from "./util.js";
 /* ================== Scene renderer ================== */
 export const S = 4; // internal scale
 GS.scene = null;
+/* In expedition rooms the scene takes all the room it is given, larger than its own pixel size too
+   (CSS alone only shrinks a canvas). Elsewhere the stylesheet decides. */
+function fitWhenPlaced(c) {
+  if (typeof ResizeObserver !== "function") return;
+  requestAnimationFrame(() => {
+    const box = c.parentElement; if (!box) return;
+    const fit = () => {
+      if (!c.isConnected) { ro.disconnect(); return; }
+      if (!document.body.classList.contains("room")) { c.style.width = c.style.height = ""; return; }
+      const ar = c.width / c.height, w = Math.floor(Math.min(box.clientWidth, box.clientHeight * ar));
+      if (w > 0) { c.style.width = w + "px"; c.style.height = Math.floor(w / ar) + "px"; }
+    };
+    const ro = new ResizeObserver(fit); ro.observe(box); fit();
+  });
+}
 export function mountCanvas(cols, rows) {
   const c = document.createElement("canvas"); c.className = "pixel-canvas"; c.width = cols * 16 * S; c.height = rows * 16 * S;
   c.setAttribute("role", "img");
   const x = c.getContext("2d"); x.imageSmoothingEnabled = false; x.setTransform(S, 0, 0, S, 0, 0);
+  fitWhenPlaced(c);
   return { c, x, cols, rows };
 }
 export function draw(ctx, spr, lx, ly, scale = 1, noShadow) {
