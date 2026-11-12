@@ -345,3 +345,40 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   body.campview #sc canvas { max-height: calc(100dvh - 24px); }
   body.campview h1 { font-size: 2rem; }
 }
+
+/* ---------- money: coins and notes that look like the real ones ---------- */
+.coins small { font-size: .85rem; margin-left: 2px; }
+.coins img.gr { margin-left: 8px; }
+.btn.num small { font-size: .5em; margin-left: 4px; }
+.btn.num { white-space: nowrap; }
+.mini-coins { font-weight: 800; }
+.piece { position: relative; width: 52px; height: 52px; border-radius: 50%; display: inline-grid; place-content: center; line-height: .9; font-family: var(--font-body); color: #2a2a2a;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 0 rgba(0,0,0,.25); flex: none; }
+.piece b { font-weight: 900; font-size: 1.25rem; } .piece small { font-size: .7rem; font-weight: 800; }
+.piece.zl1, .piece.gr-silver { background: radial-gradient(circle at 35% 30%, #f4f6f8, #b9c0c8 70%, #8f98a2); }
+.piece.zl2 { background: radial-gradient(circle, #ecc95e 0 52%, #c9ced4 54% 100%); }
+.piece.zl5 { background: radial-gradient(circle, #dfe3e8 0 52%, #e6b84a 54% 100%); width: 56px; height: 56px; }
+.piece.gr-copper { width: 44px; height: 44px; background: radial-gradient(circle at 35% 30%, #f2b07a, #c46e3c 70%, #8f4a22); color: #3a1a08; }
+.piece.gr-silver { width: 46px; height: 46px; }
+.piece.note { width: 78px; height: 44px; border-radius: 6px; grid-auto-flow: column; gap: 4px; align-items: baseline; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.piece.n10 { background: linear-gradient(135deg, #b98f5f, #8f6a3f); }
+.piece.n20 { background: linear-gradient(135deg, #a07cc0, #6f4f94); }
+.piece.n50 { background: linear-gradient(135deg, #5d8fd0, #2f5f9e); }
+.payov { position: fixed; inset: 0; z-index: 40; background: rgba(42,29,46,.5); display: grid; place-items: center; padding: 12px; overflow-y: auto; }
+.paybox { max-width: 520px; width: 100%; display: grid; gap: 8px; }
+.paybox .lbl, .piggy .lbl { margin: 0; font-weight: 800; color: var(--muted); }
+.wallet, .counter { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-height: 58px; padding: 6px; border-radius: 12px; }
+.wallet { background: var(--soft); }
+.counter { background: #e9d9b4; border: 3px dashed var(--wood); }
+.stack { display: inline-flex; align-items: center; gap: 2px; }
+.stack i { font-style: normal; font-weight: 900; color: var(--wood-dark); }
+.piggy { display: grid; gap: 10px; }
+/* rooms on narrow screens: hearts, wallet and the two buttons share one row */
+@media (max-width: 480px) {
+  body.room .hud { gap: 6px; }
+  body.room .hearts img { width: 20px; height: 20px; }
+  body.room .icon-btn { width: 38px; height: 38px; font-size: 1.05rem; }
+  body.room .coins { font-size: 1.15rem; padding: 2px 8px 2px 4px; }
+  body.room .coins img { width: 20px; height: 20px; }
+  body.room .coins img.gr { margin-left: 6px; }
+}

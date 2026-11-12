@@ -29,7 +29,7 @@ export async function logicRoom() {
   }
   const coins = good * 2;
   GS.RUN.coins += coins; updHud();
-  say(heroName(), `${good === 2 ? "Obie zagadki rozwiązane!" : good ? "Udało się!" : "Przeszliśmy!"} Sowa przepuszcza nas do skrzyni.${coins ? ` +${coins} monety.` : ""}`);
+  say(heroName(), `${good === 2 ? "Obie zagadki rozwiązane!" : good ? "Udało się!" : "Przeszliśmy!"} Sowa przepuszcza nas do skrzyni.${coins ? ` +${coins} zł.` : ""}`);
   nextRoom();
 }
 

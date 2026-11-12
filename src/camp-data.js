@@ -6,7 +6,7 @@ export const BUILDINGS = {
   house: {
     name: "Dom", cost: [20, 50, 100],
     levels: ["Namiot", "Szałas", "Chatka", "Domek na drzewie"],
-    effect: (l) => (l ? `+${l} ${l === 1 ? "moneta" : "monety"} w każdej skrzyni` : "Tu śpicie po wyprawie"),
+    effect: (l) => (l ? `+${l} zł w każdej skrzyni` : "Tu śpicie po wyprawie"),
     tile: [0, 1], size: 2
   },
   well: {
@@ -18,7 +18,7 @@ export const BUILDINGS = {
   garden: {
     name: "Ogródek", cost: [10, 30, 60],
     levels: ["", "Jedna grządka", "Dwie grządki", "Trzy grządki"],
-    effect: (l) => `${l} ${l === 1 ? "grządka" : "grządki"}: rośliny rosną po każdej wyprawie, plon daje 3 monety`,
+    effect: (l) => `${l} ${l === 1 ? "grządka" : "grządki"}: rośliny rosną po każdej wyprawie, plon daje 3 zł`,
     tile: [5, 4], size: 1
   },
   library: {

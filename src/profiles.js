@@ -81,7 +81,7 @@ export function whoPlays() {
     <div class="players">${list.map((p) => `<button class="player" data-id="${p.id}">
         <img src="${url(heroSprite(p.hero))}" alt="">
         <b>${esc(p.hero.name)}</b>
-        <span class="mini-coins"><img src="${ICON.coin}" alt="">${p.coins}</span></button>`).join("")}
+        <span class="mini-coins"><img src="${ICON.coin}" alt="">${p.coins} zł</span></button>`).join("")}
       <button class="player add" id="addPlayer"><span class="plus" aria-hidden="true">+</span><b>Nowy gracz</b></button>
     </div>`;
   app.querySelectorAll(".player[data-id]").forEach((b) => b.addEventListener("click", () => {

@@ -28,7 +28,7 @@ Testy grają w prawdziwą grę w przeglądarce Chromium:
 | --- | --- |
 | `tests/expedition.test.mjs` | Pełne wyprawy w lesie i w górach na poziomach 1–3, odblokowanie gór, czy da się zebrać wszystkie monety w limicie klocków, limit prób na poziomie 3, wyjście z wyprawy w trakcie animacji, szerokość telefonu |
 | `tests/save.test.mjs` | Przeniesienie zapisu z pierwszej wersji, PIN, gracze, kopia zapisu, cofanie, uszkodzone pliki, dwie otwarte karty |
-| `tests/camp.test.mjs` | Budowa z pytaniem o odejmowanie, ozdoby, ogródek, sklep, działanie budynków na wyprawie |
+| `tests/camp.test.mjs` | Płacenie monetami i banknotami z resztą, skarbonka (100 gr = 1 zł), ozdoby, ogródek, sklep, działanie budynków na wyprawie |
 | `tests/layout.test.mjs` | Każdy rodzaj pokoju mieści się na ekranie bez przewijania: mały telefon 360×640, telefon 390×844, tablet pionowo i poziomo |
 | `tests/offline.test.mjs` | Gra bez internetu, otwarcie pliku z dysku, brak zapytań poza grę |
 | `tests/puzzles.test.mjs` | Zagadki logiczne i zadania z zegarem, sprawdzane tysiące razy bez przeglądarki: jedno rozwiązanie, żadna wskazówka nie wystarcza sama, polskie nazwy godzin |

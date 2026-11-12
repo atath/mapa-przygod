@@ -16,7 +16,7 @@ export function hudHTML(run) {
   const trail = run ? run.rooms.map((r, i) => `${i ? "<i></i>" : ""}<span class="${i < run.i ? "done" : i === run.i ? "now" : ""}">${r ? `<img src="${ICON[TI[r]]}" alt="">` : "<b>?</b>"}</span>`).join("") : "";
   return `<div class="hud">
     ${run ? `<span class="hearts" aria-label="Serduszka: ${run.hp}">${hearts}</span>` : `<button class="icon-btn" id="homeBtn" aria-label="Obóz">⛺</button>`}
-    <span class="coins" aria-label="Monety"><img src="${ICON.coin}" alt=""><span id="coinN">${GS.G.coins + (run ? run.coins : 0)}</span></span>
+    <span class="coins" aria-label="Portfel"><img src="${ICON.coin}" alt=""><span id="coinN">${GS.G.coins + (run ? run.coins : 0)}</span><small>zł</small><img src="${ICON.grosz}" alt="" class="gr"><span id="grN">${GS.G.gr + (run ? run.gr : 0)}</span><small>gr</small></span>
     <button class="icon-btn" id="voiceBtn" aria-pressed="${GS.G.voice}" aria-label="Czytanie na głos">${GS.G.voice ? "🔊" : "🔇"}</button>
     ${run ? `<button class="icon-btn" id="quitBtn" aria-label="Wróć do obozu">⛺</button>` : ""}
     ${run ? `<div class="trail" aria-label="Postęp wyprawy">${trail}</div><div class="runes" aria-label="Zdobyte runy">${runesHTML()}</div>` : ""}

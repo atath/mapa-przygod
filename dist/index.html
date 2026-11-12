@@ -369,6 +369,43 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   body.campview h1 { font-size: 2rem; }
 }
 
+/* ---------- money: coins and notes that look like the real ones ---------- */
+.coins small { font-size: .85rem; margin-left: 2px; }
+.coins img.gr { margin-left: 8px; }
+.btn.num small { font-size: .5em; margin-left: 4px; }
+.btn.num { white-space: nowrap; }
+.mini-coins { font-weight: 800; }
+.piece { position: relative; width: 52px; height: 52px; border-radius: 50%; display: inline-grid; place-content: center; line-height: .9; font-family: var(--font-body); color: #2a2a2a;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 3px 0 rgba(0,0,0,.25); flex: none; }
+.piece b { font-weight: 900; font-size: 1.25rem; } .piece small { font-size: .7rem; font-weight: 800; }
+.piece.zl1, .piece.gr-silver { background: radial-gradient(circle at 35% 30%, #f4f6f8, #b9c0c8 70%, #8f98a2); }
+.piece.zl2 { background: radial-gradient(circle, #ecc95e 0 52%, #c9ced4 54% 100%); }
+.piece.zl5 { background: radial-gradient(circle, #dfe3e8 0 52%, #e6b84a 54% 100%); width: 56px; height: 56px; }
+.piece.gr-copper { width: 44px; height: 44px; background: radial-gradient(circle at 35% 30%, #f2b07a, #c46e3c 70%, #8f4a22); color: #3a1a08; }
+.piece.gr-silver { width: 46px; height: 46px; }
+.piece.note { width: 78px; height: 44px; border-radius: 6px; grid-auto-flow: column; gap: 4px; align-items: baseline; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.piece.n10 { background: linear-gradient(135deg, #b98f5f, #8f6a3f); }
+.piece.n20 { background: linear-gradient(135deg, #a07cc0, #6f4f94); }
+.piece.n50 { background: linear-gradient(135deg, #5d8fd0, #2f5f9e); }
+.payov { position: fixed; inset: 0; z-index: 40; background: rgba(42,29,46,.5); display: grid; place-items: center; padding: 12px; overflow-y: auto; }
+.paybox { max-width: 520px; width: 100%; display: grid; gap: 8px; }
+.paybox .lbl, .piggy .lbl { margin: 0; font-weight: 800; color: var(--muted); }
+.wallet, .counter { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; min-height: 58px; padding: 6px; border-radius: 12px; }
+.wallet { background: var(--soft); }
+.counter { background: #e9d9b4; border: 3px dashed var(--wood); }
+.stack { display: inline-flex; align-items: center; gap: 2px; }
+.stack i { font-style: normal; font-weight: 900; color: var(--wood-dark); }
+.piggy { display: grid; gap: 10px; }
+/* rooms on narrow screens: hearts, wallet and the two buttons share one row */
+@media (max-width: 480px) {
+  body.room .hud { gap: 6px; }
+  body.room .hearts img { width: 20px; height: 20px; }
+  body.room .icon-btn { width: 38px; height: 38px; font-size: 1.05rem; }
+  body.room .coins { font-size: 1.15rem; padding: 2px 8px 2px 4px; }
+  body.room .coins img { width: 20px; height: 20px; }
+  body.room .coins img.gr { margin-left: 6px; }
+}
+
 </style>
 </head>
 <body>
@@ -386,7 +423,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       name: "Dom",
       cost: [20, 50, 100],
       levels: ["Namiot", "Sza\u0142as", "Chatka", "Domek na drzewie"],
-      effect: (l) => l ? `+${l} ${l === 1 ? "moneta" : "monety"} w ka\u017Cdej skrzyni` : "Tu \u015Bpicie po wyprawie",
+      effect: (l) => l ? `+${l} z\u0142 w ka\u017Cdej skrzyni` : "Tu \u015Bpicie po wyprawie",
       tile: [0, 1],
       size: 2
     },
@@ -402,7 +439,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       name: "Ogr\xF3dek",
       cost: [10, 30, 60],
       levels: ["", "Jedna grz\u0105dka", "Dwie grz\u0105dki", "Trzy grz\u0105dki"],
-      effect: (l) => `${l} ${l === 1 ? "grz\u0105dka" : "grz\u0105dki"}: ro\u015Bliny rosn\u0105 po ka\u017Cdej wyprawie, plon daje 3 monety`,
+      effect: (l) => `${l} ${l === 1 ? "grz\u0105dka" : "grz\u0105dki"}: ro\u015Bliny rosn\u0105 po ka\u017Cdej wyprawie, plon daje 3 z\u0142`,
       tile: [5, 4],
       size: 1
     },
@@ -494,6 +531,10 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     "math.miss": "Brakuj\u0105ca liczba",
     "math.three": "Trzy liczby",
     "math.buy": "Odejmowanie przy zakupach",
+    "money.pay": "P\u0142acenie monetami",
+    "money.change": "Liczenie reszty",
+    "money.exchange": "Wymiana 100 gr na 1 z\u0142",
+    "money.missing": "Ile brakuje do z\u0142ot\xF3wki",
     "logic.spell": "Dob\xF3r czaru do potwora",
     "polish.word": "Uk\u0142adanie s\u0142owa z liter",
     "polish.read": "Czytanie drogowskaz\xF3w",
@@ -593,6 +634,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       created: s.created || (/* @__PURE__ */ new Date()).toISOString(),
       hero,
       coins: Math.max(0, s.coins | 0),
+      gr: Math.max(0, s.gr | 0),
       owned: Array.isArray(s.owned) ? s.owned.slice() : ["none"],
       pets,
       petNames,
@@ -2119,13 +2161,31 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       g.ell(13, 17.8, 3.6, 1.2, "M", "RA");
       g.px(10, 19, "M");
     }),
-    coin: PAINT(32, 32, { Y: "#ffcf3a", y: "#d99a16", W: "#fff6c9" }, (g) => {
-      g.ell(16, 16, 7.4, 7.4, "y");
-      g.ell(16, 16, 6, 6, "Y");
-      g.rect(15, 12, 2, 8, "y");
-      g.rect(13, 13, 1, 1, "W");
-      g.rect(12, 14, 1, 2, "W");
-      g.px(19, 19, "y", "Y");
+    // 5 zł: silver centre in a gold ring, like the real coin
+    coin: PAINT(32, 32, { Y: "#f0c64a", y: "#b98a1c", S: "#dfe4ea", s: "#9aa3ad", K: "#4a4f58", W: "#ffffff" }, (g) => {
+      g.ell(16, 16, 8.4, 8.4, "y");
+      g.ell(16, 16, 7.4, 7.4, "Y");
+      g.ell(16, 16, 4.8, 4.8, "s");
+      g.ell(16, 16, 4.2, 4.2, "S");
+      g.rect(14, 13, 4, 1, "K");
+      g.rect(14, 14, 1, 2, "K");
+      g.rect(14, 15, 3, 1, "K");
+      g.rect(17, 16, 1, 2, "K");
+      g.rect(14, 18, 3, 1, "K");
+      g.px(11, 12, "W");
+      g.px(12, 11, "W");
+    }),
+    // 5 gr: a smaller copper coin
+    grosz: PAINT(32, 32, { C: "#d68a52", c: "#9c5228", K: "#5a2c12", W: "#ffd9b8" }, (g) => {
+      g.ell(16, 17, 6.2, 6.2, "c");
+      g.ell(16, 17, 5.2, 5.2, "C");
+      g.rect(14, 14, 4, 1, "K");
+      g.rect(14, 15, 1, 2, "K");
+      g.rect(14, 16, 3, 1, "K");
+      g.rect(17, 17, 1, 2, "K");
+      g.rect(14, 19, 3, 1, "K");
+      g.px(12, 14, "W");
+      g.px(13, 13, "W");
     }),
     star: PAINT(32, 32, { Y: "#ffd93c", y: "#e8a816", W: "#fff6c9" }, (g) => {
       const pts = [];
@@ -2327,7 +2387,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   }
   var GRASS = [1, 2, 3].map((s) => tile("#74c24f", [["#66b445", 18], ["#86cf5c", 12], ["#5a9f3c", 5], ["#9edb72", 4]], s * 97, s === 2 ? 3 : 2));
   var DIRT = [1, 2].map((s) => tile("#d6ae68", [["#c79c55", 16], ["#e6c88a", 10], ["#a8814a", 4], ["#f0dcae", 3]], s * 31, 0));
-  var ICON = { heart: url(SPR.heart), coin: url(SPR.coin), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };
+  var ICON = { heart: url(SPR.heart), coin: url(SPR.coin), grosz: url(SPR.grosz), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };
 
   // src/fx.js
   var rand = (a, b) => a + Math.random() * (b - a);
@@ -2711,9 +2771,10 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     }));
     function openChest() {
       st2.open = true;
-      const house = houseBonus(GS.G.camp), bonus = 5 + GS.G.level * 2 + house;
+      const house = houseBonus(GS.G.camp), bonus = 9 + GS.G.level * 2 + house;
       GS.RUN.coins += bonus;
       GS.G.coins += GS.RUN.coins;
+      GS.G.gr += GS.RUN.gr;
       GS.G.trips++;
       growGarden(GS.G.camp);
       record("polish.password", misses === 0, took(), `${pw.w}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
@@ -2728,7 +2789,8 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       bigEffect();
       setTimeout(bigEffect, 700);
       $("coinN").textContent = GS.G.coins;
-      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryli\u015Bmy now\u0105 krain\u0119: ${lands().mountains.name}!` : ""}`), 900);
+      if ($("grN")) $("grN").textContent = GS.G.gr;
+      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} z\u0142${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryli\u015Bmy now\u0105 krain\u0119: ${lands().mountains.name}!` : ""}`), 900);
       $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
       $("campBtn").addEventListener("click", () => {
         GS.RUN = null;
@@ -2736,6 +2798,61 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       });
       $("againBtn").addEventListener("click", () => startTrip(landKey));
     }
+  }
+
+  // src/money.js
+  var many = (n, one, few, lots) => n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : lots;
+  var zlWord = (n) => many(n, "z\u0142oty", "z\u0142ote", "z\u0142otych");
+  var grWord = (n) => many(n, "grosz", "grosze", "groszy");
+  var zl = (n) => `${n} ${zlWord(n)}`;
+  var gr = (n) => `${n} ${grWord(n)}`;
+  var zlShort = (n) => `${n} z\u0142`;
+  var zlGen = (n) => `${n} ${n === 1 ? "z\u0142otego" : "z\u0142otych"}`;
+  var grGen = (n) => `${n} ${n === 1 ? "grosza" : "groszy"}`;
+  var ZL_DENOMS = [
+    { v: 50, note: true, look: "n50" },
+    { v: 20, note: true, look: "n20" },
+    { v: 10, note: true, look: "n10" },
+    { v: 5, look: "zl5" },
+    { v: 2, look: "zl2" },
+    { v: 1, look: "zl1" }
+  ];
+  var GR_DENOMS = [
+    { v: 50, look: "gr-silver" },
+    { v: 20, look: "gr-silver" },
+    { v: 10, look: "gr-silver" },
+    { v: 5, look: "gr-copper" },
+    { v: 2, look: "gr-copper" },
+    { v: 1, look: "gr-copper" }
+  ];
+  function breakdown(amount, denoms = ZL_DENOMS) {
+    const out = [];
+    let left2 = Math.max(0, amount | 0);
+    for (const d of denoms) {
+      const n = Math.floor(left2 / d.v);
+      if (n) {
+        out.push({ d, n });
+        left2 -= n * d.v;
+      }
+    }
+    return out;
+  }
+  var HUNDREDS = [[50, 50], [50, 20, 20, 10], [50, 20, 10, 10, 5, 5], [20, 20, 20, 20, 10, 10], [50, 10, 10, 10, 10, 5, 2, 2, 1], [20, 20, 20, 10, 10, 10, 5, 5]];
+  function piggyCoins(total, pick3 = (a) => a[0]) {
+    if (total < 100) return breakdown(total, GR_DENOMS);
+    const hundred = pick3(HUNDREDS), counts = /* @__PURE__ */ new Map();
+    const add = (v, n = 1) => counts.set(v, (counts.get(v) || 0) + n);
+    hundred.forEach((v) => add(v));
+    for (const { d, n } of breakdown(total - 100, GR_DENOMS)) add(d.v, n);
+    return GR_DENOMS.filter((d) => counts.get(d.v)).map((d) => ({ d, n: counts.get(d.v) }));
+  }
+  function changeOptions(ans, n = 3) {
+    const set = /* @__PURE__ */ new Set([ans]);
+    for (const d of shuffle([1, -1, 2, -2, 5, -5, 10, -10])) {
+      if (set.size >= n) break;
+      if (ans + d >= 0) set.add(ans + d);
+    }
+    return shuffle([...set]);
   }
 
   // src/monster-room.js
@@ -2968,7 +3085,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       save();
       updHud();
       snd.coin();
-      say(heroName(), `${pick(PRAISE)} ${mon.name} uciek\u0142 i zostawi\u0142 ${loot} monety!`);
+      say(heroName(), `${pick(PRAISE)} ${mon.name} uciek\u0142 i zostawi\u0142 ${zl(loot)}!`);
       nextRoom();
     }
     const intro = GS.G.fights === 0 ? `Uwaga! ${mon.name} to potw\xF3r ${E.adj}. Ka\u017Cdy potw\xF3r boi si\u0119 innego czaru, to jest w ksi\u0119dze czar\xF3w. Wybierz dobry czar i karty, kt\xF3re razem daj\u0105 jego moc. Potem potw\xF3r zaatakuje, a ty os\u0142onisz si\u0119 tarcz\u0105.` : `Grrr! ${mon.name} zagradza drog\u0119!`;
@@ -3181,6 +3298,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       ctx.fillRect(cx - rr / 2, cy - rr / 2, P2, P2);
     }
   }
+  var GR_PER_COIN = 5;
   function pathRoom() {
     roomShell();
     const lv = L(), run = GS.RUN, first = run.i === 0;
@@ -3259,7 +3377,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       });
       coins.forEach((k) => {
         const [r, c] = k.split(",").map(Number);
-        draw(x, SPR.coin, c * 16, r * 16 - bob(t, r + c));
+        draw(x, SPR.grosz, c * 16, r * 16 - bob(t, r + c));
       });
       if (!busy && prog.length) {
         x.font = "bold 7px sans-serif";
@@ -3410,12 +3528,12 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
         record("code.path", true, thought, detail(true));
         save();
         GS.RUN.rooms[GS.RUN.i + 1] = reached.type;
-        GS.RUN.coins += picked.length;
+        GS.RUN.gr += GR_PER_COIN * picked.length;
         updHud();
         const all = picked.length > 0 && coins.size === 0;
         snd.ok();
         burst(cv.c, 30);
-        say(heroName(), `Uda\u0142o si\u0119! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " \u2014 wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
+        say(heroName(), `Uda\u0142o si\u0119! ${picked.length ? `${picked.length} \xD7 5 gr = ${GR_PER_COIN * picked.length} gr${all ? " \u2014 wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`, `Uda\u0142o si\u0119! ${picked.length ? `${picked.length} razy 5 groszy to ${GR_PER_COIN * picked.length} groszy${all ? ", wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
         return nextRoom();
       }
       record("code.path", false, thought, detail(false));
@@ -3441,7 +3559,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     async function guide() {
       const fainted = await hurt();
       if (left(run)) return;
-      if (!fainted) say(petName(), "Sko\u0144czy\u0142y si\u0119 pr\xF3by. Poka\u017C\u0119 ci drog\u0119, ale tym razem bez monet.");
+      if (!fainted) say(petName(), "Sko\u0144czy\u0142y si\u0119 pr\xF3by. Poka\u017C\u0119 ci drog\u0119, ale tym razem bez groszy.");
       const key = (r, c) => r + "," + c, prev = /* @__PURE__ */ new Map([[key(...M.start), null]]), q = [M.start.slice()], exitSet = new Set(M.exits.map((e) => e.cell + ""));
       let end = null;
       while (q.length && !end) {
@@ -3474,8 +3592,8 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       nextRoom();
     }
     const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
-    const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadz\u0105"} ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Monety licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `${T.key === "mountains" ? "Szlak si\u0119 rozwidla" : "Las si\u0119 rozwidla"}. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
-    const short = `${first ? "U\u0142\xF3\u017C strza\u0142ki do wyj\u015Bcia i zbierz monety." : "Dok\u0105d idziemy?"} Wyj\u015Bcia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}`;
+    const intro = first ? `Wyruszamy! Jedna strza\u0142ka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadz\u0105"} ${M.exits.length === 2 ? "dwa wyj\u015Bcia" : "trzy wyj\u015Bcia"}: ${exitsTxt}. Wybierz, dok\u0105d idziemy, i u\u0142\xF3\u017C strza\u0142ki. Grosze licz\u0105 si\u0119, gdy dojdziesz do wyj\u015Bcia \u2014 zawsze da si\u0119 zebra\u0107 wszystkie naraz.${isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}` : `${T.key === "mountains" ? "Szlak si\u0119 rozwidla" : "Las si\u0119 rozwidla"}. Wyj\u015Bcia: ${exitsTxt}. Dok\u0105d idziemy?`;
+    const short = `${first ? "U\u0142\xF3\u017C strza\u0142ki do wyj\u015Bcia i zbierz grosze." : "Dok\u0105d idziemy?"} Wyj\u015Bcia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 pr\xF3by." : ""}`;
     say(petName(), short, intro + (lv.loops && first ? ` Mo\u017Cesz u\u017Cy\u0107 najwy\u017Cej ${limit} klock\xF3w \u2014 pomog\u0105 ci \xD72, \xD73 i \xD74.` : "") + (lv.slide && first ? ` Nowy klocek: \u201Ea\u017C do przeszkody\u201D. ${gw("Bohaterka idzie tak d\u0142ugo, dop\xF3ki nic jej nie zatrzyma.", "Bohater idzie tak d\u0142ugo, dop\xF3ki nic go nie zatrzyma.")}` : ""));
   }
 
@@ -3898,7 +4016,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const coins = good * 2;
     GS.RUN.coins += coins;
     updHud();
-    say(heroName(), `${good === 2 ? "Obie zagadki rozwi\u0105zane!" : good ? "Uda\u0142o si\u0119!" : "Przeszli\u015Bmy!"} Sowa przepuszcza nas do skrzyni.${coins ? ` +${coins} monety.` : ""}`);
+    say(heroName(), `${good === 2 ? "Obie zagadki rozwi\u0105zane!" : good ? "Uda\u0142o si\u0119!" : "Przeszli\u015Bmy!"} Sowa przepuszcza nas do skrzyni.${coins ? ` +${coins} z\u0142.` : ""}`);
     nextRoom();
   }
   function headFor(q) {
@@ -4134,7 +4252,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   function finish(run, good, line) {
     GS.RUN.coins += good;
     updHud();
-    say(heroName(), `${line} ${good ? `+${good} ${good === 1 ? "moneta" : good < 5 ? "monety" : "monet"}.` : ""}`);
+    say(heroName(), `${line} ${good ? `+${good} z\u0142.` : ""}`);
     nextRoom();
   }
 
@@ -4169,7 +4287,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
     order.forEach((idx, k) => runes[Math.floor(k * spots / order.length)].push(pw.w[idx]));
     const maxHp = 3 + wellHearts(GS.G.camp);
-    GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
+    GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, gr: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
     tripStart(GS.RUN);
     room();
   }
@@ -4205,6 +4323,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const h = app.querySelector(".hearts");
     if (h) h.innerHTML = Array.from({ length: GS.RUN.maxHp }, (_, i) => `<img src="${ICON.heart}" alt="" class="${i < GS.RUN.hp ? "" : "empty"}">`).join("");
     if ($("coinN")) $("coinN").textContent = GS.G.coins + GS.RUN.coins;
+    if ($("grN")) $("grN").textContent = GS.G.gr + GS.RUN.gr;
     const r = app.querySelector(".runes");
     if (r) r.innerHTML = runesHTML();
   }
@@ -4248,7 +4367,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     GS.RUN.coins -= lost;
     GS.RUN.hp = GS.RUN.maxHp;
     updHud();
-    say(petName(), `Ojej, ${heroName()} si\u0119 ${gw("zm\u0119czy\u0142a", "zm\u0119czy\u0142")}. Odpoczywamy chwilk\u0119\u2026 Ju\u017C lepiej! ${lost ? gw("Zgubi\u0142y\u015Bmy ", "Zgubili\u015Bmy ") + lost + " " + (lost === 1 ? "monet\u0119" : "monety") + ". " : ""}Spr\xF3bujmy jeszcze raz.`);
+    say(petName(), `Ojej, ${heroName()} si\u0119 ${gw("zm\u0119czy\u0142a", "zm\u0119czy\u0142")}. Odpoczywamy chwilk\u0119\u2026 Ju\u017C lepiej! ${lost ? gw("Zgubi\u0142y\u015Bmy ", "Zgubili\u015Bmy ") + (lost === 1 ? "z\u0142ot\xF3wk\u0119" : zl(lost)) + ". " : ""}Spr\xF3bujmy jeszcze raz.`);
     return true;
   }
   function libHintHTML() {
@@ -4582,7 +4701,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const trail = run ? run.rooms.map((r, i) => `${i ? "<i></i>" : ""}<span class="${i < run.i ? "done" : i === run.i ? "now" : ""}">${r ? `<img src="${ICON[TI[r]]}" alt="">` : "<b>?</b>"}</span>`).join("") : "";
     return `<div class="hud">
     ${run ? `<span class="hearts" aria-label="Serduszka: ${run.hp}">${hearts}</span>` : `<button class="icon-btn" id="homeBtn" aria-label="Ob\xF3z">\u26FA</button>`}
-    <span class="coins" aria-label="Monety"><img src="${ICON.coin}" alt=""><span id="coinN">${GS.G.coins + (run ? run.coins : 0)}</span></span>
+    <span class="coins" aria-label="Portfel"><img src="${ICON.coin}" alt=""><span id="coinN">${GS.G.coins + (run ? run.coins : 0)}</span><small>z\u0142</small><img src="${ICON.grosz}" alt="" class="gr"><span id="grN">${GS.G.gr + (run ? run.gr : 0)}</span><small>gr</small></span>
     <button class="icon-btn" id="voiceBtn" aria-pressed="${GS.G.voice}" aria-label="Czytanie na g\u0142os">${GS.G.voice ? "\u{1F50A}" : "\u{1F507}"}</button>
     ${run ? `<button class="icon-btn" id="quitBtn" aria-label="Wr\xF3\u0107 do obozu">\u26FA</button>` : ""}
     ${run ? `<div class="trail" aria-label="Post\u0119p wyprawy">${trail}</div><div class="runes" aria-label="Zdobyte runy">${runesHTML()}</div>` : ""}
@@ -4629,8 +4748,96 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     GS.HERO = heroSprite(GS.G.hero);
   }
 
+  // src/money-ui.js
+  function pieceHTML(d, unit, attrs = "") {
+    return `<button class="piece ${d.look}${d.note ? " note" : ""}" ${attrs} aria-label="${d.v} ${unit === "gr" ? "groszy" : d.v === 1 ? "z\u0142oty" : d.v < 5 ? "z\u0142ote" : "z\u0142otych"}"><b>${d.v}</b><small>${unit}</small></button>`;
+  }
+  function pay(price, what) {
+    return new Promise((resolve) => {
+      const took = timer(), wallet = breakdown(GS.G.coins, ZL_DENOMS).map((s) => ({ d: s.d, n: s.n })), counter = [];
+      const ov = document.createElement("div");
+      ov.className = "payov";
+      ov.setAttribute("role", "dialog");
+      ov.setAttribute("aria-label", "P\u0142acenie");
+      document.body.appendChild(ov);
+      const close = (r) => {
+        ov.remove();
+        resolve(r);
+      };
+      const sum = () => counter.reduce((a, d) => a + d.v, 0);
+      const render = () => {
+        ov.innerHTML = `<div class="panel paybox">
+        <p class="task-q">Zap\u0142a\u0107 <b>${zlShort(price)}</b> za: ${esc(what)}</p>
+        <p class="lbl">Tw\xF3j portfel \u2014 dotknij, \u017Ceby po\u0142o\u017Cy\u0107 na ladzie</p>
+        <div class="wallet">${wallet.filter((s) => s.n).map((s) => `<span class="stack">${pieceHTML(s.d, "z\u0142", `data-w="${s.d.v}"`)}${s.n > 1 ? `<i>\xD7${s.n}</i>` : ""}</span>`).join("")}</div>
+        <p class="lbl">Na ladzie: <b>${zlShort(sum())}</b></p>
+        <div class="counter">${counter.length ? counter.map((d, i) => pieceHTML(d, "z\u0142", `data-c="${i}"`)).join("") : `<span class="muted">pusto</span>`}</div>
+        <p class="note" id="payMsg" role="status"></p>
+        <div class="row"><button class="btn small" id="payCancel">Rezygnuj\u0119</button><button class="btn main" id="payGo" ${sum() >= price ? "" : "disabled"}>P\u0142ac\u0119</button></div>
+      </div>`;
+        ov.querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => {
+          const s = wallet.find((x) => x.d.v === +b.dataset.w);
+          if (!s || !s.n) return;
+          s.n--;
+          counter.push(s.d);
+          snd.coin();
+          render();
+        }));
+        ov.querySelectorAll("[data-c]").forEach((b) => b.addEventListener("click", () => {
+          const d = counter.splice(+b.dataset.c, 1)[0];
+          wallet.find((x) => x.d.v === d.v).n++;
+          snd.letter();
+          render();
+        }));
+        $("payCancel").addEventListener("click", () => close("cancel"));
+        $("payGo").addEventListener("click", () => settle());
+        if (window.__LW_TEST) window.__LW_TEST.pay = { price, sum: sum(), wallet: wallet.flatMap((s) => Array(s.n).fill(s.d.v)) };
+      };
+      async function settle() {
+        const given = sum();
+        if (given < price) return;
+        if (given === price) {
+          GS.G.coins -= price;
+          record("money.pay", true, took(), `${zlShort(price)} odliczone dok\u0142adnie`);
+          save();
+          snd.ok();
+          burst(ov.querySelector(".counter"), 24);
+          say(petName(), `Dok\u0142adnie ${zl(price)}. Bez reszty!`);
+          await sleep(900);
+          close("paid");
+          return;
+        }
+        const ans = given - price, opts = changeOptions(ans), tk = timer();
+        record("money.pay", true, took(), `${zlShort(price)}, dane ${zlShort(given)}`);
+        ov.querySelector(".paybox").innerHTML = `<p class="task-q">Dajesz <b>${zlShort(given)}</b>, a to kosztuje <b>${zlShort(price)}</b>.<br>Ile reszty dostaniesz?</p>
+        <div class="opts">${opts.map((v) => `<button class="btn num" data-v="${v}">${v}<small>z\u0142</small></button>`).join("")}</div><p class="note" id="payMsg" role="status"></p>`;
+        say(petName(), `Dajesz ${zl(given)}, a to kosztuje ${zl(price)}. Ile reszty? Dobra odpowied\u017A to z\u0142ot\xF3wka rabatu!`);
+        if (window.__LW_TEST) window.__LW_TEST.pay = { price, sum: given, change: ans };
+        let done = false;
+        ov.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", async () => {
+          if (done) return;
+          done = true;
+          const ok = +b.dataset.v === ans;
+          b.classList.add(ok ? "right" : "wrong");
+          record("money.change", ok, tk(), `${given} \u2212 ${price} \u2192 ${b.dataset.v}${ok ? "" : ` (${ans})`}`);
+          const paid = ok ? Math.max(0, price - 1) : price;
+          GS.G.coins -= paid;
+          save();
+          if (ok) {
+            snd.ok();
+            burst(b, 24);
+          } else snd.coin();
+          $("payMsg").textContent = ok ? `Tak! ${ans} z\u0142 reszty, a kupiec daje z\u0142ot\xF3wk\u0119 rabatu.` : `Reszta to ${ans} z\u0142.`;
+          say(petName(), ok ? `Brawo, ${zl(ans)} reszty! Kupiec daje z\u0142ot\xF3wk\u0119 rabatu.` : `Reszta to ${zl(ans)}. ${given} odj\u0105\u0107 ${price} to ${ans}.`);
+          await sleep(1500);
+          close("paid");
+        }));
+      }
+      render();
+    });
+  }
+
   // src/build.js
-  var coinsWord = (n) => n === 1 ? "moneta" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "monety" : "monet";
   function preview(k, lvl) {
     if (k === "house") return HOUSE[lvl];
     if (k === "well") return WELL[lvl];
@@ -4643,7 +4850,6 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const C = GS.G.camp;
     let tab = "build", asking = null;
     app.innerHTML = `${hudHTML(null)}<h1>Budowa obozu</h1>${dialogHTML()}
-    <div class="ask" id="ask" hidden></div>
     <div class="tabs"><button class="choice" id="tabB" aria-pressed="true">Budynki</button><button class="choice" id="tabD" aria-pressed="false">Ozdoby</button></div>
     <div class="shop" id="list"></div>
     <button class="btn" id="backBtn">Wr\xF3\u0107 do obozu</button>`;
@@ -4660,13 +4866,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
           <span>${esc(B.name)}</span>
           <small>${l ? `Teraz: ${esc(B.levels[l])}` : k === "house" ? `Teraz: ${esc(B.levels[0])}` : "Jeszcze nie ma"}</small>
           <small class="eff">${max ? esc(B.effect(l)) : `${esc(B.levels[next])}: ${esc(B.effect(next))}`}</small>
-          <span class="price">${max ? "Gotowe \u2713" : `<img src="${ICON.coin}" alt="">${B.cost[l]}`}</span></button>`;
+          <span class="price">${max ? "Gotowe \u2713" : `${B.cost[l]} z\u0142`}</span></button>`;
         }).join("");
       } else {
         $("list").innerHTML = Object.keys(DECOR).map((k) => `<button class="item build" data-k="${k}">
           <img src="${url(DECOR_SPR[k])}" alt=""><span>${esc(DECOR[k].name)}</span>
           <small>W plecaku: ${C.inv[k] || 0}, w obozie: ${C.decor.filter((d) => d.k === k).length}</small>
-          <span class="price"><img src="${ICON.coin}" alt="">${DECOR[k].price}</span></button>`).join("");
+          <span class="price">${DECOR[k].price} z\u0142</span></button>`).join("");
       }
       $("list").querySelectorAll(".item").forEach((b) => b.addEventListener("click", () => choose(b)));
     }
@@ -4700,53 +4906,25 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
         void btn.offsetWidth;
         btn.classList.add("shake");
         snd.bad();
-        say(petName(), `Potrzebujemy ${price} ${coinsWord(price)}, a mamy ${GS.G.coins}. Brakuje ${price - GS.G.coins}. Ruszajmy na wypraw\u0119!`);
+        say(petName(), `To kosztuje ${zl(price)}, a mamy ${zl(GS.G.coins)}. Brakuje ${zlGen(price - GS.G.coins)}. Ruszajmy na wypraw\u0119!`);
         return;
       }
-      ask(price, label, apply, btn);
+      buy(price, label, apply, btn);
     }
-    function ask(price, label, apply, btn) {
-      const have = GS.G.coins, ans = have - price;
-      const opts = /* @__PURE__ */ new Set([ans]);
-      while (opts.size < 3) {
-        const v = ans + ri(-3, 3);
-        if (v >= 0) opts.add(v);
-      }
+    async function buy(price, label, apply, btn) {
       asking = true;
-      const took = timer();
-      $("ask").hidden = false;
-      $("ask").innerHTML = `<div class="sum">${have} \u2212 ${price} = ?</div><div class="opts">${shuffle([...opts]).map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>
-      <button class="btn small" id="askCancel">Jednak nie kupuj\u0119</button>`;
-      say(
-        petName(),
-        `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to 1 moneta rabatu!`,
-        `Masz ${have} ${coinsWord(have)}. ${label} kosztuje ${price}. Ile monet zostanie? Dobra odpowied\u017A to jedna moneta rabatu.`
-      );
-      $("ask").scrollIntoView({ block: "nearest" });
-      $("askCancel").addEventListener("click", () => {
-        asking = null;
-        $("ask").hidden = true;
-        say(petName(), "Dobrze, zostawiamy monety na p\xF3\u017Aniej.");
-      });
-      $("ask").querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => {
-        if (!asking) return;
-        const ok = +b.dataset.v === ans;
-        b.classList.add(ok ? "right" : "wrong");
-        record("math.buy", ok, took(), `${have} \u2212 ${price} \u2192 ${b.dataset.v}${ok ? "" : ` (${ans})`}`);
-        const paid = ok ? price - 1 : price;
-        GS.G.coins -= paid;
-        const done = apply();
-        save();
-        ok ? snd.ok() : snd.coin();
-        burst(btn, 30);
-        $("coinN").textContent = GS.G.coins;
-        say(petName(), (ok ? `Brawo, zostanie ${ans}! Z rabatem p\u0142acimy ${paid}. ` : `Zostanie ${ans}. P\u0142acimy ${paid}. `) + done);
-        setTimeout(() => {
-          asking = null;
-          $("ask").hidden = true;
-          render();
-        }, 900);
-      }));
+      const r = await pay(price, label);
+      asking = null;
+      if (r !== "paid") {
+        say(petName(), "Dobrze, zostawiamy z\u0142ot\xF3wki na p\xF3\u017Aniej.");
+        return;
+      }
+      const done = apply();
+      save();
+      burst(btn, 30);
+      $("coinN").textContent = GS.G.coins;
+      setTimeout(() => say(petName(), done), 200);
+      render();
     }
     $("tabB").addEventListener("click", () => {
       if (!asking) {
@@ -4762,7 +4940,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     });
     $("backBtn").addEventListener("click", camp);
     render();
-    say(petName(), `Co budujemy? Masz ${GS.G.coins} ${coinsWord(GS.G.coins)}. Ka\u017Cdy budynek pomaga na wyprawach.`);
+    say(petName(), `Co budujemy? Masz ${zl(GS.G.coins)}. Ka\u017Cdy budynek pomaga na wyprawach.`);
     try {
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -4787,7 +4965,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       <div class="field"><span>Sk\xF3ra</span><div class="choices" id="skCh">${SKINS.map((c) => `<button class="swatch" data-v="${c}" style="background:${c}" aria-label="odcie\u0144 ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>Ubranie</span><div class="choices" id="ouCh">${OUTFITS.map((c) => `<button class="swatch" data-v="${c}" style="background:${c}" aria-label="kolor ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>Zwierzak</span><div class="choices" id="petCh">${GS.G.pets.map((k) => `<button class="choice" data-v="${k}"><img src="${url(PETSPR[k])}" alt="">${PETS[k].name}</button>`).join("")}</div>
-        <span style="font-weight:700;color:var(--muted);font-size:.95rem">Kolejne zwierzaki odblokujesz w sklepie za monety z wypraw.</span></div>
+        <span style="font-weight:700;color:var(--muted);font-size:.95rem">Kolejne zwierzaki odblokujesz w sklepie za z\u0142ot\xF3wki z wypraw.</span></div>
       <label class="field"><span>Imi\u0119 zwierzaka</span><input type="text" id="petIn" maxlength="14" autocomplete="off" value="${esc(GS.G.petNames[h.pet] || "")}" placeholder=""></label>
     </div>
     <button class="btn main" id="goBtn">${fromCamp ? "Gotowe" : "Ruszamy!"}</button>${isNew && profiles().length ? `<button class="btn" id="cancelBtn">Wr\xF3\u0107</button>` : ""}`;
@@ -4907,6 +5085,91 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     });
     $("backBtn").addEventListener("click", camp);
     say(petName(), open.length > 1 ? "Dok\u0105d dzi\u015B idziemy? Las czy G\xF3ry Zegarowe?" : "Na razie znamy drog\u0119 do lasu. Za kilka wypraw odkryjemy g\xF3ry!");
+  }
+
+  // src/piggy.js
+  function piggy() {
+    GS.scene = null;
+    app.innerHTML = `${hudHTML(null)}<h1>Skarbonka</h1>${dialogHTML()}<div class="panel piggy" id="pig"></div>
+    <button class="btn" id="backBtn">Wr\xF3\u0107 do obozu</button>`;
+    wireHud(camp);
+    wireSay();
+    $("backBtn").addEventListener("click", camp);
+    GS.G.gr >= 100 ? exchange() : missing();
+  }
+  function missing() {
+    const have = GS.G.gr, ans = 100 - have, took = timer();
+    if (have === 0) {
+      $("pig").innerHTML = `<p class="task-q"><span class="em big">\u{1F437}</span><br>Skarbonka jest pusta.</p>`;
+      say(petName(), "Skarbonka jest pusta. Grosze zbieramy na \u015Bcie\u017Ckach w czasie wyprawy. Sto groszy to jeden z\u0142oty!");
+      return;
+    }
+    $("pig").innerHTML = `<p class="task-q"><span class="em big">\u{1F437}</span><br>W skarbonce jest <b>${have} gr</b>.<br>Ile groszy brakuje do z\u0142ot\xF3wki?</p>
+    <p class="note muted">1 z\u0142 = 100 gr</p>
+    <div class="opts">${changeOptions(ans).map((v) => `<button class="btn num" data-v="${v}">${v}<small>gr</small></button>`).join("")}</div>`;
+    if (window.__LW_TEST) window.__LW_TEST.piggy = { missing: ans };
+    say(petName(), `W skarbonce jest ${gr(have)}. Z\u0142ot\xF3wka to sto groszy. Ile groszy brakuje do z\u0142ot\xF3wki?`);
+    let done = false;
+    $("pig").querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => {
+      if (done) return;
+      done = true;
+      const ok = +b.dataset.v === ans;
+      b.classList.add(ok ? "right" : "wrong");
+      record("money.missing", ok, took(), `${have} gr + ? = 100 gr \u2192 ${b.dataset.v}${ok ? "" : ` (${ans})`}`);
+      save();
+      if (ok) {
+        snd.ok();
+        burst(b, 20);
+      } else snd.bad();
+      say(petName(), ok ? `Tak! ${have} i ${ans} to razem sto. Jeszcze ${gr(ans)} i wymienimy je na z\u0142ot\xF3wk\u0119.` : `Brakuje ${grGen(ans)}, bo ${have} i ${ans} to razem sto.`);
+    }));
+  }
+  function exchange() {
+    const coins = piggyCoins(GS.G.gr, pick).map((s) => ({ d: s.d, n: s.n })), chosen = [], took = timer();
+    let misses = 0;
+    const sum = () => chosen.reduce((a, d) => a + d.v, 0);
+    const render = () => {
+      const s = sum();
+      $("pig").innerHTML = `<p class="task-q"><span class="em big">\u{1F437}</span><br>W skarbonce jest <b>${GS.G.gr} gr</b>. Wybierz monety, kt\xF3re razem daj\u0105 <b>100 gr</b>.</p>
+      <div class="wallet">${coins.filter((c) => c.n).map((c) => `<span class="stack">${pieceHTML(c.d, "gr", `data-w="${c.d.v}"`)}${c.n > 1 ? `<i>\xD7${c.n}</i>` : ""}</span>`).join("")}</div>
+      <p class="lbl">Od\u0142o\u017Cone: <b>${s} gr</b>${s > 100 ? " \u2014 za du\u017Co!" : ""}</p>
+      <div class="counter">${chosen.length ? chosen.map((d, i) => pieceHTML(d, "gr", `data-c="${i}"`)).join("") : `<span class="muted">pusto</span>`}</div>
+      <button class="btn main" id="swapBtn" ${s === 100 ? "" : "disabled"}>Wymieniam na 1 z\u0142</button>`;
+      if (window.__LW_TEST) window.__LW_TEST.piggy = { sum: s, coins: coins.flatMap((c) => Array(c.n).fill(c.d.v)) };
+      $("pig").querySelectorAll("[data-w]").forEach((b) => b.addEventListener("click", () => {
+        const c = coins.find((x) => x.d.v === +b.dataset.w);
+        if (!c || !c.n) return;
+        c.n--;
+        chosen.push(c.d);
+        snd.coin();
+        render();
+        if (sum() > 100) {
+          misses++;
+          say(petName(), "Za du\u017Co! Z\u0142ot\xF3wka to dok\u0142adnie sto groszy. Zabierz kt\xF3r\u0105\u015B monet\u0119 z powrotem.");
+        }
+      }));
+      $("pig").querySelectorAll("[data-c]").forEach((b) => b.addEventListener("click", () => {
+        const d = chosen.splice(+b.dataset.c, 1)[0];
+        coins.find((x) => x.d.v === d.v).n++;
+        snd.letter();
+        render();
+      }));
+      $("swapBtn").addEventListener("click", () => {
+        if (sum() !== 100) return;
+        GS.G.gr -= 100;
+        GS.G.coins += 1;
+        record("money.exchange", misses === 0, took(), `${chosen.map((d) => d.v).join(" + ")} = 100 gr`);
+        save();
+        snd.fanfare();
+        burst($("swapBtn"), 30);
+        $("coinN").textContent = GS.G.coins;
+        if ($("grN")) $("grN").textContent = GS.G.gr;
+        say(petName(), `${chosen.map((d) => d.v).join(" plus ")} to sto groszy, czyli jeden z\u0142oty! Masz ju\u017C ${GS.G.coins} z\u0142.`);
+        setTimeout(() => GS.G.gr >= 100 ? exchange() : missing(), 1600);
+      });
+    };
+    render();
+    say(petName(), `Mamy ${gr(GS.G.gr)}! Wybierz monety, kt\xF3re razem daj\u0105 sto groszy, a wymienimy je na z\u0142ot\xF3wk\u0119.`);
   }
 
   // src/sha256.js
@@ -5278,13 +5541,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       draw(cv.x, PETSPR[GS.G.hero.pet], 40, 8 - bob(t, 2), 1.25);
     } };
     let tab = "hats";
-    const coinsWord2 = (n) => n === 1 ? "monet\u0119" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "monety" : "monet";
+    let paying = false;
     function noMoney(b, price) {
       b.classList.remove("shake");
       void b.offsetWidth;
       b.classList.add("shake");
       snd.bad();
-      say(petName(), `Potrzebujemy ${price} ${price === 1 ? "monety" : "monet"}, a mamy ${GS.G.coins}. Brakuje ${price - GS.G.coins}. Ruszajmy na wypraw\u0119!`);
+      say(petName(), `To kosztuje ${zl(price)}, a mamy ${zl(GS.G.coins)}. Brakuje ${zlGen(price - GS.G.coins)}. Ruszajmy na wypraw\u0119!`);
     }
     function render() {
       $("tabHats").setAttribute("aria-pressed", String(tab === "hats"));
@@ -5293,33 +5556,40 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
         $("shop").innerHTML = Object.keys(HATS).map((k) => {
           const it = HATS[k], own = GS.G.owned.includes(k), on = GS.G.hero.hat === k;
           return `<button class="item" data-k="${k}" aria-pressed="${on}"><img src="${url(heroSprite(Object.assign({}, GS.G.hero, { hat: k })))}" alt=""><span>${esc(isBoy() && it.nameM || it.name)}</span>
-          <span class="price">${on ? "Za\u0142o\u017Cona" : own ? "Za\u0142\xF3\u017C" : `<img src="${ICON.coin}" alt="">${it.price}`}</span></button>`;
+          <span class="price">${on ? "Za\u0142o\u017Cona" : own ? "Za\u0142\xF3\u017C" : `${it.price} z\u0142`}</span></button>`;
         }).join("");
       } else {
         $("shop").innerHTML = Object.keys(PETS).map((k) => {
           const it = PETS[k], own = GS.G.pets.includes(k), on = GS.G.hero.pet === k;
           return `<button class="item" data-k="${k}" aria-pressed="${on}"><img src="${url(PETSPR[k])}" alt="" class="${own ? "" : "lockd"}"><span>${esc(it.name)}</span>
-          <span class="price">${on ? "Na wyprawie" : own ? "We\u017A na wypraw\u0119" : `<img src="${ICON.coin}" alt="">${it.price}`}</span></button>`;
+          <span class="price">${on ? "Na wyprawie" : own ? "We\u017A na wypraw\u0119" : `${it.price} z\u0142`}</span></button>`;
         }).join("");
       }
-      $("shop").querySelectorAll(".item").forEach((b) => b.addEventListener("click", () => {
+      $("shop").querySelectorAll(".item").forEach((b) => b.addEventListener("click", async () => {
         const k = b.dataset.k;
+        if (paying) return;
         if (tab === "hats") {
           const it = HATS[k];
           if (!GS.G.owned.includes(k)) {
             if (GS.G.coins < it.price) return noMoney(b, it.price);
-            GS.G.coins -= it.price;
+            paying = true;
+            const r = await pay(it.price, isBoy() && it.nameM || it.name);
+            paying = false;
+            if (r !== "paid") return;
             GS.G.owned.push(k);
             snd.coin();
             burst(b);
-            say(petName(), `Kupione! ${isBoy() && it.nameM || it.name} wygl\u0105da super!`);
+            setTimeout(() => say(petName(), `Kupione! ${isBoy() && it.nameM || it.name} wygl\u0105da super!`), 200);
           } else snd.letter();
           GS.G.hero.hat = k;
         } else {
           const it = PETS[k];
           if (!GS.G.pets.includes(k)) {
             if (GS.G.coins < it.price) return noMoney(b, it.price);
-            GS.G.coins -= it.price;
+            paying = true;
+            const r = await pay(it.price, it.name);
+            paying = false;
+            if (r !== "paid") return;
             GS.G.pets.push(k);
             snd.fanfare();
             burst(b, 40);
@@ -5343,7 +5613,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       say(petName(), "Tu odblokujesz nowych przyjaci\xF3\u0142 na wyprawy. Najrzadszy jest jednoro\u017Cec!");
     });
     render();
-    say(petName(), `Masz ${GS.G.coins} ${coinsWord2(GS.G.coins)}. Kup czapk\u0119 albo odblokuj nowego zwierzaka!`);
+    say(petName(), `Masz ${zl(GS.G.coins)}. Kup czapk\u0119 albo odblokuj nowego zwierzaka!`);
     $("backBtn").addEventListener("click", camp);
   }
 
@@ -5357,6 +5627,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     <button class="btn main" id="tripBtn">Wyprawa</button>
     <div class="row"><button class="btn small gold" id="buildBtn">Budowa obozu</button><button class="btn small" id="editBtn">Ustaw ozdoby</button></div>
     <div class="row"><button class="btn small" id="shopBtn">Sklep: czapki i zwierzaki</button><button class="btn small" id="lookBtn">Zmie\u0144 wygl\u0105d</button><button class="btn small" id="playersBtn">Gracze</button></div>
+    <div class="row"><button class="btn small" id="piggyBtn">\u{1F437} Skarbonka: ${GS.G.gr} gr</button></div>
     ${parentHTML()}`;
     wireHud(camp);
     wireSay();
@@ -5437,7 +5708,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       snd.coin();
       burst(cv.c, 18);
       $("coinN").textContent = GS.G.coins;
-      say(heroName(), `Zebrane: ${got}! +3 monety. Posia\u0142am nowe nasionko.`.replace("Posia\u0142am", gw("Posia\u0142am", "Posia\u0142em")));
+      say(heroName(), `Zebrane: ${got}! +3 z\u0142. Posia\u0142am nowe nasionko.`.replace("Posia\u0142am", gw("Posia\u0142am", "Posia\u0142em")));
     }
     function renderBar() {
       const inv = Object.keys(C.inv).filter((k) => C.inv[k] > 0);
@@ -5477,12 +5748,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     });
     const ripe = C.beds.filter((b) => b.s === RIPE).length;
     const lines = [`Cze\u015B\u0107, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygod\u0119?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wypraw\u0119?`];
-    say(petName(), ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`);
+    say(petName(), ripe ? `W ogr\xF3dku co\u015B dojrza\u0142o! Dotknij grz\u0105dki, \u017Ceby zebra\u0107 plon.` : GS.G.trips ? pick(lines) : `Cze\u015B\u0107, ${heroName()}! Jestem ${petName()}. W lesie s\u0105 potwory i zaczarowane drzwi. Za z\u0142ot\xF3wki z wypraw zbudujemy tu wspania\u0142y ob\xF3z!`);
     $("tripBtn").addEventListener("click", worldMap);
     $("buildBtn").addEventListener("click", buildScreen);
     $("shopBtn").addEventListener("click", shop);
     $("lookBtn").addEventListener("click", () => creator(true));
     $("playersBtn").addEventListener("click", whoPlays);
+    $("piggyBtn").addEventListener("click", piggy);
     wireParent((kind) => {
       if (kind === "deleted" || kind === "imported") boot();
     });
@@ -5576,7 +5848,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     <div class="players">${list.map((p) => `<button class="player" data-id="${p.id}">
         <img src="${url(heroSprite(p.hero))}" alt="">
         <b>${esc(p.hero.name)}</b>
-        <span class="mini-coins"><img src="${ICON.coin}" alt="">${p.coins}</span></button>`).join("")}
+        <span class="mini-coins"><img src="${ICON.coin}" alt="">${p.coins} z\u0142</span></button>`).join("")}
       <button class="player add" id="addPlayer"><span class="plus" aria-hidden="true">+</span><b>Nowy gracz</b></button>
     </div>`;
     app.querySelectorAll(".player[data-id]").forEach((b) => b.addEventListener("click", () => {

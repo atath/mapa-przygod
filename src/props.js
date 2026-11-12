@@ -29,9 +29,17 @@ export const SPR = {
     g.line(19, 23, 21, 27, "r"); g.line(24, 22, 25, 25, "r");
     g.ell(13, 17.8, 3.6, 1.2, "M", "RA"); g.px(10, 19, "M");
   }),
-  coin: PAINT(32, 32, { Y: "#ffcf3a", y: "#d99a16", W: "#fff6c9" }, (g) => {
-    g.ell(16, 16, 7.4, 7.4, "y"); g.ell(16, 16, 6, 6, "Y");
-    g.rect(15, 12, 2, 8, "y"); g.rect(13, 13, 1, 1, "W"); g.rect(12, 14, 1, 2, "W"); g.px(19, 19, "y", "Y");
+  // 5 zł: silver centre in a gold ring, like the real coin
+  coin: PAINT(32, 32, { Y: "#f0c64a", y: "#b98a1c", S: "#dfe4ea", s: "#9aa3ad", K: "#4a4f58", W: "#ffffff" }, (g) => {
+    g.ell(16, 16, 8.4, 8.4, "y"); g.ell(16, 16, 7.4, 7.4, "Y"); g.ell(16, 16, 4.8, 4.8, "s"); g.ell(16, 16, 4.2, 4.2, "S");
+    g.rect(14, 13, 4, 1, "K"); g.rect(14, 14, 1, 2, "K"); g.rect(14, 15, 3, 1, "K"); g.rect(17, 16, 1, 2, "K"); g.rect(14, 18, 3, 1, "K");
+    g.px(11, 12, "W"); g.px(12, 11, "W");
+  }),
+  // 5 gr: a smaller copper coin
+  grosz: PAINT(32, 32, { C: "#d68a52", c: "#9c5228", K: "#5a2c12", W: "#ffd9b8" }, (g) => {
+    g.ell(16, 17, 6.2, 6.2, "c"); g.ell(16, 17, 5.2, 5.2, "C");
+    g.rect(14, 14, 4, 1, "K"); g.rect(14, 15, 1, 2, "K"); g.rect(14, 16, 3, 1, "K"); g.rect(17, 17, 1, 2, "K"); g.rect(14, 19, 3, 1, "K");
+    g.px(12, 14, "W"); g.px(13, 13, "W");
   }),
   star: PAINT(32, 32, { Y: "#ffd93c", y: "#e8a816", W: "#fff6c9" }, (g) => {
     const pts = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 5.2 : 12.4; pts.push([16 + Math.cos(a) * r, 17 + Math.sin(a) * r]); }
@@ -110,4 +118,4 @@ export function tile(base, dots, seed, tufts) {
 }
 export const GRASS = [1, 2, 3].map((s) => tile("#74c24f", [["#66b445", 18], ["#86cf5c", 12], ["#5a9f3c", 5], ["#9edb72", 4]], s * 97, s === 2 ? 3 : 2));
 export const DIRT = [1, 2].map((s) => tile("#d6ae68", [["#c79c55", 16], ["#e6c88a", 10], ["#a8814a", 4], ["#f0dcae", 3]], s * 31, 0));
-export const ICON = { heart: url(SPR.heart), coin: url(SPR.coin), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };
+export const ICON = { heart: url(SPR.heart), coin: url(SPR.coin), grosz: url(SPR.grosz), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };

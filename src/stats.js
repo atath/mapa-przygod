@@ -12,6 +12,7 @@ export const SKILLS = {
   "math.cards": "Karty: suma równa mocy potwora",
   "math.add": "Dodawanie", "math.sub": "Odejmowanie", "math.miss": "Brakująca liczba", "math.three": "Trzy liczby",
   "math.buy": "Odejmowanie przy zakupach",
+  "money.pay": "Płacenie monetami", "money.change": "Liczenie reszty", "money.exchange": "Wymiana 100 gr na 1 zł", "money.missing": "Ile brakuje do złotówki",
   "logic.spell": "Dobór czaru do potwora",
   "polish.word": "Układanie słowa z liter", "polish.read": "Czytanie drogowskazów", "polish.password": "Hasło do skrzyni",
   "code.path": "Ścieżka ze strzałek",

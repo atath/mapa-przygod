@@ -43,7 +43,9 @@ for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
         assert.deepEqual(db.profiles.p1.lands, ["forest", "mountains"], "8 trips should open the mountains");
         await o.p.waitForFunction(() => /Odkryliśmy nową krainę: Góry Zegarowe/.test(document.getElementById("txt").textContent), null, { timeout: 5000 });
       }
-      assert.ok(db.profiles.p1.coins > 10, "coins were not added to the save");
+      assert.ok(db.profiles.p1.coins > 10, "złote were not added to the save");
+      const grosze = 5 * rooms.filter((r) => r.kind === "path").reduce((a, r) => a + r.expected, 0);
+      assert.equal(db.profiles.p1.gr, grosze, "every coin on the paths is 5 gr in the wallet");
       // measurements for stage 3: every room left an answer, the trip and the play time were counted
       const st = db.profiles.p1.stats, kinds = new Set(st.answers.map((a) => a.k)), seen = new Set(rooms.map((r) => r.kind));
       const expect = ["code.path", "polish.password", "logic.who"].concat(seen.has("clock") ? ["time.read", "time.set", "time.elapsed"] : [], seen.has("time") ? ["time.howlong", "time.longer", "time.feel"] : [],seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);

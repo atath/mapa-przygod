@@ -147,6 +147,7 @@ export function hedge(ctx, x0, y0, w, h, seed) {
     ctx.fillStyle = hi; ctx.fillRect(cx - rr / 2, cy - rr / 2, P, P);
   }
 }
+export const GR_PER_COIN = 5; // the copper coins on the board are 5 gr each
 export function pathRoom() {
   roomShell();
   const lv = L(), run = GS.RUN, first = run.i === 0;
@@ -192,7 +193,7 @@ export function pathRoom() {
       const ax = c * 16 + 9 + (reduced() ? 0 : Math.round(glow * 2));
       x.fillStyle = "#fff6c9"; x.fillRect(ax, r * 16 + 7, 4, 2); x.fillRect(ax + 2, r * 16 + 6, 1, 4); x.fillRect(ax + 3, r * 16 + 7, 1, 2);
     });
-    coins.forEach((k) => { const [r, c] = k.split(",").map(Number); draw(x, SPR.coin, c * 16, r * 16 - bob(t, r + c)); });
+    coins.forEach((k) => { const [r, c] = k.split(",").map(Number); draw(x, SPR.grosz, c * 16, r * 16 - bob(t, r + c)); });
     if (!busy && prog.length) {
       x.font = "bold 7px sans-serif"; x.textAlign = "center"; x.textBaseline = "middle";
       simulate(M, prog).forEach((st, n) => {
@@ -267,10 +268,10 @@ export function pathRoom() {
     const detail = (ok) => `${blocks} ${blocks === 1 ? "klocek" : blocks < 5 ? "klocki" : "klocków"}, monety ${picked.length}/${M.coins.size}${ok ? "" : `, ${result === "short" ? "za krótko" : "zderzenie"}`}`;
     if (result === "win") {
       record("code.path", true, thought, detail(true)); save();
-      GS.RUN.rooms[GS.RUN.i + 1] = reached.type; GS.RUN.coins += picked.length; updHud();
+      GS.RUN.rooms[GS.RUN.i + 1] = reached.type; GS.RUN.gr += GR_PER_COIN * picked.length; updHud();
       const all = picked.length > 0 && coins.size === 0;
       snd.ok(); burst(cv.c, 30);
-      say(heroName(), `Udało się! ${picked.length ? `Zebrane monety: ${picked.length}${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
+      say(heroName(), `Udało się! ${picked.length ? `${picked.length} × 5 gr = ${GR_PER_COIN * picked.length} gr${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`, `Udało się! ${picked.length ? `${picked.length} razy 5 groszy to ${GR_PER_COIN * picked.length} groszy${all ? ", wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
       return nextRoom();
     }
     record("code.path", false, thought, detail(false)); took = timer();
@@ -288,7 +289,7 @@ export function pathRoom() {
   // level 3: after the last failed try the companion leads the way out — no coins this time
   async function guide() {
     const fainted = await hurt(); if (left(run)) return;
-    if (!fainted) say(petName(), "Skończyły się próby. Pokażę ci drogę, ale tym razem bez monet.");
+    if (!fainted) say(petName(), "Skończyły się próby. Pokażę ci drogę, ale tym razem bez groszy.");
     const key = (r, c) => r + "," + c, prev = new Map([[key(...M.start), null]]), q = [M.start.slice()], exitSet = new Set(M.exits.map((e) => e.cell + ""));
     let end = null;
     while (q.length && !end) {
@@ -309,10 +310,10 @@ export function pathRoom() {
   }
   const exitsTxt = M.exits.map((e) => ROOM_NAME[e.type]).join(", ");
   const intro = first
-    ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadzą"} ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Monety liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
+    ? `Wyruszamy! Jedna strzałka to jeden krok, czyli jedno pole. ${T.key === "mountains" ? "Szlak ma" : "Z lasu prowadzą"} ${M.exits.length === 2 ? "dwa wyjścia" : "trzy wyjścia"}: ${exitsTxt}. Wybierz, dokąd idziemy, i ułóż strzałki. Grosze liczą się, gdy dojdziesz do wyjścia — zawsze da się zebrać wszystkie naraz.${isFinite(maxTries) ? " Masz 3 próby." : ""}`
     : `${T.key === "mountains" ? "Szlak się rozwidla" : "Las się rozwidla"}. Wyjścia: ${exitsTxt}. Dokąd idziemy?`;
   // on screen a short line (the board shows the rest); read aloud the full explanation
-  const short = `${first ? "Ułóż strzałki do wyjścia i zbierz monety." : "Dokąd idziemy?"} Wyjścia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 próby." : ""}`;
+  const short = `${first ? "Ułóż strzałki do wyjścia i zbierz grosze." : "Dokąd idziemy?"} Wyjścia: ${exitsTxt}.${first && isFinite(maxTries) ? " Masz 3 próby." : ""}`;
   say(petName(), short, intro + (lv.loops && first ? ` Możesz użyć najwyżej ${limit} klocków — pomogą ci ×2, ×3 i ×4.` : "")
     + (lv.slide && first ? ` Nowy klocek: „aż do przeszkody”. ${gw("Bohaterka idzie tak długo, dopóki nic jej nie zatrzyma.", "Bohater idzie tak długo, dopóki nic go nie zatrzyma.")}` : ""));
 }

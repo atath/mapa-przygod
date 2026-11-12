@@ -108,6 +108,31 @@ export function planPath(p) {
   });
 }
 
+// Pays in the open payment window: exact money when the wallet allows it, otherwise the smallest
+// overpayment, then answers the change question (wrongly when asked to). Returns what happened.
+export async function payWith(p, { wrongChange = false, overpay = false } = {}) {
+  await p.waitForSelector(".payov #payGo");
+  const { price, wallet } = await p.evaluate(() => window.__LW_TEST.pay);
+  // subset sums over the wallet's pieces: pick an exact one, else the smallest sum above the price
+  let best = null;
+  const n = wallet.length, lim = Math.min(n, 14);
+  for (let m = 1; m < 1 << lim; m++) {
+    let s = 0; const pick = []; for (let i = 0; i < lim; i++) if (m & (1 << i)) { s += wallet[i]; pick.push(wallet[i]); }
+    if (s < price) continue;
+    if (overpay && s === price) continue;
+    if (!best || s < best.s || (s === best.s && pick.length < best.pick.length)) best = { s, pick };
+  }
+  for (const v of best.pick) await p.click(`.payov [data-w="${v}"]`);
+  await p.click("#payGo");
+  if (best.s === price) { await p.waitForSelector(".payov", { state: "detached" }); return { price, given: best.s, change: 0 }; }
+  await p.waitForSelector(".payov [data-v]");
+  const ch = await p.evaluate(() => window.__LW_TEST.pay.change);
+  const opts = await p.$$eval(".payov [data-v]", (b) => b.map((x) => +x.dataset.v));
+  await p.click(`.payov [data-v="${wrongChange ? opts.find((v) => v !== ch) : ch}"]`);
+  await p.waitForSelector(".payov", { state: "detached" });
+  return { price, given: best.s, change: ch };
+}
+
 // From camp through the world map into a land.
 export async function go(p, land = "forest") {
   await p.click("#tripBtn"); await p.click(`[data-land="${land}"]`);
@@ -151,7 +176,7 @@ export async function playRoom(p) {
   if (["Wieża zegarowa", "Kamień czasu", "Strażnik skrzyni"].includes(kind)) return quizRoom(p, kind);
   if (PATH_LABELS.includes(kind)) {
     const plan = await planPath(p);
-    const before = +(await text(p, "#coinN"));
+    const before = +(await text(p, "#grN"));
     for (const [d, n] of plan.out) {
       if (plan.loops) { await p.click(`[data-d="${d}"]`); if (n > 1) await p.click(`[data-n="${n}"]`); }
       else for (let i = 0; i < n; i++) await p.click(`[data-d="${d}"]`);
@@ -160,9 +185,9 @@ export async function playRoom(p) {
     await p.click("#goBtn");
     await p.waitForFunction(() => /Udało się|Popraw|Został/.test(document.getElementById("txt").textContent), null, { timeout: 30000 });
     const msg = await text(p, "#txt");
-    const after = +(await text(p, "#coinN"));
+    const after = +(await text(p, "#grN"));
     await leaves(p, kind);
-    return { kind: "path", ok: /Udało się/.test(msg), found: plan.found, coins: after - before, expected: plan.coins, blocks: plan.out.length, limit };
+    return { kind: "path", ok: /Udało się/.test(msg), found: plan.found, coins: (after - before) / 5, expected: plan.coins, blocks: plan.out.length, limit };
   }
   if (kind === "Potwór na polanie") {
     for (let turn = 0; turn < 30 && (await label(p)) === "Potwór na polanie"; turn++) {

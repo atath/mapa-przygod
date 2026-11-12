@@ -163,7 +163,7 @@ function feel(q) {
 const secWord = (n) => (n % 1 ? "sekundy" : n === 1 ? "sekunda" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "sekundy" : "sekund");
 function finish(run, good, line) {
   GS.RUN.coins += good; updHud();
-  say(heroName(), `${line} ${good ? `+${good} ${good === 1 ? "moneta" : good < 5 ? "monety" : "monet"}.` : ""}`);
+  say(heroName(), `${line} ${good ? `+${good} zł.` : ""}`);
   nextRoom();
 }
 export { digital };

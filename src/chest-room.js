@@ -52,15 +52,15 @@ export function chestRoom() {
     }
   }));
   function openChest() {
-    st.open = true; const house = houseBonus(GS.G.camp), bonus = 5 + GS.G.level * 2 + house; GS.RUN.coins += bonus;
-    GS.G.coins += GS.RUN.coins; GS.G.trips++; growGarden(GS.G.camp);
+    st.open = true; const house = houseBonus(GS.G.camp), bonus = 9 + GS.G.level * 2 + house; GS.RUN.coins += bonus;
+    GS.G.coins += GS.RUN.coins; GS.G.gr += GS.RUN.gr; GS.G.trips++; growGarden(GS.G.camp);
     record("polish.password", misses === 0, took(), `${pw.w}${misses ? `, pomyłki: ${misses}` : ""}`); tripEnd(GS.RUN, true);
     const opened = !GS.G.lands.includes("mountains") && GS.G.trips >= UNLOCK_TRIPS; if (opened) GS.G.lands.push("mountains");
     const timeLine = tripTimeLine(GS.RUN.active || 0), landKey = GS.RUN.land;
     save();
     speak(pw.w); snd.fanfare(); praise(pw.w.toUpperCase() + "!"); bigEffect(); setTimeout(bigEffect, 700);
-    $("coinN").textContent = GS.G.coins;
-    setTimeout(() => cv.c.isConnected && say(heroName(), `Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte monety: ${GS.RUN.coins}${house ? ` (w tym ${house} od domu)` : ""}.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryliśmy nową krainę: ${lands().mountains.name}!` : ""}`), 900);
+    $("coinN").textContent = GS.G.coins; if ($("grN")) $("grN").textContent = GS.G.gr;
+    setTimeout(() => cv.c.isConnected && say(heroName(), `Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} zł${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryliśmy nową krainę: ${lands().mountains.name}!` : ""}`), 900);
     $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Następna wyprawa</button>`;
     $("campBtn").addEventListener("click", () => { GS.RUN = null; camp(); });
     $("againBtn").addEventListener("click", () => startTrip(landKey));

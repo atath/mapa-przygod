@@ -16,6 +16,7 @@ import { $, app, esc, pick, ri, shuffle, sleep } from "./util.js";
 import { libraryHints, wellHearts } from "./camp-data.js";
 import { tripEnd, tripStart } from "./stats.js";
 import { save } from "./save.js";
+import { zl } from "./money.js";
 
 /* ================== Expedition ================== */
 export const PASSWORDS = [
@@ -38,7 +39,7 @@ export function startTrip(landKey) {
   const order = shuffle(pw.w.split("").map((l, i) => i)), runes = Array.from({ length: spots }, () => []);
   order.forEach((idx, k) => runes[Math.floor((k * spots) / order.length)].push(pw.w[idx]));
   const maxHp = 3 + wellHearts(GS.G.camp);
-  GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
+  GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, gr: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
   tripStart(GS.RUN);
   room();
 }
@@ -56,6 +57,7 @@ export function roomShell() {
 export function updHud() {
   const h = app.querySelector(".hearts"); if (h) h.innerHTML = Array.from({ length: GS.RUN.maxHp }, (_, i) => `<img src="${ICON.heart}" alt="" class="${i < GS.RUN.hp ? "" : "empty"}">`).join("");
   if ($("coinN")) $("coinN").textContent = GS.G.coins + GS.RUN.coins;
+  if ($("grN")) $("grN").textContent = GS.G.gr + GS.RUN.gr;
   const r = app.querySelector(".runes"); if (r) r.innerHTML = runesHTML();
 }
 export function runesHTML() { return GS.RUN.got.length ? GS.RUN.got.map((l) => `<b>${esc(l)}</b>`).join("") : `<em>runy hasła</em>`; }
@@ -85,7 +87,7 @@ export async function hurt() {
   if (GS.RUN.hp > 0) return false;
   await sleep(700); if (left(run)) return true;
   const lost = Math.min(2, GS.RUN.coins); GS.RUN.coins -= lost; GS.RUN.hp = GS.RUN.maxHp; updHud();
-  say(petName(), `Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + lost + " " + (lost === 1 ? "monetę" : "monety") + ". " : ""}Spróbujmy jeszcze raz.`);
+  say(petName(), `Ojej, ${heroName()} się ${gw("zmęczyła", "zmęczył")}. Odpoczywamy chwilkę… Już lepiej! ${lost ? gw("Zgubiłyśmy ", "Zgubiliśmy ") + (lost === 1 ? "złotówkę" : zl(lost)) + ". " : ""}Spróbujmy jeszcze raz.`);
   return true;
 }
 

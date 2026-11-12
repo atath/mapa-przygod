@@ -28,7 +28,7 @@ export function normalizeProfile(s, id) {
   const hero = s.hero && typeof s.hero === "object" ? Object.assign({}, s.hero, { name: cleanName(s.hero.name) }) : null;
   return {
     id: s.id || id || newId(), created: s.created || new Date().toISOString(),
-    hero, coins: Math.max(0, s.coins | 0), owned: Array.isArray(s.owned) ? s.owned.slice() : ["none"],
+    hero, coins: Math.max(0, s.coins | 0), gr: Math.max(0, s.gr | 0), owned: Array.isArray(s.owned) ? s.owned.slice() : ["none"],
     pets, petNames,
     level: [1, 2, 3].includes(s.level) ? s.level : 1, trips: Math.max(0, s.trips | 0), fights: Math.max(0, s.fights | 0),
     voice: s.voice !== false, sound: s.sound !== false,

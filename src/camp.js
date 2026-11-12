@@ -5,6 +5,7 @@ import { DECOR_SPR, HOUSE, LIBRARY, PLANT_SPR, WELL } from "./camp-art.js";
 import { CAMP_COLS, CAMP_ROWS, DECOR, FIRE_TILE, PLANTS, PLANT_NAME, RIPE, blockedTiles } from "./camp-data.js";
 import { creator } from "./creator.js";
 import { worldMap } from "./map.js";
+import { piggy } from "./piggy.js";
 import { burst } from "./fx.js";
 import { parentHTML, wireParent } from "./parent.js";
 import { PETSPR } from "./pets.js";
@@ -28,6 +29,7 @@ export function camp() {
     <button class="btn main" id="tripBtn">Wyprawa</button>
     <div class="row"><button class="btn small gold" id="buildBtn">Budowa obozu</button><button class="btn small" id="editBtn">Ustaw ozdoby</button></div>
     <div class="row"><button class="btn small" id="shopBtn">Sklep: czapki i zwierzaki</button><button class="btn small" id="lookBtn">Zmień wygląd</button><button class="btn small" id="playersBtn">Gracze</button></div>
+    <div class="row"><button class="btn small" id="piggyBtn">🐷 Skarbonka: ${GS.G.gr} gr</button></div>
     ${parentHTML()}`;
   wireHud(camp); wireSay();
   const cv = mountCanvas(CAMP_COLS, CAMP_ROWS); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", "Obóz");
@@ -85,7 +87,7 @@ export function camp() {
     const got = PLANT_NAME[bed.p];
     GS.G.coins += 3; bed.p = pick(PLANTS); bed.s = 0; save();
     snd.coin(); burst(cv.c, 18); $("coinN").textContent = GS.G.coins;
-    say(heroName(), `Zebrane: ${got}! +3 monety. Posiałam nowe nasionko.`.replace("Posiałam", gw("Posiałam", "Posiałem")));
+    say(heroName(), `Zebrane: ${got}! +3 zł. Posiałam nowe nasionko.`.replace("Posiałam", gw("Posiałam", "Posiałem")));
   }
 
   // decorations: the bar lists what is in the bag; edit mode shows free tiles
@@ -114,11 +116,12 @@ export function camp() {
   const ripe = C.beds.filter((b) => b.s === RIPE).length;
   const lines = [`Cześć, ${heroName()}! Las czeka na nas.`, `${petName()} merda ogonkiem. Idziemy na przygodę?`, `Ognisko grzeje. ${gw("Gotowa", "Gotowy")} na wyprawę?`];
   say(petName(), ripe ? `W ogródku coś dojrzało! Dotknij grządki, żeby zebrać plon.`
-    : GS.G.trips ? pick(lines) : `Cześć, ${heroName()}! Jestem ${petName()}. W lesie są potwory i zaczarowane drzwi. Za monety z wypraw zbudujemy tu wspaniały obóz!`);
+    : GS.G.trips ? pick(lines) : `Cześć, ${heroName()}! Jestem ${petName()}. W lesie są potwory i zaczarowane drzwi. Za złotówki z wypraw zbudujemy tu wspaniały obóz!`);
   $("tripBtn").addEventListener("click", worldMap);
   $("buildBtn").addEventListener("click", buildScreen);
   $("shopBtn").addEventListener("click", shop);
   $("lookBtn").addEventListener("click", () => creator(true));
   $("playersBtn").addEventListener("click", whoPlays);
+  $("piggyBtn").addEventListener("click", piggy);
   wireParent((kind) => { if (kind === "deleted" || kind === "imported") boot(); });
 }

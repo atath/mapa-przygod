@@ -93,3 +93,29 @@ test("the trip-time line reads well", () => {
   assert.equal(tripTimeLine(12 * 60000), "Ta wyprawa trwała 12 minut. To tyle, co 4 piosenki.");
   assert.equal(tripTimeLine(22 * 60000), "Ta wyprawa trwała 22 minuty. To tyle, co 7 piosenek.");
 });
+
+import { zl, gr, zlGen, grGen, breakdown, sumOf, piggyCoins, changeOptions, GR_DENOMS } from "../src/money.js";
+
+test("money words follow Polish grammar", () => {
+  assert.deepEqual([1, 2, 4, 5, 12, 22, 25, 101].map(zl), ["1 złoty", "2 złote", "4 złote", "5 złotych", "12 złotych", "22 złote", "25 złotych", "101 złotych"]);
+  assert.deepEqual([1, 3, 5, 14, 23].map(gr), ["1 grosz", "3 grosze", "5 groszy", "14 groszy", "23 grosze"]);
+  assert.deepEqual([1, 2, 5].map(zlGen), ["1 złotego", "2 złotych", "5 złotych"]); assert.deepEqual([1, 3].map(grGen), ["1 grosza", "3 groszy"]);
+});
+
+test("the wallet holds the fewest coins and notes, the piggy bank always lets you make 100 gr", () => {
+  assert.deepEqual(breakdown(87).map((s) => [s.d.v, s.n]), [[50, 1], [20, 1], [10, 1], [5, 1], [2, 1]]);
+  assert.equal(sumOf(breakdown(1234)), 1234); assert.deepEqual(breakdown(0), []);
+  seedRandom(seed);
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  for (let total = 0; total < 400; total++) {
+    const st = piggyCoins(total, pick), coins = st.flatMap((s) => Array(s.n).fill(s.d.v));
+    assert.equal(coins.reduce((a, b) => a + b, 0), total);
+    assert.ok(coins.every((v) => GR_DENOMS.some((d) => d.v === v)));
+    if (total >= 100) {
+      let ok = false; const k = Math.min(coins.length, 16);
+      for (let m = 1; m < 1 << k && !ok; m++) { let s = 0; for (let i = 0; i < k; i++) if (m & (1 << i)) s += coins[i]; ok = s === 100; }
+      assert.ok(ok, `${total} gr: no coins make exactly 100`);
+    }
+  }
+  for (let a = 0; a < 60; a++) { const o = changeOptions(a); assert.equal(o.length, 3); assert.ok(o.includes(a)); assert.ok(o.every((v) => v >= 0)); assert.equal(new Set(o).size, 3); }
+});

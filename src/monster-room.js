@@ -11,6 +11,7 @@ import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, pick, reduced, ri, shuffle, sleep, rnd } from "./util.js";
 import { record, timer } from "./stats.js";
+import { zl } from "./money.js";
 
 /* ---------- Monster room (spells + math, turn-based) ---------- */
 export function monsterRoom() {
@@ -141,7 +142,7 @@ export function monsterRoom() {
     await anim(600, (p) => { st.gone = p; });
     if (left(run)) return;
     const loot = ri(2, 3) + (GS.G.level - 1); GS.RUN.coins += loot; GS.RUN.beaten++; GS.G.fights++; save(); updHud(); snd.coin();
-    say(heroName(), `${pick(PRAISE)} ${mon.name} uciekł i zostawił ${loot} monety!`);
+    say(heroName(), `${pick(PRAISE)} ${mon.name} uciekł i zostawił ${zl(loot)}!`);
     nextRoom();
   }
 
