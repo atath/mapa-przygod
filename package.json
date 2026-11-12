@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@fontsource/nunito": "^5.1.0",
     "@fontsource/pixelify-sans": "^5.1.0",

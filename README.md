@@ -144,6 +144,10 @@ Gra nie ma kont, reklam, analityki ani połączeń z zewnętrznymi serwisami. Ni
 
 Budowanie, testy (gra jest testowana automatycznie w prawdziwej przeglądarce) i struktura kodu: [docs/DEVELOPERS.md](docs/DEVELOPERS.md).
 
+## 📜 Licencja
+
+Kod gry jest na licencji [MIT](LICENSE): możesz ją za darmo uruchamiać, zmieniać i przekazywać dalej, także innym rodzinom i szkołom, pod warunkiem zachowania informacji o autorze.
+
 ## 🎨 Grafika i czcionki
 
-Cała grafika (postacie, potworki, zwierzaki, obóz) jest narysowana kodem na potrzeby tej gry. Czcionki [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) i [Nunito](https://fonts.google.com/specimen/Nunito) są na licencji SIL Open Font License.
+Cała grafika (postacie, potworki, zwierzaki, obóz) jest narysowana kodem na potrzeby tej gry. Grafika jest objęta tą samą licencją MIT co kod. Czcionki [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans) i [Nunito](https://fonts.google.com/specimen/Nunito) mają własną licencję, SIL Open Font License, i MIT ich nie obejmuje.
