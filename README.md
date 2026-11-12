@@ -50,7 +50,7 @@ Gra **wspiera szkołę, ale jej nie zastępuje**. Wyprawa trwa 10–15 minut i m
 | 📖 **Polski** | Układanie słów z liter, czytanie podobnych wyrazów, zagadki do hasła skrzyni |
 | 🦉 **Logika** | „Kto to zrobił?” z kilku wskazówek, ciągi, co nie pasuje, „jeśli… to…” |
 
-Zadania są dopasowane do [nowej podstawy programowej](https://mscdn.pl/wp-content/uploads/2026/05/edukacja_wczesnoszkolna.pdf) dla klas 1–3, która obowiązuje od września 2026 roku. Każde zadanie czyta na głos zwierzak, więc dziecko, które dopiero uczy się czytać, też sobie poradzi.
+Kolejne zadania powstają z myślą o [nowej podstawie programowej](https://mscdn.pl/wp-content/uploads/2026/05/edukacja_wczesnoszkolna.pdf) dla klas 1–3, obowiązującej od września 2026 roku. Gra nie przerabia jej całej: ćwiczy to, w czym zabawa naprawdę pomaga. Każde zadanie czyta na głos zwierzak, więc dziecko, które dopiero uczy się czytać, też sobie poradzi.
 
 ## 👨‍👩‍👧 Dla rodzica
 
