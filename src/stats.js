@@ -16,7 +16,11 @@ export const SKILLS = {
   "logic.spell": "Dobór czaru do potwora",
   "polish.word": "Układanie słowa z liter", "polish.read": "Czytanie drogowskazów", "polish.password": "Hasło do skrzyni",
   "code.path": "Ścieżka ze strzałek",
-  "logic.who": "Łączenie wskazówek: kto to zrobił", "logic.seq": "Co dalej w ciągu", "logic.odd": "Co nie pasuje", "logic.if": "Jeśli… to…",
+  "logic.who": "Kto to zrobił (dawne)", "logic.seq": "Co dalej w ciągu", "logic.odd": "Co nie pasuje", "logic.if": "Jeśli… to… (dawne)",
+  "logic.houses": "Kto gdzie mieszka: łączenie wskazówek", "logic.tiles": "Płytki i kawałki (wyobraźnia przestrzenna)", "logic.grow": "Rosnące figury",
+  "logic.sudoku": "Obrazkowe sudoku", "logic.bridges": "Dwa mosty: odkrywanie reguły",
+  "math.count": "Liczenie co 2, co 5…", "math.pyramid": "Piramida liczbowa", "math.scale": "Waga: ile waży jedno", "math.signs": "Wstaw znaki + i −",
+  "time.hour": "Mała wskazówka: która mniej więcej godzina", "time.guess": "Zgadywanie, ile potrwa wyprawa", "time.day": "Plan dnia",
   "time.read": "Odczytywanie zegara", "time.set": "Ustawianie zegara", "time.elapsed": "O której się skończy",
   "time.howlong": "Ile co trwa", "time.longer": "Co trwa dłużej", "time.feel": "Wyczucie sekund"
 };

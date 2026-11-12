@@ -17,6 +17,8 @@ export const LEGACY_PIN_HASH = "9f09a3853e2cc699d01ed23d54c0ba2aa4c9ad5502a604c3
 const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 // names are typed by a child or come from an imported file: short plain text only
+// every kind of owl puzzle there is or was (src/logic-room.js); unknown names in a save are dropped
+export const LOGIC_KIND_NAMES = ["houses", "patterns", "tiles", "pyramid", "sudoku", "bridges", "scale", "signs"];
 export const cleanName = (v) => (typeof v === "string" ? v.replace(/[<>&"\u0000-\u001f]/g, "").trim().slice(0, 14) : "");
 export function normalizeProfile(s, id) {
   s = s && typeof s === "object" ? s : {};
@@ -35,6 +37,9 @@ export function normalizeProfile(s, id) {
     camp: normalizeCamp(s.camp),
     // players from before the lands existed already have plenty of trips behind them: the mountains are open
     lands: Array.isArray(s.lands) ? ["forest", ...(s.lands.includes("mountains") ? ["mountains"] : [])] : s.hero ? ["forest", "mountains"] : ["forest"],
+    // owl puzzle kinds played lately, so the next one is a different kind; time-guess hits in a row
+    logicSeen: Array.isArray(s.logicSeen) ? s.logicSeen.filter((k) => typeof k === "string" && LOGIC_KIND_NAMES.includes(k)).slice(-(LOGIC_KIND_NAMES.length - 1)) : [],
+    guessStreak: Math.min(99, Math.max(0, s.guessStreak | 0)),
     stats: normalizeStats(s.stats)
   };
 }

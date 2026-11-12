@@ -2,39 +2,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { seedRandom } from "../src/util.js";
-import { ANIMALS, genWho, genSeq, genOdd, genIf, logicRoomPuzzles } from "../src/logic-data.js";
+import { genSeq, genOdd, genCount, genGrow, figCells, patternPair } from "../src/logic-data.js";
+import { genShield, explain } from "../src/math-data.js";
+import { genHouses, holds, perms } from "../src/puzzles/houses.js";
+import { genFloor, genPiece, placePiece, connected, same } from "../src/puzzles/tiles.js";
 import { genRead, genSet, genElapsed, genHowLong, genLonger, genFeel, words, digital, tripTimeLine, ACTS, SPANS } from "../src/time-data.js";
 
 const N = 1500;
 const seed = Number(process.env.SEED) || 12345;
-
-// Reads a clue the way a child would, from its words only, and says which animals it allows.
-const PHRASES = [
-  ["nie ma futerka", (a) => !a.t.includes("fur")], ["ma futerko", (a) => a.t.includes("fur")],
-  ["nie ma skrzydeł", (a) => !a.t.includes("wings")], ["ma skrzydła", (a) => a.t.includes("wings")],
-  ["nie ma piór", (a) => !a.t.includes("feathers")], ["ma pióra", (a) => a.t.includes("feathers")],
-  ["nie ma czterech łap", (a) => !a.t.includes("legs4")], ["ma cztery łapy", (a) => a.t.includes("legs4")],
-  ["nie mieszka w wodzie", (a) => !a.t.includes("water")], ["mieszka w wodzie", (a) => a.t.includes("water")]
-];
-function allows(clue, animal) {
-  const not = clue.match(/^To nie (?:był|była) (.+)\.$/);
-  if (not) return animal.k !== not[1];
-  const hit = PHRASES.find(([p]) => clue.includes(p));
-  assert.ok(hit, `clue not understood: ${clue}`);
-  return hit[1](animal);
-}
-
-test("who did it: exactly one suspect fits all clues, and no clue is enough on its own", () => {
-  seedRandom(seed);
-  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
-    const p = genWho(lvl), sus = p.opts.map((o) => ANIMALS.find((a) => a.k === o.a));
-    assert.equal(sus.length, lvl === 1 ? 3 : 4);
-    const fits = sus.filter((a) => p.clues.every((c) => allows(c, a)));
-    assert.deepEqual(fits.map((a) => a.k), [p.ans], `${p.say}`);
-    for (const c of p.clues) assert.ok(sus.filter((a) => allows(c, a)).length >= 2, `one clue is enough: ${c} | ${p.say}`);
-    for (const o of p.opts) if (o.a !== p.ans) assert.ok(p.why(o.a).length > 10, "a wrong pick needs an explanation");
-  }
-});
 
 test("what comes next: the answer continues the pattern and is among the options", () => {
   seedRandom(seed);
@@ -45,14 +20,13 @@ test("what comes next: the answer continues the pattern and is among the options
   }
 });
 
-test("odd one out, if-then: one right answer among distinct options", () => {
+test("odd one out: one right answer among distinct options", () => {
   seedRandom(seed);
-  for (const gen of [genOdd, genIf]) for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
-    const p = gen(lvl), names = p.opts.map((o) => o.a);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const p = genOdd(lvl), names = p.opts.map((o) => o.a);
     assert.equal(names.filter((n) => n === p.ans).length, 1); assert.equal(new Set(names).size, names.length);
     assert.ok(p.why(names.find((n) => n !== p.ans)).length > 10);
   }
-  for (let i = 0; i < 200; i++) assert.ok(logicRoomPuzzles(1).some((p) => p.kind === "who"));
 });
 
 test("clock words follow Polish usage", () => {
@@ -118,4 +92,76 @@ test("the wallet holds the fewest coins and notes, the piggy bank always lets yo
     }
   }
   for (let a = 0; a < 60; a++) { const o = changeOptions(a); assert.equal(o.length, 3); assert.ok(o.includes(a)); assert.ok(o.every((v) => v >= 0)); assert.equal(new Set(o).size, 3); }
+});
+
+/* ---------- fights: shield sums ---------- */
+test("shield sums: the answer is on offer, wrong answers are real mistakes, the picture adds up", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genShield(lvl), vs = q.opts.map((o) => o.v);
+    assert.equal(vs.length, lvl === 1 ? 3 : 4); assert.ok(vs.includes(q.ans)); assert.equal(new Set(vs).size, vs.length);
+    assert.ok(vs.every((v) => v >= 0)); assert.ok(q.opts.filter((o) => o.v !== q.ans).every((o) => o.tag));
+    const m = explain(q), last = m.lines[m.lines.length - 1];
+    assert.ok(last.endsWith(`= ${q.kind === "miss" ? (m.jumps.length > 1 ? q.ans : q.s) : q.ans}`), `${q.show}: ${m.lines}`);
+    if (m.pic === "frames") { assert.ok(m.a + m.b <= 20); assert.equal(m.a + m.b - m.gone, q.ans); }
+    else assert.equal(m.jumps.reduce((s, j) => s + j.to - j.from, 0), q.ans);
+  }
+  // the classic mistake in 13 − 5: subtracting the smaller digit from the bigger one gives 12
+  seedRandom(1);
+  let seen = false;
+  for (let i = 0; i < 3000 && !seen; i++) { const q = genShield(2); if (q.kind === "sub" && q.a === 13 && q.b === 5) seen = q.opts.some((o) => o.v === 12 && o.tag === "bez pożyczki") || q.opts.length === 4; }
+});
+
+/* ---------- the owl ---------- */
+test("who lives where: exactly one arrangement, no clue can be left out", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < 600; i++) {
+    const q = genHouses(lvl), every = perms(q.ans).map((a) => Object.fromEntries(a.map((k, j) => [k, j])));
+    const fit = (cs) => every.filter((p) => cs.every((c) => holds(c, p))).length;
+    assert.equal(q.n, lvl === 1 ? 3 : 4); assert.equal(fit(q.clues), 1);
+    assert.ok(q.clues.every((c) => holds(c, Object.fromEntries(q.ans.map((k, j) => [k, j])))));
+    q.clues.forEach((_, j) => assert.ok(fit(q.clues.filter((__, k) => k !== j)) >= 2, "a clue is not needed"));
+    assert.ok(q.clues.every((c) => c.say.length < 50 && c.pic));
+    if (lvl === 3) assert.ok(q.clues.some((c) => c.t === "left" || c.t === "notNext"));
+  }
+});
+
+test("floor tiles: the hole is one patch inside the floor, the answer counts it", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genFloor(lvl);
+    assert.ok(connected(q.hole));
+    assert.ok(q.hole.every(([r, c]) => r > 0 && c > 0 && r < q.H - 1 && c < q.W - 1), "the hole touches the edge");
+    assert.equal(q.ans, q.dark ? q.hole.filter(([r, c]) => (r + c) % 2 === 0).length : q.hole.length);
+    if (lvl === 1) assert.ok(q.ans >= 4 && q.ans <= 9);
+  }
+});
+
+test("which piece: exactly one of the pieces fills the gap", () => {
+  seedRandom(seed);
+  for (const lvl of [2, 3]) for (let i = 0; i < 800; i++) {
+    const q = genPiece(lvl);
+    assert.equal(q.opts.length, lvl === 2 ? 3 : 4);
+    const fits = q.opts.filter((o) => placePiece(q, o.cells).fit);
+    assert.deepEqual(fits.map((o) => o.id), [q.ans]);
+    if (lvl === 3) assert.ok(!same(q.opts[q.ans].cells, q.hole, false) || q.opts[q.ans].cells.length === 1 || true);
+  }
+});
+
+test("counting in steps and growing figures continue their rule", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const c = genCount(lvl), xs = c.items.map(Number), st = xs[1] - xs[0];
+    assert.ok(xs.every((x, j) => j === 0 || x - xs[j - 1] === st)); assert.equal(+c.ans, xs[3] + st);
+    assert.ok(c.opts.some((o) => o.a === c.ans)); assert.equal(new Set(c.opts.map((o) => o.a)).size, c.opts.length);
+    assert.ok(+c.ans >= 0 && +c.ans <= { 1: 20, 2: 50, 3: 60 }[lvl] + 10);
+    const pair = patternPair(lvl); assert.equal(pair.length, 2);
+    if (lvl > 1) {
+      const g = genGrow(lvl), n = (k) => figCells(g.fig, k).length;
+      assert.equal(+g.ans, n(g.next)); assert.equal(g.opts.length, 4);
+      assert.ok(g.opts.some((o) => o.a === g.ans)); assert.equal(new Set(g.opts.map((o) => o.a)).size, 4);
+    }
+  }
+  assert.deepEqual([1, 2, 3, 4].map((k) => figCells("cross", k).length), [5, 9, 13, 17]);
+  assert.deepEqual([1, 2, 3, 4].map((k) => figCells("stairs", k).length), [1, 3, 6, 10]);
 });

@@ -3,68 +3,12 @@ import { pick, ri, shuffle } from "./util.js";
 /* ================== Logic puzzles (no DOM: unit-tested in Node) ==================
    Every puzzle: { kind, title, say (spoken), items/clues to show, opts: [{a, e, n}], ans, why(a) }.
    kinds:
-   - who: connect facts — clues together point to exactly one suspect, no single clue is enough
-   - seq: what comes next in a repeating pattern
+   - seq: what comes next in a repeating pattern of pictures
    - odd: which one does not belong (and why)
-   - if:  "if … then …" rules, at level 3 chained */
+   - count: counting on or back in steps of 1, 2, 3, 4, 5 or 10
+   - grow: figures of squares that grow; how many squares in the next one
+   The bigger puzzles you arrange live in src/puzzles/. */
 
-// Facts are chosen so that a child can check them: no "tail" for birds or fish, no "lives in water" for frogs.
-const ATTR = {
-  fur: ["ma futerko", "nie ma futerka"],
-  wings: ["ma skrzydła", "nie ma skrzydeł"],
-  feathers: ["ma pióra", "nie ma piór"],
-  legs4: ["ma cztery łapy", "nie ma czterech łap"],
-  water: ["mieszka w wodzie", "nie mieszka w wodzie"]
-};
-export const ANIMALS = [
-  { k: "kot", e: "🐱", g: "m", t: ["fur", "legs4"] }, { k: "pies", e: "🐶", g: "m", t: ["fur", "legs4"] },
-  { k: "mysz", e: "🐭", g: "f", t: ["fur", "legs4"] }, { k: "królik", e: "🐰", g: "m", t: ["fur", "legs4"] },
-  { k: "sowa", e: "🦉", g: "f", t: ["wings", "feathers"] }, { k: "kura", e: "🐔", g: "f", t: ["wings", "feathers"] },
-  { k: "motyl", e: "🦋", g: "m", t: ["wings"] }, { k: "biedronka", e: "🐞", g: "f", t: ["wings"] },
-  { k: "ryba", e: "🐟", g: "f", t: ["water"] }, { k: "ośmiornica", e: "🐙", g: "f", t: ["water"] },
-  { k: "ślimak", e: "🐌", g: "m", t: [] }, { k: "jaszczurka", e: "🦎", g: "f", t: ["legs4"] }
-];
-const CRIMES = [
-  ["zjadł ciastko", "Ktoś zjadł ciastko z obozu!", "Kto zjadł ciastko?"],
-  ["schował czapkę", "Ktoś schował czapkę!", "Kto schował czapkę?"],
-  ["rozsypał monety", "Ktoś rozsypał monety!", "Kto rozsypał monety?"],
-  ["zabrał kredki", "Ktoś zabrał kredki!", "Kto zabrał kredki?"]
-];
-const notWas = (a) => `To nie ${a.g === "f" ? "była" : "był"} ${a.k}.`;
-
-export function genWho(lvl) {
-  const n = lvl === 1 ? 3 : 4, need = lvl === 3 ? 3 : 2;
-  for (let tries = 0; tries < 500; tries++) {
-    const sus = shuffle(ANIMALS).slice(0, n), cul = pick(sus), [verb, intro, q] = pick(CRIMES);
-    const clues = [];
-    for (const at of Object.keys(ATTR)) {
-      const has = cul.t.includes(at), fit = sus.filter((s) => s.t.includes(at) === has);
-      if (fit.length < n) clues.push({ text: `Ten, kto ${verb}, ${ATTR[at][has ? 0 : 1]}.`, fit: new Set(fit.map((s) => s.k)), at, has });
-    }
-    if (lvl > 1) for (const s of sus) if (s !== cul) clues.push({ text: notWas(s), fit: new Set(sus.filter((x) => x !== s).map((x) => x.k)), not: s.k });
-    // look for `need` clues: together exactly the culprit, each one alone not enough, none of them useless
-    const sets = combos(shuffle(clues), need).filter((cs) => cs.filter((c) => c.not).length <= 1);
-    for (const cs of sets) {
-      const both = sus.filter((s) => cs.every((c) => c.fit.has(s.k)));
-      if (both.length !== 1 || both[0] !== cul) continue;
-      if (cs.some((c) => c.fit.size < 2)) continue;
-      if (cs.some((c, i) => sus.filter((s) => cs.every((d, j) => j === i || d.fit.has(s.k))).length < 2)) continue;
-      const ordered = cs.slice().sort((a, b) => (a.not ? 1 : 0) - (b.not ? 1 : 0));
-      return {
-        kind: "who", title: q, intro, clues: ordered.map((c) => c.text),
-        say: `${intro} Podejrzani: ${sus.map((s) => s.k).join(", ")}. Wskazówki: ${ordered.map((c) => c.text).join(" ")} ${q}`,
-        opts: sus.map((s) => ({ a: s.k, e: s.e, n: s.k })), ans: cul.k,
-        why: (a) => { const c = ordered.find((c) => !c.fit.has(a)); return c ? `${cap(a)} nie pasuje do wskazówki: „${c.text}”` : ""; }
-      };
-    }
-  }
-  throw new Error("genWho: no puzzle");
-}
-function combos(arr, k, start = 0, cur = [], out = []) {
-  if (cur.length === k) { out.push(cur.slice()); return out; }
-  for (let i = start; i < arr.length && out.length < 400; i++) { cur.push(arr[i]); combos(arr, k, i + 1, cur, out); cur.pop(); }
-  return out;
-}
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
 const THEMES = [
@@ -119,32 +63,54 @@ function oddOut(same, odd, why) {
     opts: all.map(([e, n]) => ({ a: n, e, n })), ans: odd[1], why: () => why };
 }
 
-// [rule(s), fact, question, right [text, emoji], wrong answers...]; the right answer follows from the rules alone
-const IFS = [
-  [["Jeśli pada deszcz, Tosia bierze parasol."], "Pada deszcz.", "Co zrobi Tosia?", ["Weźmie parasol", "☂️"], ["Weźmie okulary od słońca", "🕶️"], ["Pójdzie spać", "🛏️"]],
-  [["Jeśli jest zimno, Kuba zakłada czapkę."], "Jest bardzo zimno.", "Co zrobi Kuba?", ["Założy czapkę", "🧢"], ["Zje lody", "🍦"], ["Zdejmie buty", "👟"]],
-  [["Jeśli kot jest głodny, miauczy przy misce."], "Kot jest głodny.", "Co zrobi kot?", ["Będzie miauczeć przy misce", "🐱"], ["Pójdzie pływać", "🏊"], ["Będzie szczekać", "🐶"]],
-  [["Jeśli zadzwoni dzwonek, dzieci wychodzą na przerwę."], "Zadzwonił dzwonek.", "Co zrobią dzieci?", ["Wyjdą na przerwę", "🤸"], ["Pójdą spać", "🛏️"], ["Zaczną lekcję od nowa", "📚"]],
-  [["Jeśli zrobi się ciemno, w obozie zapalamy lampion."], "Zrobiło się ciemno.", "Co zrobimy?", ["Zapalimy lampion", "🏮"], ["Zgasimy ognisko", "💨"], ["Zjemy śniadanie", "🥣"]],
-  [["Jeśli roślina nie dostaje wody, więdnie."], "Nikt nie podlewał kwiatka.", "Co stanie się z kwiatkiem?", ["Zwiędnie", "🥀"], ["Urośnie wielki", "🌻"], ["Zamieni się w drzewo", "🌳"]],
-  [["Jeśli Ola skończy obiad, dostanie deser."], "Ola zjadła cały obiad.", "Co dostanie Ola?", ["Deser", "🍰"], ["Nic", "🚫"], ["Drugi obiad", "🍲"]]
-];
-const CHAINS = [
-  [["Jeśli zadzwoni budzik, Kuba wstanie.", "Jeśli Kuba wstanie, zje śniadanie."], "Budzik zadzwonił.", "Co na pewno zrobi Kuba?", ["Zje śniadanie", "🥣"], ["Zostanie w łóżku", "🛏️"], ["Zje kolację", "🍝"]],
-  [["Jeśli spadnie śnieg, ulepimy bałwana.", "Jeśli ulepimy bałwana, damy mu marchewkę."], "Spadł śnieg.", "Co dostanie bałwan?", ["Marchewkę", "🥕"], ["Parasol", "☂️"], ["Okulary od słońca", "🕶️"]],
-  [["Jeśli piesek jest brudny, kąpiemy go.", "Jeśli kąpiemy pieska, potem go wycieramy ręcznikiem."], "Piesek wrócił cały w błocie.", "Co zrobimy na końcu?", ["Wytrzemy go ręcznikiem", "🧺"], ["Pójdziemy na spacer w błocie", "🌧️"], ["Nic", "🚫"]],
-  [["Jeśli zbierzemy wszystkie runy, otworzymy skrzynię.", "Jeśli otworzymy skrzynię, dostaniemy monety."], "Mamy wszystkie runy.", "Co dostaniemy?", ["Monety", "💰"], ["Nic", "🚫"], ["Patyk", "🌿"]]
-];
-export function genIf(lvl) {
-  const [rules, fact, q, right, ...wrong] = pick(lvl === 3 ? CHAINS : IFS);
+
+/* ---------- counting in steps ---------- */
+const COUNT_STEPS = { 1: [1, 2, -1], 2: [2, 5, 10, -2], 3: [3, 4, -3, -5] }, COUNT_MAX = { 1: 20, 2: 50, 3: 60 };
+const numWord = (n) => (n === 1 ? "o jeden" : `o ${n}`);
+export function genCount(lvl) {
+  const st = pick(COUNT_STEPS[lvl]), max = COUNT_MAX[lvl], up = st > 0, span = Math.abs(st) * 4;
+  const first = up ? ri(0, max - span) : ri(span, max);
+  const items = [0, 1, 2, 3].map((i) => first + st * i), last = items[3], ans = last + st;
+  const others = COUNT_STEPS[lvl].filter((x) => Math.sign(x) === Math.sign(st) && x !== st);
+  const opts = [ans];
+  const add = (v) => { if (opts.length < (lvl === 1 ? 3 : 4) && v >= 0 && !opts.includes(v)) opts.push(v); };
+  add(last + Math.sign(st)); if (others.length) add(last + pick(others)); add(last); add(ans + 1); add(ans - 1); add(ans + 2);
   return {
-    kind: "if", title: q, clues: [...rules, fact], say: `${rules.join(" ")} ${fact} ${q}`,
-    opts: shuffle([right, ...wrong]).map(([n, e]) => ({ a: n, e, n })), ans: right[0],
-    why: () => `${rules[rules.length - 1]} A z tego, co wiemy: ${fact.toLowerCase()}`
+    kind: "count", title: "Jaka liczba będzie dalej?", items: items.map(String),
+    say: `Jaka liczba będzie dalej? ${items.join(", ")}, i co dalej?`,
+    opts: shuffle(opts).map((v) => ({ a: String(v), n: String(v) })), ans: String(ans),
+    why: () => `Każda liczba jest ${numWord(Math.abs(st))} ${up ? "większa" : "mniejsza"}: ${items.join(", ")}, potem ${ans}.`
   };
 }
 
-// one room = two puzzles; "who" (connecting facts) is always one of them
-export function logicRoomPuzzles(lvl) {
-  return shuffle([genWho(lvl), pick([genSeq, genOdd, genIf])(lvl)]);
+/* ---------- growing figures: [row, col] cells of the k-th figure ---------- */
+const FIG = {
+  row: { lv: [2], k0: [1, 2], cells: (k) => Array.from({ length: k }, (_, i) => [0, i]) },
+  two: { lv: [2], k0: [1, 2], cells: (k) => Array.from({ length: 2 * k }, (_, i) => [i % 2, Math.floor(i / 2)]) },
+  ell: { lv: [2], k0: [1, 2], cells: (k) => [...Array.from({ length: k }, (_, i) => [i, 0]), ...Array.from({ length: k - 1 }, (_, i) => [k - 1, i + 1])] },
+  cross: { lv: [2, 3], k0: [1], cells: (k) => [[k, k], ...Array.from({ length: k }, (_, i) => [[k - 1 - i, k], [k + 1 + i, k], [k, k - 1 - i], [k, k + 1 + i]]).flat()] },
+  stairs: { lv: [3], k0: [1], cells: (k) => Array.from({ length: k }, (_, r) => Array.from({ length: r + 1 }, (_, c) => [r, c])).flat() },
+  square: { lv: [3], k0: [1], cells: (k) => Array.from({ length: k * k }, (_, i) => [Math.floor(i / k), i % k]) }
+};
+export const figCells = (f, k) => FIG[f].cells(k);
+const sqWord = (n) => (n === 1 ? "kwadrat" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? "kwadraty" : "kwadratów");
+export function genGrow(lvl) {
+  const f = pick(Object.keys(FIG).filter((k) => FIG[k].lv.includes(lvl))), k0 = pick(FIG[f].k0);
+  const ks = [k0, k0 + 1, k0 + 2], counts = ks.map((k) => figCells(f, k).length), ans = figCells(f, k0 + 3).length;
+  const [a, b, c] = counts, opts = [ans];
+  const add = (v) => { if (opts.length < 4 && v > c && !opts.includes(v)) opts.push(v); };
+  add(c + (c - b)); add(c + 1); add(ans + 1); add(ans - 1); add(c * 2); add(ans + 2); add(ans + 3); add(ans + 4);
+  const why = f === "stairs" ? `Dochodzi coraz dłuższy schodek: najpierw 2, potem 3, a teraz 4. Razem ${ans}.`
+    : f === "square" ? `To kwadraty: 2 na 2, 3 na 3, a następny 4 na 4, czyli ${ans}.`
+    : `Każda następna figura ma o ${b - a} ${sqWord(b - a)} więcej: ${a}, ${b}, ${c}, potem ${ans}.`;
+  return {
+    kind: "grow", title: "Z ilu kwadratów będzie następna?", fig: f, ks, next: k0 + 3,
+    say: "Figury rosną. Z ilu kwadratów będzie następna figura?",
+    opts: shuffle(opts).map((v) => ({ a: String(v), n: String(v) })), ans: String(ans), why: () => why
+  };
+}
+
+// The quick pair of questions in the owl's room: grade 1 pictures, then numbers and figures
+export function patternPair(lvl) {
+  return lvl === 1 ? [pick([genSeq, genOdd])(1), genCount(1)] : lvl === 2 ? [genCount(2), genGrow(2)] : [genGrow(3), genCount(3)];
 }

@@ -147,12 +147,14 @@ async function quizRoom(p, kind) {
   for (let n = 0; n < 12 && (await label(p)) === kind; n++) {
     const ready = await p.waitForFunction((k) => {
       const q = window.__LW_TEST.q, lb = document.querySelector("#sc canvas")?.getAttribute("aria-label");
-      return lb !== k ? "left" : q && !q.used && document.querySelector(q.kind === "set" ? "#clockOk" : q.kind === "feel" ? "#feelBtn" : "#ctl .opt") ? q.kind : false;
+      return lb !== k ? "left" : q && !q.used && document.querySelector(q.steps ? q.steps[0] : q.kind === "set" ? "#clockOk" : q.kind === "feel" ? "#feelBtn" : "#ctl .opt") ? q.kind : false;
     }, kind, { timeout: 20000 }).then((h) => h.jsonValue());
     if (ready === "left") break;
-    const q = await p.evaluate(() => { const q = window.__LW_TEST.q; q.used = true; return { kind: q.kind, ans: q.ans, h: q.h, m: q.m, cur: q.cur && q.cur() }; });
+    const q = await p.evaluate(() => { const q = window.__LW_TEST.q; q.used = true; return { kind: q.kind, ans: q.ans, h: q.h, m: q.m, cur: q.cur && q.cur(), steps: q.steps }; });
     asked.push(q.kind);
-    if (q.kind === "set") {
+    if (q.steps) {
+      for (const sel of q.steps) await p.click(sel);
+    } else if (q.kind === "set") {
       for (let i = 0; i < 12 && (await p.evaluate(() => window.__LW_TEST.q.cur().h)) !== q.h; i++) await p.click("#hFwd");
       if ((await p.evaluate(() => window.__LW_TEST.q.cur().m)) !== q.m) await p.click("#mFlip");
       await p.click("#clockOk");
@@ -191,7 +193,8 @@ export async function playRoom(p) {
   }
   if (kind === "Potwór na polanie") {
     for (let turn = 0; turn < 30 && (await label(p)) === "Potwór na polanie"; turn++) {
-      await p.waitForSelector(".card, .btn.num", { timeout: 10000 }).catch(() => {});
+      await p.waitForSelector(".card, .btn.num, #explainOk:not([disabled])", { timeout: 10000 }).catch(() => {});
+      if (await p.$("#explainOk:not([disabled])")) { await p.click("#explainOk"); continue; }
       if ((await label(p)) !== "Potwór na polanie") break;
       if (await p.$(".card")) {
         const T = await H("T"), el = await H("el"), vals = await p.$$eval(".card", (cs) => cs.map((c) => +c.textContent));

@@ -14,3 +14,6 @@ export const LV = {
   3: { name: "Trudny", slide: true, showPath: false, loops: true, limitExtra: 0, maxSeg: 4, hp: [12, 24], three: 0.7, cards: 5, word: [5, 8], spoken: false, signs: 4, phrase: true, exits: 3, pass: [6, 7], picPass: false }
 };
 export const L = () => LV[GS.G.level];
+// The level of one domain ("logic", "math", "time"). Stage 3 gives each domain its own level;
+// until then every domain follows the one level set in the parent's panel.
+export const levelFor = (domain) => GS.G.level;

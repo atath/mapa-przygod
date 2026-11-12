@@ -12,6 +12,8 @@ import { heroName, petName, say } from "./shell.js";
 import { $, app, esc, pick, reduced, ri, shuffle, sleep, rnd } from "./util.js";
 import { record, timer } from "./stats.js";
 import { zl } from "./money.js";
+import { dotRows, explain, genShield } from "./math-data.js";
+import { showExplain } from "./explain-ui.js";
 
 /* ---------- Monster room (spells + math, turn-based) ---------- */
 export function monsterRoom() {
@@ -49,17 +51,6 @@ export function monsterRoom() {
     const fill = []; while (sol.length + fill.length < lv.cards) { const v = ri(1, 9); if (v !== T) fill.push(v); }
     return shuffle(sol.concat(fill));
   }
-  function attackQ() {
-    const lvl = GS.G.level, kind = lvl === 1 ? pick(["add", "sub"]) : lvl === 2 ? pick(["add", "sub", "miss"]) : pick(["three", "miss", "sub", "three"]);
-    const max = lvl === 1 ? 15 : 20;
-    let show, sayTxt, ans;
-    if (kind === "add") { const a = ri(3, max - 2), b = ri(2, max - a); ans = a + b; show = `${a} + ${b}`; sayTxt = `${a} dodać ${b}`; }
-    else if (kind === "sub") { const a = ri(8, max), b = ri(2, a - 1); ans = a - b; show = `${a} − ${b}`; sayTxt = `${a} odjąć ${b}`; }
-    else if (kind === "miss") { const s_ = ri(8, max), a = ri(2, s_ - 2); ans = s_ - a; show = `${a} + ? = ${s_}`; sayTxt = `${a} dodać ile daje ${s_}`; }
-    else { const a = ri(4, 12), b = ri(2, 8), c = ri(1, Math.min(9, a + b - 1)); ans = a + b - c; show = `${a} + ${b} − ${c}`; sayTxt = `${a} dodać ${b} odjąć ${c}`; }
-    const opts = new Set([ans]); while (opts.size < (lvl === 1 ? 3 : 4)) { const v = ans + ri(-3, 3); if (v >= 0) opts.add(v); }
-    return { kind, show, say: sayTxt, ans, opts: shuffle([...opts]), q: kind === "miss" ? show : show + " = ?" };
-  }
   let wrongSpells = 0;
   function playerTurn(prefix) {
     const N = ri(lv.hp[0], lv.hp[1]), hand = makeHand(N), sel = new Set();
@@ -68,7 +59,7 @@ export function monsterRoom() {
     $("ctl").innerHTML = `
       <div class="foe"><span class="power"><img src="${EICON[el]}" width="40" height="40" alt="">${esc(mon.name)} · moc <b>${N}</b></span></div>
       <div class="spells" id="spells">${Object.keys(ELEM).map((k) => `<button class="spell" data-s="${k}" aria-pressed="false" aria-label="${ELEM[k].name}, pokonuje: ${ELEM[ELEM[k].beats].name}"><img src="${EICON[k]}" alt="">${ELEM[k].name}<small>pokonuje <img src="${EICON[ELEM[k].beats]}" alt=""></small></button>`).join("")}</div>
-      <div class="cards" id="cards">${hand.map((v, i) => `<button class="card" data-i="${i}" aria-pressed="false" aria-label="karta ${v}">${v}</button>`).join("")}</div>
+      <div class="cards" id="cards">${hand.map((v, i) => `<button class="card" data-i="${i}" aria-pressed="false" aria-label="karta ${v}">${v}${GS.G.level === 1 ? `<span class="dots" aria-hidden="true">${dotRows(v).map((n) => `<span>${"<i></i>".repeat(n)}</span>`).join("")}</span>` : ""}</button>`).join("")}</div>
       <div class="sum" id="sum" aria-live="polite"></div>
       <button class="btn main" id="cast" disabled>✨ Rzuć czar</button>`;
     const upd = () => {
@@ -115,15 +106,15 @@ export function monsterRoom() {
   }
 
   function monsterTurn() {
-    const q = attackQ();
+    const q = genShield(GS.G.level);
     $("ctl").innerHTML = `<div class="foe"><span class="power">🛡️ Tarcza: ile to?</span></div><div class="sum">${q.q}</div>
-      <div class="opts">${q.opts.map((v) => `<button class="btn num" data-v="${v}">${v}</button>`).join("")}</div>`;
+      <div class="opts">${q.opts.map((o) => `<button class="btn num" data-v="${o.v}">${o.v}</button>`).join("")}</div>`;
     say(mon.name, `${mon.name} ${mon.attack}! Osłoń się tarczą: ${q.q}`, `${mon.name} ${mon.attack}! Osłoń się tarczą. ${q.say}?`);
     let done = false; const took = timer();
     app.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", async () => {
       if (done) return; done = true;
-      const ok = +b.dataset.v === q.ans;
-      record("math." + q.kind, ok, took(), `${q.show.replace("?", "□")} → ${b.dataset.v}${ok ? "" : ` (${q.ans})`}`);
+      const v = +b.dataset.v, ok = v === q.ans, tag = ok ? "" : (q.opts.find((o) => o.v === v) || {}).tag || "";
+      record("math." + q.kind, ok, took(), `${q.show.replace("?", "□")} → ${v}${ok ? "" : ` (${q.ans}) ${tag}`}`); save();
       b.classList.add(ok ? "right" : "wrong");
       if (ok) {
         st.shield = 1; snd.letter(); await fly(E.icon, 92, 40, 30); snd.ok();
@@ -132,8 +123,10 @@ export function monsterRoom() {
       } else {
         await fly(E.icon, 92, 36, 30); st.flash = 1; setTimeout(() => (st.flash = 0), 600);
         const fainted = await hurt(); if (left(run)) return;
-        if (!fainted) say(petName(), `Ała! Dobra odpowiedź to ${q.ans}. Następnym razem się uda!`);
-        await sleep(1800); if (left(run)) return;
+        // a picture of how to get there instead of just the number
+        const m = explain(q);
+        if (!fainted) say(petName(), `Ała! Zobacz, jak to policzyć. ${m.speak}`);
+        await showExplain($("ctl"), m); if (left(run)) return;
       }
       playerTurn();
     }));

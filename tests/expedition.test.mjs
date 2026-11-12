@@ -48,7 +48,11 @@ for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
       assert.equal(db.profiles.p1.gr, grosze, "every coin on the paths is 5 gr in the wallet");
       // measurements for stage 3: every room left an answer, the trip and the play time were counted
       const st = db.profiles.p1.stats, kinds = new Set(st.answers.map((a) => a.k)), seen = new Set(rooms.map((r) => r.kind));
-      const expect = ["code.path", "polish.password", "logic.who"].concat(seen.has("clock") ? ["time.read", "time.set", "time.elapsed"] : [], seen.has("time") ? ["time.howlong", "time.longer", "time.feel"] : [],seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
+      const expect = ["code.path", "polish.password"].concat(seen.has("clock") ? ["time.set"] : [], seen.has("time") ? ["time.howlong", "time.feel"] : [], seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
+      const OWL = ["logic.houses", "logic.tiles", "logic.seq", "logic.odd", "logic.grow", "logic.sudoku", "logic.bridges", "math.count", "math.pyramid", "math.scale", "math.signs"];
+      assert.ok(OWL.some((k) => kinds.has(k)), "the owl's puzzle left no answer");
+      if (seen.has("clock")) assert.ok(["time.read", "time.elapsed", "time.hour"].some((k) => kinds.has(k)), "the clock tower asked only one task");
+      if (seen.has("time")) assert.ok(["time.longer", "time.day"].some((k) => kinds.has(k)), "the time stone missed a task");
       for (const k of expect) assert.ok(kinds.has(k), `no answer recorded for ${k}`);
       assert.equal(st.answers.filter((a) => a.k === "code.path").length, 3, "one path answer per path room");
       assert.ok(st.answers.every((a) => a.ms >= 0 && a.t > 0));

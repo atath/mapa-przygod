@@ -382,3 +382,93 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   body.room .coins img { width: 20px; height: 20px; }
   body.room .coins img.gr { margin-left: 6px; }
 }
+
+/* ---------- picture explanation after a wrong sum; dots on level-1 cards ---------- */
+.card .dots { display: grid; gap: 2px; justify-items: center; margin-top: 2px; }
+.card .dots span { display: flex; gap: 2px; }
+.card .dots i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .55; }
+.card { display: grid; place-content: center; }
+.explain { display: grid; gap: 6px; justify-items: center; }
+.tfs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.tf { display: grid; grid-template-columns: repeat(5, 26px); grid-auto-rows: 26px; gap: 3px; padding: 4px; background: var(--surface); border: 3px solid var(--wood-dark); border-radius: 8px; }
+.tf i { border-radius: 50%; border: 2px dashed var(--line); transition: background .2s, opacity .3s, transform .3s; }
+.tf i.a { background: #2b6cb0; border-color: #2b6cb0; }
+.tf i.b { background: #e8442c; border-color: #e8442c; }
+.tf i.gone { opacity: .15; transform: scale(.6); }
+.nline { width: min(420px, 100%); color: var(--fg); }
+.jump { opacity: 0; transition: opacity .3s; } .jump.on { opacity: 1; }
+.ex-lines { display: flex; flex-wrap: wrap; gap: 4px 14px; justify-content: center; font-weight: 900; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.ex-lines span { opacity: .15; transition: opacity .3s; } .ex-lines span.on { opacity: 1; }
+
+/* ---------- the owl's puzzles you arrange ---------- */
+.pz { gap: 6px; width: 100%; }
+.pl-slots, .pl-tray { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pl-tray { min-height: 54px; padding: 4px; border-radius: 12px; background: var(--soft); width: 100%; }
+.pl-tray.empty { background: transparent; }
+.pz-piece, .pz-slot { font: inherit; color: inherit; cursor: pointer; border: 3px solid var(--wood-dark); border-radius: 12px; background: var(--surface); box-shadow: 0 3px 0 var(--wood-dark); }
+.pz-piece { min-width: 52px; min-height: 48px; font-size: 1.8rem; line-height: 1; padding: 4px 6px; }
+.pz-piece.sel { background: var(--gold); transform: translateY(-4px); }
+.pz-slot { display: grid; justify-items: center; align-content: start; width: 70px; min-height: 84px; padding: 2px; background: #f1e3c2; border-style: dashed; }
+.pz-slot.full { border-style: solid; background: var(--surface); }
+.pz-slot.bad { border-color: var(--bad); background: #fbebeb; }
+.pz-slot .roof { font-size: 1.3rem; line-height: 1; }
+.pz-slot .em { font-size: 2rem; line-height: 1.1; min-height: 2.2rem; }
+.pz-slot small { font-weight: 900; color: var(--muted); font-size: .8rem; }
+.hclues { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px; width: 100%; }
+.hclue { display: grid; gap: 0; text-align: center; padding: 4px 6px; border: 2px solid var(--line); border-radius: 10px; background: var(--surface); font: inherit; color: inherit; cursor: pointer; }
+.hclue .pic { font-size: 1.4rem; line-height: 1.2; white-space: nowrap; }
+.hclue small { font-weight: 700; font-size: .78rem; line-height: 1.15; }
+.hclue.good { border-color: var(--good); background: #e5f4e4; }
+.hclue.bad { border-color: var(--bad); background: #fbebeb; }
+.hclue.good .pic::after { content: " ✓"; color: var(--good); }
+.hclue.bad .pic::after { content: " ✗"; color: var(--bad); }
+.numpad { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 100%; }
+.numpad .np { min-height: 44px; padding: 0; font-family: var(--font-body); font-weight: 900; font-size: 1.5rem; background: #fffaf0; color: #24160a; }
+.ans { display: inline-block; min-width: 2.2em; padding: 0 8px; border: 3px dashed var(--wood); border-radius: 10px; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.floorwrap { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.floor { --tc: 26px; display: grid; grid-auto-rows: var(--tc); background: #8d6a4a; padding: 3px; border-radius: 6px; }
+.floor i { box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); background: #e7c98f; transition: background .2s; }
+.floor.chess i.t.d { background: #8a5a2b; }
+.floor i.h { background: #5a4130; box-shadow: none; }
+.floor i.h.t { border-top: 2px dashed #f4ead3; } .floor i.h.b { border-bottom: 2px dashed #f4ead3; }
+.floor i.h.l { border-left: 2px dashed #f4ead3; } .floor i.h.r { border-right: 2px dashed #f4ead3; }
+.floor i.h.fill { background: #7ed38a; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.floor i.h.gap { background: #ffcf3a; }
+.floor i.over { background: #e8442c !important; }
+.extra { font-weight: 900; font-size: 1.4rem; color: var(--bad); }
+.pc-opts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.pc-opt { --mc: 14px; display: grid; place-items: center; min-width: 64px; min-height: 64px; padding: 6px; border: 3px solid var(--wood-dark); border-radius: 12px; background: var(--surface); box-shadow: 0 3px 0 var(--wood-dark); cursor: pointer; }
+.pc-opt[aria-pressed="true"] { background: var(--gold); }
+.pc-opt:disabled { opacity: .35; }
+.mini { display: grid; gap: 1px; }
+.mini i { background: #7ed38a; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); }
+.grow { --gc: 8px; display: flex; gap: 14px; align-items: flex-end; justify-content: center; flex-wrap: wrap; }
+.fig { display: inline-grid; gap: 1px; }
+.fig i { background: #2b6cb0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+.fig.new i { background: #2c9a5a; }
+.grow .q, .seq.nums .q { display: inline-grid; place-items: center; min-width: 2.2rem; min-height: 2.2rem; border: 3px dashed var(--wood); border-radius: 10px; font-family: var(--font-body); font-weight: 900; font-size: 1.4rem; color: var(--wood-dark); }
+.seq.nums span { font-family: var(--font-body); font-weight: 900; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.seq.nums span + span::before { content: ","; margin-right: 4px; opacity: .5; }
+.seq.nums .q::before { content: none !important; }
+.opts.nums .opt .lb { font-family: var(--font-body); font-weight: 900; font-size: 1.8rem; }
+@media (max-height: 900px) {
+  body.room .pz-slot { width: 60px; min-height: 66px; }
+  body.room .pz-slot .em { font-size: 1.6rem; min-height: 1.8rem; }
+  body.room .pz-piece { min-height: 42px; font-size: 1.5rem; }
+  body.room .pl-tray { min-height: 46px; }
+  body.room .hclue small { font-size: .72rem; }
+  body.room .hclue .pic { font-size: 1.15rem; }
+  body.room .floor { --tc: 20px; }
+  body.room .numpad .np { min-height: 38px; font-size: 1.3rem; }
+  body.room .tf { grid-template-columns: repeat(5, 18px); grid-auto-rows: 18px; gap: 2px; }
+  body.room .ex-lines { font-size: 1.1rem; }
+  body.room .pc-opt { --mc: 11px; min-width: 52px; min-height: 52px; }
+}
+@media (max-height: 700px) {
+  body.room .hclue small { display: none; }
+  body.room .pz-slot { width: 54px; min-height: 56px; }
+  body.room .pz-slot .roof { display: none; }
+  body.room .floor { --tc: 16px; }
+  body.room .numpad .np { min-height: 34px; }
+  body.room .tf { grid-template-columns: repeat(5, 14px); grid-auto-rows: 14px; }
+}
