@@ -51,3 +51,24 @@ export function changeOptions(ans, n = 3) {
   for (const d of shuffle([1, -1, 2, -2, 5, -5, 10, -10])) { if (set.size >= n) break; if (ans + d >= 0) set.add(ans + d); }
   return shuffle([...set]);
 }
+
+/* Grosze lying on the paths: real coins, so collecting them is also adding them up.
+   Every path holds at least 40 gr when all its coins are picked up, so three paths make more than
+   a złoty to swap in the piggy bank. Grade 1: 10 and 20 gr (counting in tens); then 5 gr, then 50 gr too. */
+export const PATH_MIN_GR = 40;
+const PATH_SETS = { 1: [10, 20], 2: [5, 10, 20], 3: [5, 10, 20, 50] }, PATH_MAX = { 1: 60, 2: 60, 3: 80 };
+export function pathCoinValues(n, lvl, pick = (a) => a[Math.floor(Math.random() * a.length)]) {
+  const set = PATH_SETS[lvl] || PATH_SETS[1];
+  for (let t = 0; t < 200; t++) {
+    const v = Array.from({ length: n }, () => pick(set)), sum = v.reduce((a, b) => a + b, 0);
+    if (sum >= PATH_MIN_GR && sum <= PATH_MAX[lvl]) return v.sort((a, b) => b - a);
+  }
+  return Array.from({ length: n }, () => 20);
+}
+// "20 gr + 10 gr = 30 gr" on screen, "20 groszy i 10 groszy to razem 30 groszy" aloud
+export function coinSum(vals) {
+  const sum = vals.reduce((a, b) => a + b, 0);
+  if (vals.length === 1) return { show: `${vals[0]} gr`, speak: gr(vals[0]), sum };
+  const words = vals.map(gr);
+  return { show: `${vals.map((v) => `${v} gr`).join(" + ")} = ${sum} gr`, speak: `${words.slice(0, -1).join(", ")} i ${words.at(-1)} to razem ${gr(sum)}`, sum };
+}

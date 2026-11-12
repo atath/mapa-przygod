@@ -44,7 +44,7 @@ Gra **wspiera szkołę, ale jej nie zastępuje**. Wyprawa trwa 10–15 minut i m
 | | W grze |
 | --- | --- |
 | 🧭 **Programowanie** | Kolejność kroków, pętle (×2, ×3, ×4), klocek „aż do przeszkody”, szukanie najkrótszej drogi |
-| ➕ **Matematyka** | Dodawanie i odejmowanie z obrazkiem po błędzie (ramka dziesiątkowa, oś liczbowa), brakująca liczba, piramida liczbowa, waga jako równanie, wstawianie znaków, liczenie co 2, co 5 |
+| ➕ **Matematyka** | Dodawanie i odejmowanie z obrazkiem po błędzie (ramka dziesiątkowa, oś liczbowa), brakująca liczba, piramida liczbowa, waga jako równanie, wstawianie znaków, liczenie co 2, co 5, dodawanie groszy zebranych na ścieżce |
 | 🪙 **Pieniądze** | Prawdziwe monety i banknoty, płacenie, reszta, wymiana 100 gr na 1 zł |
 | ⏰ **Czas** | Najpierw sama mała wskazówka, potem zegar, na którym obie wskazówki chodzą razem; „o której się skończy”, plan dnia, ile co trwa, wyczucie sekund, zgadywanie, ile potrwa wyprawa |
 | 📖 **Polski** | Układanie słów z liter, czytanie podobnych wyrazów, zagadki do hasła skrzyni |

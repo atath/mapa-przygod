@@ -74,7 +74,7 @@ test("the trip-time line reads well", () => {
   assert.equal(tripTimeLine(22 * 60000), "Ta wyprawa trwała 22 minuty. To tyle, co 7 piosenek.");
 });
 
-import { zl, gr, zlGen, grGen, breakdown, sumOf, piggyCoins, changeOptions, GR_DENOMS } from "../src/money.js";
+import { zl, gr, zlGen, grGen, breakdown, sumOf, piggyCoins, changeOptions, GR_DENOMS, pathCoinValues, coinSum, PATH_MIN_GR } from "../src/money.js";
 
 test("money words follow Polish grammar", () => {
   assert.deepEqual([1, 2, 4, 5, 12, 22, 25, 101].map(zl), ["1 złoty", "2 złote", "4 złote", "5 złotych", "12 złotych", "22 złote", "25 złotych", "101 złotych"]);
@@ -263,4 +263,17 @@ test("day plan: events at least an hour apart, the clock and the part of day giv
     assert.ok(t.every((x, j) => j === 0 || x - t[j - 1] >= 60));
     if (lvl === 1) assert.ok(q.evs.every((x) => x.m === 0));
   }
+});
+
+test("coins on the paths: real grosze, at least 40 gr a path, so a trip is worth more than a złoty", () => {
+  seedRandom(seed);
+  const allowed = { 1: [10, 20], 2: [5, 10, 20], 3: [5, 10, 20, 50] };
+  for (const lvl of [1, 2, 3]) for (const n of [2, 3]) for (let i = 0; i < 500; i++) {
+    const v = pathCoinValues(n, lvl), sum = v.reduce((a, b) => a + b, 0);
+    assert.equal(v.length, n); assert.ok(v.every((x) => allowed[lvl].includes(x)), `${v}`);
+    assert.ok(sum >= PATH_MIN_GR && sum <= (lvl === 3 ? 80 : 60), `${v}`);
+  }
+  assert.ok(3 * PATH_MIN_GR >= 100);
+  assert.deepEqual(coinSum([20, 10, 5]), { show: "20 gr + 10 gr + 5 gr = 35 gr", speak: "20 groszy, 10 groszy i 5 groszy to razem 35 groszy", sum: 35 });
+  assert.deepEqual(coinSum([20]), { show: "20 gr", speak: "20 groszy", sum: 20 });
 });

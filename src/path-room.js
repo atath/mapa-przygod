@@ -5,7 +5,9 @@ import { ROOM_NAME, hurt, left, nextRoom, roomShell, updHud } from "./expedition
 import { burst } from "./fx.js";
 import { MON_FRAMES } from "./monsters.js";
 import { PETSPR } from "./pets.js";
-import { SPR } from "./props.js";
+import { GR_SPR, SPR } from "./props.js";
+import { coinSum, pathCoinValues } from "./money.js";
+import { levelFor } from "./content.js";
 import { land, msprites } from "./lands.js";
 import { bob, draw, light, mountCanvas } from "./scene.js";
 import { gw, heroName, petName, say } from "./shell.js";
@@ -116,9 +118,13 @@ export function placeCoins(M, open, exitKeys, start, lv) {
   const free = [...open].filter((k) => k !== start + "" && !exitKeys.has(k));
   for (let t = 0; t < 40; t++) {
     const arr = shuffle(free).slice(0, ri(2, 3)), n = minBlocksAll(M, arr, lv.loops ? 4 : 1, lv.slide);
-    if (isFinite(n)) { M.coins = new Set(arr); M.needAll = n; return M; }
+    if (isFinite(n)) {
+      // the coins' values: together at least 40 gr on every path (src/money.js)
+      const vals = pathCoinValues(arr.length, GS.G ? levelFor("math") : 1, (a) => a[Math.floor(rnd() * a.length)]);
+      M.coins = new Set(arr); M.vals = new Map(arr.map((k, i) => [k, vals[i]])); M.needAll = n; return M;
+    }
   }
-  M.coins = new Set(); M.needAll = Math.max(...M.need); return M;
+  M.coins = new Set(); M.vals = new Map(); M.needAll = Math.max(...M.need); return M;
 }
 // expands the program into single steps; a SLIDE block walks until the next field is blocked
 export function simulate(M, prog) {
@@ -147,7 +153,6 @@ export function hedge(ctx, x0, y0, w, h, seed) {
     ctx.fillStyle = hi; ctx.fillRect(cx - rr / 2, cy - rr / 2, P, P);
   }
 }
-export const GR_PER_COIN = 5; // the copper coins on the board are 5 gr each
 export function pathRoom() {
   roomShell();
   const lv = L(), run = GS.RUN, first = run.i === 0;
@@ -193,7 +198,7 @@ export function pathRoom() {
       const ax = c * 16 + 9 + (reduced() ? 0 : Math.round(glow * 2));
       x.fillStyle = "#fff6c9"; x.fillRect(ax, r * 16 + 7, 4, 2); x.fillRect(ax + 2, r * 16 + 6, 1, 4); x.fillRect(ax + 3, r * 16 + 7, 1, 2);
     });
-    coins.forEach((k) => { const [r, c] = k.split(",").map(Number); draw(x, SPR.grosz, c * 16, r * 16 - bob(t, r + c)); });
+    coins.forEach((k) => { const [r, c] = k.split(",").map(Number); draw(x, GR_SPR[M.vals.get(k)] || SPR.grosz, c * 16, r * 16 - bob(t, r + c)); });
     if (!busy && prog.length) {
       x.font = "bold 7px sans-serif"; x.textAlign = "center"; x.textBaseline = "middle";
       simulate(M, prog).forEach((st, n) => {
@@ -268,10 +273,11 @@ export function pathRoom() {
     const detail = (ok) => `${blocks} ${blocks === 1 ? "klocek" : blocks < 5 ? "klocki" : "klocków"}, monety ${picked.length}/${M.coins.size}${ok ? "" : `, ${result === "short" ? "za krótko" : "zderzenie"}`}`;
     if (result === "win") {
       record("code.path", true, thought, detail(true)); save();
-      GS.RUN.rooms[GS.RUN.i + 1] = reached.type; GS.RUN.gr += GR_PER_COIN * picked.length; updHud();
+      const got = coinSum(picked.map((k) => M.vals.get(k)));
+      GS.RUN.rooms[GS.RUN.i + 1] = reached.type; GS.RUN.gr += got.sum; updHud();
       const all = picked.length > 0 && coins.size === 0;
       snd.ok(); burst(cv.c, 30);
-      say(heroName(), `Udało się! ${picked.length ? `${picked.length} × 5 gr = ${GR_PER_COIN * picked.length} gr${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`, `Udało się! ${picked.length ? `${picked.length} razy 5 groszy to ${GR_PER_COIN * picked.length} groszy${all ? ", wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
+      say(heroName(), `Udało się! ${picked.length ? `${got.show}${all ? " — wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`, `Udało się! ${picked.length ? `${got.speak}${all ? ", wszystkie!" : ""}. ` : ""}Idziemy: ${ROOM_NAME[reached.type]}.`);
       return nextRoom();
     }
     record("code.path", false, thought, detail(false)); took = timer();

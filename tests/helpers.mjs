@@ -107,7 +107,7 @@ export function planPath(p) {
       q = nq;
     }
     const out = []; for (let cur = goal; cur && prev.get(cur); cur = prev.get(cur)[0]) { const [, d, k] = prev.get(cur); out.unshift([d, k]); }
-    return { out, coins: coins.length, loops, found: !!goal };
+    return { out, coins: coins.length, gr: coins.reduce((a, k) => a + M.vals.get(k), 0), loops, found: !!goal };
   });
 }
 
@@ -200,7 +200,8 @@ export async function playRoom(p) {
     const msg = await text(p, "#txt");
     const after = +(await text(p, "#grN"));
     await leaves(p, kind);
-    return { kind: "path", ok: /Udało się/.test(msg), found: plan.found, coins: (after - before) / 5, expected: plan.coins, blocks: plan.out.length, limit };
+    // gr: grosze paid for this path; expectedGr: what all its coins are worth
+    return { kind: "path", ok: /Udało się/.test(msg), found: plan.found, gr: after - before, expectedGr: plan.gr, coins: plan.coins, blocks: plan.out.length, limit };
   }
   if (kind === "Potwór na polanie") {
     for (let turn = 0; turn < 30 && (await label(p)) === "Potwór na polanie"; turn++) {

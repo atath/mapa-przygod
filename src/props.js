@@ -14,6 +14,19 @@ export function fire(f) {
     g.px(8 + f * 2, 9 - f, "Y"); g.px(24 - f, 6 + f, "O"); g.px(19, 3 + f, "W");
   });
 }
+// tiny digits for coins on the board, 3×5 pixels
+const DIG = { 0: ["###", "#.#", "#.#", "#.#", "###"], 1: [".#.", "##.", ".#.", ".#.", "###"], 2: ["###", "..#", "###", "#..", "###"], 5: ["###", "#..", "###", "..#", "###"] };
+// a grosz coin with its value: 1–5 gr copper, 10–50 gr silver (bigger for more)
+function grCoin(v) {
+  const copper = v < 10, r = v < 10 ? 6.2 : v < 20 ? 6.4 : v < 50 ? 7 : 7.8;
+  return PAINT(32, 32, copper ? { C: "#d68a52", c: "#9c5228", K: "#5a2c12", W: "#ffd9b8" } : { C: "#dfe4ea", c: "#8f98a2", K: "#3d434c", W: "#ffffff" }, (g) => {
+    g.ell(16, 17, r, r, "c"); g.ell(16, 17, r - 1, r - 1, "C");
+    const ds = String(v).split(""), w = ds.length * 4 - 1, x0 = Math.round(16 - w / 2);
+    ds.forEach((d, i) => DIG[d].forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") g.px(x0 + i * 4 + x, 15 + y, "K"); })));
+    g.px(16 - Math.round(r * 0.6), 13, "W"); g.px(17 - Math.round(r * 0.6), 12, "W");
+  });
+}
+export const GR_SPR = {};
 export const SPR = {
   tree: PAINT(32, 32, { L: "#4fb34a", l: "#8fdc6e", D: "#2f7d3a", T: "#8a5a34", t: "#5c371e", R: "#e8442c" }, (g) => {
     g.rect(13, 20, 6, 10, "T"); g.ell(16, 30, 5.4, 1.6, "T"); g.line(15, 21, 15, 29, "t"); g.px(12, 30, "t"); g.px(20, 30, "t");
@@ -118,4 +131,5 @@ export function tile(base, dots, seed, tufts) {
 }
 export const GRASS = [1, 2, 3].map((s) => tile("#74c24f", [["#66b445", 18], ["#86cf5c", 12], ["#5a9f3c", 5], ["#9edb72", 4]], s * 97, s === 2 ? 3 : 2));
 export const DIRT = [1, 2].map((s) => tile("#d6ae68", [["#c79c55", 16], ["#e6c88a", 10], ["#a8814a", 4], ["#f0dcae", 3]], s * 31, 0));
+for (const v of [5, 10, 20, 50]) GR_SPR[v] = grCoin(v);
 export const ICON = { heart: url(SPR.heart), coin: url(SPR.coin), grosz: url(SPR.grosz), star: url(SPR.star), chest: url(SPR.chest), door: url(SPR.door), sign: url(SPR.sign), tree: url(SPR.tree) };

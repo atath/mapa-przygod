@@ -25,7 +25,8 @@ for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
         assert.ok(r.ok, `room ${i} (${r.kind}) failed: ${r.why || ""}`);
         if (r.kind === "path") {
           assert.ok(r.found, "no way to collect every coin and reach an exit");
-          assert.equal(r.coins, r.expected, `path paid ${r.coins} coins, ${r.expected} were collected`);
+          assert.equal(r.gr, r.expectedGr, `path paid ${r.gr} gr, coins worth ${r.expectedGr} gr were collected`);
+          assert.ok(r.expectedGr >= 40, `a path holds only ${r.expectedGr} gr`);
           const max = +r.limit.match(/\/ (\d+)/)[1];
           assert.ok(r.blocks <= max, `all-coins plan needs ${r.blocks} blocks, limit is ${max}`);
         }
@@ -44,8 +45,9 @@ for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
         await o.p.waitForFunction(() => /Odkryliśmy nową krainę: Góry Zegarowe/.test(document.getElementById("txt").textContent), null, { timeout: 5000 });
       }
       assert.ok(db.profiles.p1.coins > 10, "złote were not added to the save");
-      const grosze = 5 * rooms.filter((r) => r.kind === "path").reduce((a, r) => a + r.expected, 0);
-      assert.equal(db.profiles.p1.gr, grosze, "every coin on the paths is 5 gr in the wallet");
+      const grosze = rooms.filter((r) => r.kind === "path").reduce((a, r) => a + r.expectedGr, 0);
+      assert.equal(db.profiles.p1.gr, grosze, "the coins picked up on the paths are in the wallet");
+      assert.ok(grosze >= 100, `one trip brought only ${grosze} gr: not enough for a złoty`);
       // measurements for stage 3: every room left an answer, the trip and the play time were counted
       const st = db.profiles.p1.stats, kinds = new Set(st.answers.map((a) => a.k)), seen = new Set(rooms.map((r) => r.kind));
       const expect = ["code.path", "polish.password"].concat(seen.has("clock") ? ["time.set"] : [], seen.has("time") ? ["time.howlong", "time.feel"] : [], seen.has("monster") ? ["math.cards", "logic.spell"] : [], seen.has("door") ? ["polish.word"] : [], seen.has("sign") ? ["polish.read"] : []);
