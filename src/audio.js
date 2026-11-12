@@ -48,5 +48,13 @@ export const snd = {
   poof() { for (let i = 0; i < 6; i++) note(1200 - i * 150, i * 0.04, 0.08, "square", 0.04); },
   door() { [262, 330, 392, 523].forEach((f, i) => note(f, i * 0.09, 0.25, "triangle", 0.12)); },
   letter() { note(1047, 0, 0.08, "triangle", 0.1); },
+  // fight: a breath of fire, a wave, roots in the ground; the shield forming, holding, breaking; the whirlwind
+  fire() { [320, 250, 190, 140].forEach((f, i) => note(f + Math.random() * 20, i * 0.07, 0.14, "sawtooth", 0.045)); },
+  water() { [520, 700, 610, 860, 740].forEach((f, i) => note(f, i * 0.06, 0.09, "sine", 0.07)); },
+  earth() { note(92, 0, 0.26, "triangle", 0.14); note(70, 0.1, 0.32, "triangle", 0.14); note(120, 0.3, 0.1, "square", 0.035); },
+  shield() { note(784, 0, 0.1, "sine", 0.08); note(1175, 0.08, 0.28, "sine", 0.07); },
+  deflect() { note(1568, 0, 0.06, "triangle", 0.08); note(1319, 0.05, 0.22, "sine", 0.07); },
+  crack() { note(900, 0, 0.05, "square", 0.06); note(520, 0.04, 0.06, "square", 0.06); note(240, 0.09, 0.22, "sawtooth", 0.07); },
+  whirl() { for (let i = 0; i < 9; i++) note(280 + i * 85, i * 0.06, 0.1, "sine", 0.04); },
   fanfare() { [523, 523, 523, 659, 784, 659, 784].forEach((f, i) => note(f, [0, .12, .24, .36, .6, .78, .9][i], i === 6 ? 0.7 : 0.14)); }
 };

@@ -194,3 +194,32 @@ test("time stone: the day plan fits a small phone and a wrong order explains", {
     } finally { await o.close(); }
   }
 });
+
+test("fight effects: every spell, the shield and the whirlwind draw in the scene, also with reduced motion", { timeout: 120000 }, async () => {
+  for (const reduce of [false, true]) {
+    const o = await open(); const p = o.p;
+    try {
+      if (reduce) await p.emulateMedia({ reducedMotion: "reduce" });
+      await p.addInitScript(() => { window.__LW_TEST.rooms = ["monster", "chest"]; });
+      await startWith(p, srv.url, oneProfile({ level: 2 }));
+      await go(p, "forest"); await p.waitForSelector(".card");
+      const shot = () => p.evaluate(() => { const c = document.querySelector("#sc canvas"), d = c.getContext("2d").getImageData(200, 100, 160, 110).data; let s = 0; for (let i = 0; i < d.length; i += 16) s = (s * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) >>> 0; return s; });
+      for (const el of ["fire", "water", "earth"]) for (const hit of [true, false]) {
+        const before = await shot();
+        const done = p.evaluate(([e, h]) => window.__LW_TEST.fight.cast(e, h, () => {}), [el, hit]);
+        await p.waitForTimeout(reduce ? 160 : 480);
+        assert.notEqual(await shot(), before, `${el} ${hit ? "hit" : "miss"}: nothing was drawn between the hero and the monster`);
+        await done;
+      }
+      for (const el of ["fire", "water", "earth"]) for (const blocked of [true, false]) {
+        await p.evaluate(([e, b]) => window.__LW_TEST.fight.attack(b, e), [el, blocked]);
+        assert.equal(await p.evaluate(() => window.__LW_TEST.fight.shield.on), blocked, "the shield stands only after a right answer");
+        await p.evaluate(() => window.__LW_TEST.fight.shield.hide()); await p.waitForTimeout(350);
+        assert.equal(await p.evaluate(() => window.__LW_TEST.fight.shield.on), false, "the shield never faded");
+      }
+      await p.evaluate(() => window.__LW_TEST.fight.whirl());
+      const r = await playRoom(p); assert.ok(r.ok, r.why);
+      assert.deepEqual(o.errs, []);
+    } finally { await o.close(); }
+  }
+});

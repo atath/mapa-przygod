@@ -214,11 +214,11 @@ export async function playRoom(p) {
         if (vals.includes(T)) return { kind: "monster", ok: false, why: `hand holds the answer ${T}` };
         await p.click(`.spell[data-s="${COUNTER[el]}"]`);
         for (let i = 0; i < vals.length; i++) if (pick & (1 << i)) await p.click(`.card[data-i="${i}"]`);
-        await p.click("#cast"); await p.waitForTimeout(2600);
+        await p.click("#cast"); await p.waitForTimeout(3300);
       } else if (await p.$(".btn.num")) {
         const q = (await text(p, ".sum")).replace(/−/g, "-").replace("= ?", "").trim();
         let ans; if (q.includes("?")) { const [l, r] = q.split("="); ans = +r - +l.split("+")[0]; } else ans = Function("return " + q)();
-        await p.click(`.btn.num[data-v="${ans}"]`); await p.waitForTimeout(1800);
+        await p.click(`.btn.num[data-v="${ans}"]`); await p.waitForTimeout(2500);
       }
     }
     await p.waitForFunction(() => document.querySelector("#sc canvas")?.getAttribute("aria-label") !== "Potwór na polanie", null, { timeout: 15000 });

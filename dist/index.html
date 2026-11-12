@@ -1114,6 +1114,34 @@ button.brick { border-style: dashed; cursor: pointer; }
     letter() {
       note(1047, 0, 0.08, "triangle", 0.1);
     },
+    // fight: a breath of fire, a wave, roots in the ground; the shield forming, holding, breaking; the whirlwind
+    fire() {
+      [320, 250, 190, 140].forEach((f, i) => note(f + Math.random() * 20, i * 0.07, 0.14, "sawtooth", 0.045));
+    },
+    water() {
+      [520, 700, 610, 860, 740].forEach((f, i) => note(f, i * 0.06, 0.09, "sine", 0.07));
+    },
+    earth() {
+      note(92, 0, 0.26, "triangle", 0.14);
+      note(70, 0.1, 0.32, "triangle", 0.14);
+      note(120, 0.3, 0.1, "square", 0.035);
+    },
+    shield() {
+      note(784, 0, 0.1, "sine", 0.08);
+      note(1175, 0.08, 0.28, "sine", 0.07);
+    },
+    deflect() {
+      note(1568, 0, 0.06, "triangle", 0.08);
+      note(1319, 0.05, 0.22, "sine", 0.07);
+    },
+    crack() {
+      note(900, 0, 0.05, "square", 0.06);
+      note(520, 0.04, 0.06, "square", 0.06);
+      note(240, 0.09, 0.22, "sawtooth", 0.07);
+    },
+    whirl() {
+      for (let i = 0; i < 9; i++) note(280 + i * 85, i * 0.06, 0.1, "sine", 0.04);
+    },
     fanfare() {
       [523, 523, 523, 659, 784, 659, 784].forEach((f, i) => note(f, [0, 0.12, 0.24, 0.36, 0.6, 0.78, 0.9][i], i === 6 ? 0.7 : 0.14));
     }
@@ -3346,6 +3374,509 @@ button.brick { border-style: dashed; cursor: pointer; }
     });
   }
 
+  // src/fight-fx.js
+  var rand2 = (a, b) => a + Math.random() * (b - a);
+  var clamp01 = (v) => Math.max(0, Math.min(1, v));
+  var easeOut = (p) => 1 - (1 - p) * (1 - p);
+  var easeBack = (p) => {
+    const c = 1.9;
+    return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2);
+  };
+  var ARRIVE = 0.55;
+  var groundY = (x) => 45 + clamp01((x - 34) / 66) * 7;
+  var FX_PAL = {
+    fire: { hot: "#fff6c9", a: "#ffd84a", b: "#ff8a2f", c: "#e8442c", d: "#8a2a1a" },
+    water: { hot: "#ffffff", a: "#c8ecff", b: "#4aa8ff", c: "#1f6fc4", d: "#174f8f" },
+    earth: { hot: "#e2f0a8", a: "#8bb84a", b: "#5d7f2e", c: "#a8693a", d: "#6e4223" }
+  };
+  var dot = (ctx, x, y, w = 1, h = 1) => ctx.fillRect(Math.round(x), Math.round(y), w, h);
+  function disc(ctx, cx, cy, r) {
+    cx = Math.round(cx);
+    cy = Math.round(cy);
+    for (let y = -r; y <= r; y++) {
+      const w = Math.floor(Math.sqrt(r * r - y * y));
+      ctx.fillRect(cx - w, cy + y, 2 * w + 1, 1);
+    }
+  }
+  function ring(ctx, cx, cy, rx, ry = rx) {
+    const n = Math.max(8, Math.ceil(Math.max(rx, ry) * 6));
+    for (let i = 0; i < n; i++) {
+      const a = i / n * Math.PI * 2;
+      dot(ctx, cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+    }
+  }
+  function particles() {
+    let list = [];
+    return {
+      add(o) {
+        list.push(Object.assign({ vx: 0, vy: 0, g: 0, s: 1, life: 400 }, o, { max: o.life || 400 }));
+      },
+      step(ctx, dt) {
+        for (const p of list) {
+          p.vy += p.g * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+          if (p.life <= 0) continue;
+          ctx.globalAlpha = Math.min(1, p.life / p.max * 2);
+          ctx.fillStyle = p.c;
+          dot(ctx, p.x, p.y, p.s, p.s);
+        }
+        ctx.globalAlpha = 1;
+        list = list.filter((p) => p.life > 0);
+      },
+      get n() {
+        return list.length;
+      }
+    };
+  }
+  var burstOf = (P2, at, colors, n, { up = 0.06, spread = 0.07, g = 35e-5, life = 480, back = 0 } = {}) => {
+    for (let i = 0; i < n; i++) P2.add({ x: at.x + rand2(-2, 2), y: at.y + rand2(-2, 2), vx: rand2(-spread, spread) + back, vy: -rand2(up * 0.3, up * 1.6), g, s: Math.random() < 0.3 ? 2 : 1, c: colors[i % colors.length], life: rand2(life * 0.6, life) });
+  };
+  function fightFx() {
+    let live = [], last = 0, shakeEnd = 0, shakeAmp = 0;
+    const time = (ms) => reduced() ? ms / 3 : ms;
+    return {
+      time,
+      // runs an effect for ms; the promise resolves when its time is over (also if the scene stopped drawing)
+      play(e, ms) {
+        const dur = time(ms);
+        live.push({ e, t0: performance.now(), dur });
+        return new Promise((r) => setTimeout(r, dur));
+      },
+      // runs until stop() is called on the returned handle
+      loop(e) {
+        const h = { e, t0: performance.now(), dur: Infinity };
+        live.push(h);
+        return { stop() {
+          h.dead = true;
+        } };
+      },
+      draw(ctx, now) {
+        const dt = Math.min(60, last ? now - last : 16);
+        last = now;
+        for (const h of live) {
+          const p = h.dur === Infinity ? 0 : clamp01((now - h.t0) / h.dur);
+          h.e.draw(ctx, p, dt, h.dur, now);
+          if (p >= 1) h.dead = true;
+        }
+        live = live.filter((h) => !h.dead);
+        return dt;
+      },
+      shake(amp, ms) {
+        if (reduced()) return;
+        shakeAmp = amp;
+        shakeEnd = performance.now() + ms;
+      },
+      offset(now) {
+        if (now >= shakeEnd) return [0, 0];
+        return [Math.round(rand2(-shakeAmp, shakeAmp)), Math.round(rand2(-shakeAmp, shakeAmp))];
+      }
+    };
+  }
+  function fireBreath(from, to, { hit = true, back = 0 } = {}) {
+    const C = FX_PAL.fire, P2 = particles(), flames = [];
+    const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+    const reach = hit ? 1 : 0.66;
+    let boom = -1;
+    return { draw(ctx, p, dt, dur, now) {
+      const blowing = p < ARRIVE + 0.14;
+      if (blowing) for (let i = 0; i < 8; i++) flames.push({ u: 0, off: rand2(-1, 1), sp: rand2(0.8, 1.3), ph: rand2(0, 6.3), big: Math.random() < 0.4 });
+      const du = dt / (ARRIVE * dur);
+      for (const f of flames) {
+        f.u += du * f.sp;
+        if (f.u >= reach) {
+          f.dead = true;
+          if (hit && boom < 0) {
+            boom = 0;
+            burstOf(P2, to, [C.hot, C.a, C.b, C.c], 30, { up: 0.1, spread: 0.11, back });
+          } else if (!hit && Math.random() < 0.3) P2.add({ x: from.x + ux * len * f.u, y: from.y + uy * len * f.u + f.off * 6, vy: -rand2(0.01, 0.03), vx: rand2(-0.01, 0.01), c: Math.random() < 0.5 ? "#d0d0d0" : "#8f8f8f", s: 2, life: 560 });
+          continue;
+        }
+        const w = 2 + f.u * 11, x = from.x + ux * len * f.u - uy * f.off * w, y = from.y + uy * len * f.u + ux * f.off * w - f.u * f.u * 4 + Math.sin(f.ph + f.u * 9);
+        const edge = Math.abs(f.off), tail = f.u / reach;
+        ctx.fillStyle = tail > 0.88 ? C.d : edge < 0.3 && tail < 0.6 ? C.hot : edge < 0.6 && tail < 0.8 ? C.a : edge < 0.85 ? C.b : C.c;
+        const s = tail < 0.1 ? 2 : tail < 0.75 ? f.big ? 4 : 3 : 2;
+        dot(ctx, x - s / 2, y - s / 2, s, s);
+      }
+      for (let i = flames.length - 1; i >= 0; i--) if (flames[i].dead) flames.splice(i, 1);
+      if (blowing) {
+        const head = Math.min(reach, p / ARRIVE) * len * 0.8;
+        for (let d = 0; d < head; d++) {
+          const t = d / (len * 0.8), y = from.y + uy * d + Math.sin(d * 0.55 + now * 0.03) * (0.5 + t * 1.5) - t * t * 3;
+          ctx.fillStyle = t < 0.5 ? C.hot : C.a;
+          dot(ctx, from.x + ux * d, y - (t < 0.4 ? 1 : 0), 1, t < 0.4 ? 3 : t < 0.75 ? 2 : 1);
+        }
+      }
+      if (boom >= 0) {
+        boom += dt;
+        const k = boom / (0.3 * dur);
+        if (k < 1) {
+          ctx.globalAlpha = 1 - k;
+          ctx.fillStyle = k < 0.4 ? C.hot : C.a;
+          disc(ctx, to.x, to.y, Math.round(5 + k * 10));
+          ctx.fillStyle = C.b;
+          ring(ctx, to.x, to.y, 7 + k * 13);
+          ctx.fillStyle = C.c;
+          ring(ctx, to.x, to.y, 8 + k * 13);
+          ctx.globalAlpha = 1;
+        }
+        if (Math.random() < 0.6 && k < 1.3) P2.add({ x: to.x + rand2(-9, 9), y: to.y + rand2(-4, 8), vy: -rand2(0.02, 0.05), c: Math.random() < 0.5 ? C.b : C.a, life: 440 });
+      }
+      P2.step(ctx, dt);
+    } };
+  }
+  function wave(from, to, { hit = true, back = 0 } = {}) {
+    const C = FX_PAL.water, P2 = particles(), dir = Math.sign(to.x - from.x) || 1;
+    const reach = hit ? 1 : 0.66, endX = from.x + (to.x - from.x) * reach;
+    let splashed = false, rings = -1;
+    return { draw(ctx, p, dt, dur, now) {
+      const go = clamp01(p / ARRIVE), hx = from.x + (endX - from.x) * easeOut(go);
+      const grow = clamp01(p / 0.1), fall = go < 1 ? 1 : 1 - clamp01((p - ARRIVE) / 0.16), amp = grow * fall;
+      if (go >= 1 && !splashed) {
+        splashed = true;
+        rings = 0;
+        if (hit) burstOf(P2, { x: endX, y: groundY(endX) - 8 }, [C.hot, C.a, C.b, C.a, C.c], 30, { up: 0.11, spread: 0.09, g: 42e-5, life: 620, back });
+        else for (let i = 0; i < 8; i++) P2.add({ x: endX + rand2(-8, 8), y: groundY(endX) - rand2(0, 4), vy: -rand2(8e-3, 0.02), c: C.a, life: 500 });
+      }
+      if (amp > 0.02) {
+        const FACE = [0.1, 0.2, 0.32, 0.46, 0.62, 0.82], PEAK = FACE.length, TOP = 18 * amp;
+        let peakTop = null, peakX = 0;
+        for (let i = 0; i <= 56; i++) {
+          const x = Math.round(hx - dir * i);
+          if ((x - from.x) * dir < 0) break;
+          const back2 = i - PEAK, hump = back2 < 27 ? Math.sqrt(1 - back2 / 27 * (back2 / 27)) : 0;
+          const shape = i < PEAK ? FACE[i] : Math.max(hump, 0.24 * Math.exp(-back2 / 26));
+          const H = Math.round(TOP * shape + (i > PEAK ? 0.9 * Math.sin(x * 0.7 + now * 0.012) : 0));
+          if (H < 1) continue;
+          const gy = Math.round(groundY(x)) + 2;
+          if (i === PEAK) {
+            peakTop = gy - H;
+            peakX = x;
+          }
+          ctx.fillStyle = C.d;
+          dot(ctx, x, gy - H, 1, H);
+          if (i >= PEAK) {
+            ctx.fillStyle = C.c;
+            dot(ctx, x, gy - H, 1, Math.ceil(H * 0.82));
+            if (H > 3) {
+              ctx.fillStyle = C.b;
+              dot(ctx, x, gy - H, 1, Math.ceil(H * 0.58));
+            }
+            if (H > 6) {
+              ctx.fillStyle = C.a;
+              dot(ctx, x, gy - H, 1, Math.ceil(H * 0.24));
+            }
+            if (H > 5 && ((x + Math.floor(now / 90)) % 6 + 6) % 6 === 0) {
+              ctx.fillStyle = C.a;
+              dot(ctx, x, gy - Math.ceil(H * 0.45), 1, 2);
+            }
+            ctx.fillStyle = C.hot;
+            dot(ctx, x, gy - H, 1, back2 < 14 ? 2 : 1);
+          } else {
+            ctx.fillStyle = C.c;
+            dot(ctx, x, gy - H, 1, Math.max(1, Math.ceil(H * 0.35)));
+          }
+        }
+        if (peakTop != null && amp > 0.45) {
+          const r = Math.max(3, Math.round(6 * amp)), cy = peakTop + r;
+          for (let a = -100; a <= 40; a += 7) {
+            const ra = a * Math.PI / 180, lx = peakX + dir * Math.sin((a + 100) * Math.PI / 180 * 0.9) * (r + 2), ly = cy + Math.sin(ra) * r;
+            ctx.fillStyle = C.hot;
+            dot(ctx, lx, ly, 2, 2);
+            ctx.fillStyle = C.a;
+            dot(ctx, lx - dir, ly + 1, 1, 1);
+          }
+          ctx.fillStyle = C.hot;
+          dot(ctx, peakX + dir * (r + 1), cy + r - 1, 1, 2);
+          dot(ctx, peakX + dir * (r + 3), cy + r + 2, 1, 1);
+        }
+      }
+      if (go < 1) for (let i = 0; i < 2; i++) P2.add({ x: hx + dir * rand2(0, 4), y: groundY(hx) - rand2(8, 14) * amp, vx: dir * rand2(0.01, 0.05), vy: -rand2(0.02, 0.06), g: 4e-4, c: Math.random() < 0.5 ? C.hot : C.a, life: 320 });
+      if (rings >= 0) {
+        rings += dt;
+        const k = rings / (0.34 * dur);
+        if (k < 1) {
+          ctx.globalAlpha = 1 - k;
+          ctx.fillStyle = hit ? C.hot : C.b;
+          const gy = groundY(endX) + 2;
+          ring(ctx, endX, gy, 5 + k * 13, 1.5 + k * 3);
+          if (hit) ring(ctx, endX, gy, 2 + k * 8, 1 + k * 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+      P2.step(ctx, dt);
+    } };
+  }
+  function roots(from, to, { hit = true, spikes = true, small = false, back = 0 } = {}) {
+    const C = FX_PAL.earth, P2 = particles(), dir = Math.sign(to.x - from.x) || 1, seed = rand2(0, 6.3);
+    const reach = hit ? 1 : 0.66, endX = from.x + (to.x - from.x) * reach;
+    let landed = false;
+    const yAt = (x) => Math.round(groundY(x) + 1 + Math.sin(x * 0.33 + seed) * 1.4);
+    const S2 = (small ? [[-9, 13], [-3, 18], [4, 16], [10, 12]] : [[-14, 17], [-6, 25], [6, 22], [14, 16]]).map(([o, h]) => ({ o, h, lean: -Math.sign(o) }));
+    return { draw(ctx, p, dt, dur) {
+      const go = clamp01(p / ARRIVE), hx = from.x + (endX - from.x) * easeOut(go), n = Math.abs(Math.round(hx - from.x));
+      const gone = hit ? clamp01((p - 0.86) / 0.14) : clamp01((p - ARRIVE) / 0.3);
+      ctx.globalAlpha = 1 - gone;
+      const live = hit || go < 1, OUT = "#4a2a14";
+      for (let i = 0; i <= n; i++) {
+        const x = Math.round(from.x + dir * i), y = yAt(x), d = n - i;
+        const th = d < 3 ? 2 : 3;
+        ctx.fillStyle = live ? OUT : "#7d7867";
+        dot(ctx, x, y - 1, 1, th + 1);
+        ctx.fillStyle = live ? C.d : "#8c8672";
+        dot(ctx, x, y - 1, 1, th);
+        if (i % 4 !== 3) {
+          ctx.fillStyle = live ? C.c : "#a59f8c";
+          dot(ctx, x, y - 1, 1, 1);
+        }
+        if (i > 4 && i % 10 === 5) {
+          const hgt = Math.min(6, Math.floor(d * 0.5)), lean = i / 10 % 2 < 1 ? 1 : -1;
+          ctx.fillStyle = live ? C.d : "#8c8672";
+          for (let k = 1; k <= hgt; k++) dot(ctx, x + (k > 3 ? lean : 0), y - 1 - k);
+          if (hgt >= 5 && live) {
+            ctx.fillStyle = C.b;
+            dot(ctx, x + lean, y - hgt - 3, 3, 2);
+            dot(ctx, x - lean * 2, y - hgt, 2, 1);
+            ctx.fillStyle = C.a;
+            dot(ctx, x + lean, y - hgt - 3, 2, 1);
+            ctx.fillStyle = C.hot;
+            dot(ctx, x + lean * 2, y - hgt - 4);
+          }
+        }
+      }
+      if (go < 1 && Math.random() < 0.7) P2.add({ x: hx, y: yAt(hx), vx: -dir * rand2(0, 0.03), vy: -rand2(0.02, 0.06), g: 4e-4, c: Math.random() < 0.6 ? C.c : C.d, life: 300 });
+      if (go >= 1 && !landed) {
+        landed = true;
+        const at = { x: endX, y: groundY(endX) - 2 };
+        if (hit) burstOf(P2, at, [C.c, C.d, C.a, C.c, C.b], spikes ? 22 : 28, { up: spikes ? 0.1 : 0.08, spread: 0.08, g: 45e-5, life: 560, back });
+        else for (let i = 0; i < 6; i++) P2.add({ x: endX - dir * rand2(0, 30), y: yAt(endX) - 5, vy: rand2(5e-3, 0.02), vx: rand2(-0.01, 0.01), c: i % 2 ? C.b : "#a59f8c", life: 600 });
+      }
+      if (hit && spikes && go >= 1) {
+        const up = easeBack(clamp01((p - ARRIVE) / 0.16)) * (1 - gone);
+        for (const s of S2) {
+          const bx = endX + s.o, by = Math.round(groundY(bx)) + 2, H = Math.max(0, Math.round(s.h * up));
+          for (let k = 0; k < H; k++) {
+            const t = k / s.h, x = Math.round(bx + s.lean * Math.sin(t * 2.3) * 5), w = t < 0.3 ? 5 : t < 0.6 ? 4 : t < 0.85 ? 3 : 2, l = x - (w >> 1);
+            ctx.fillStyle = "#4a2a14";
+            dot(ctx, l, by - k, w, 1);
+            ctx.fillStyle = C.d;
+            dot(ctx, l + 1, by - k, w - 2 || 1, 1);
+            if (w > 3) {
+              ctx.fillStyle = C.c;
+              dot(ctx, l + 1, by - k, 1, 1);
+            }
+            if (k % 6 === 3) {
+              ctx.fillStyle = "#4a2a14";
+              dot(ctx, k % 12 === 3 ? l + w : l - 1, by - k - 1, 1, 2);
+            }
+          }
+          if (H >= s.h - 1) {
+            const x = Math.round(bx + s.lean * Math.sin(2.3) * 5);
+            ctx.fillStyle = C.b;
+            dot(ctx, x - 2, by - H - 1, 5, 2);
+            ctx.fillStyle = C.a;
+            dot(ctx, x - 1, by - H - 2, 3, 2);
+            ctx.fillStyle = C.hot;
+            dot(ctx, x, by - H - 3);
+          }
+        }
+      }
+      ctx.globalAlpha = 1;
+      P2.step(ctx, dt);
+    } };
+  }
+  var SPELL_FX = { fire: fireBreath, water: wave, earth: roots };
+  function charge(at, el) {
+    const C = FX_PAL[el], n = 9, ph = rand2(0, 6.3);
+    return { draw(ctx, p) {
+      for (let i = 0; i < n; i++) {
+        const a = ph + i / n * Math.PI * 2 + p * 3.2, r = 13 * (1 - easeOut(p)) + 1;
+        ctx.fillStyle = i % 3 === 0 ? C.hot : i % 3 === 1 ? C.a : C.b;
+        dot(ctx, at.x + Math.cos(a) * r, at.y + Math.sin(a) * r * 0.8);
+      }
+      ctx.fillStyle = C.a;
+      disc(ctx, at.x, at.y, Math.round(1 + p * 2));
+      ctx.fillStyle = C.hot;
+      dot(ctx, at.x, at.y);
+    } };
+  }
+  function sparks(at, el, n = 14) {
+    const C = FX_PAL[el], P2 = particles();
+    let done = false;
+    return { draw(ctx, p, dt) {
+      if (!done) {
+        done = true;
+        burstOf(P2, at, [C.hot, C.a, C.b], n, { up: 0.08, spread: 0.08 });
+      }
+      P2.step(ctx, dt);
+    } };
+  }
+  function tornado(cx, gy) {
+    const leaves = Array.from({ length: 11 }, (_, i) => ({ a: rand2(0, 6.3), k: rand2(0, 1), sp: rand2(0.7, 1.3), c: i % 3 ? "#8bb84a" : "#e2c15a" }));
+    return { draw(ctx, p, dt, dur, now) {
+      const H = Math.round(42 * easeOut(clamp01(p / 0.22))), fade = 1 - clamp01((p - 0.8) / 0.2), spin = Math.floor(now / 55);
+      for (let k = 0; k < H; k++) {
+        const y = Math.round(gy) - k, w = Math.round(2 + k * 0.42), sway = Math.round(Math.sin(now / 95 + k * 0.3) * (1 + k * 0.08)), x = Math.round(cx) + sway;
+        for (let i = -w; i <= w; i++) {
+          const band = ((i + k + spin * 2 + (k >> 3) * 3) % 11 + 11) % 11, rim = Math.abs(i) >= w;
+          ctx.globalAlpha = (rim ? 0.8 : band < 3 ? 0.7 : band < 6 ? 0.42 : 0.24) * fade;
+          ctx.fillStyle = rim || band < 3 ? "#ffffff" : band < 6 ? "#dff3f7" : "#b9dbe4";
+          ctx.fillRect(x + i, y, 1, 1);
+        }
+      }
+      ctx.globalAlpha = 0.6 * fade;
+      ctx.fillStyle = "#e9dcb8";
+      for (let j = 0; j < 6; j++) {
+        const a = now / 70 + j * 1.05;
+        dot(ctx, cx + Math.cos(a) * (5 + j % 3 * 2), gy + 1 + Math.sin(a) * 1.5, 2, 1);
+      }
+      for (const l of leaves) {
+        l.a += dt * 0.013 * l.sp;
+        l.k = (l.k + dt / (0.55 * dur) * l.sp) % 1;
+        const k = l.k * H, w = 4 + k * 0.46, front = Math.sin(l.a) > 0;
+        ctx.globalAlpha = (front ? 1 : 0.45) * fade;
+        ctx.fillStyle = l.c;
+        dot(ctx, cx + Math.cos(l.a) * w, gy - k, 2, front ? 2 : 1);
+      }
+      ctx.globalAlpha = 1;
+    } };
+  }
+  function aura(el, at) {
+    const C = FX_PAL[el], P2 = particles();
+    let wait = 0;
+    return { draw(ctx, p, dt) {
+      wait -= dt;
+      if (wait <= 0 && !reduced()) {
+        wait = rand2(140, 320);
+        const x = at.x + rand2(-15, 15);
+        if (el === "fire") P2.add({ x, y: at.y + rand2(0, 12), vy: -rand2(0.012, 0.03), vx: rand2(-6e-3, 6e-3), c: Math.random() < 0.5 ? C.a : C.b, life: 800 });
+        else if (el === "water") P2.add({ x, y: at.y + rand2(-14, 0), vy: rand2(0.01, 0.02), g: 12e-5, c: Math.random() < 0.5 ? C.a : C.b, life: 700 });
+        else P2.add({ x, y: at.y + rand2(-16, -4), vy: rand2(8e-3, 0.016), vx: rand2(-0.012, 0.012), c: Math.random() < 0.5 ? C.a : C.b, s: Math.random() < 0.4 ? 2 : 1, life: 900 });
+      }
+      P2.step(ctx, dt);
+    } };
+  }
+  function makeShield(cx, cy, R2) {
+    const D = 2 * R2 + 7, buf = document.createElement("canvas");
+    buf.width = buf.height = D;
+    const bx = buf.getContext("2d"), img = bx.createImageData(D, D), P2 = particles();
+    let mode = null, tIn = 0, tHit = -1e9, hx = 0, hy = 0, tOut = 0, tBreak = -1e9;
+    return {
+      get on() {
+        return !!mode;
+      },
+      show() {
+        mode = "on";
+        tIn = performance.now();
+        tOut = 0;
+      },
+      weak() {
+        mode = "weak";
+        tIn = performance.now();
+        tOut = 0;
+      },
+      hit(x, y) {
+        tHit = performance.now();
+        hx = x - cx;
+        hy = y - cy;
+      },
+      hide() {
+        if (mode) tOut = performance.now();
+      },
+      shatter() {
+        mode = null;
+        tBreak = performance.now();
+        for (let i = 0; i < 22; i++) {
+          const a = i / 22 * Math.PI * 2 + rand2(-0.1, 0.1), s = rand2(0.03, 0.09);
+          P2.add({ x: cx + Math.cos(a) * R2, y: cy + Math.sin(a) * R2, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 0.03, g: 3e-4, s: Math.random() < 0.5 ? 2 : 1, c: i % 3 ? "#bfeaff" : "#ffffff", life: rand2(380, 620) });
+        }
+      },
+      draw(ctx, now, dt) {
+        if (now - tBreak < 110) {
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = "#ffffff";
+          ring(ctx, cx, cy, R2 + (now - tBreak) / 22);
+          ctx.globalAlpha = 1;
+        }
+        P2.step(ctx, dt);
+        if (!mode) return;
+        const fade = tOut ? 1 - clamp01((now - tOut) / 260) : 1;
+        if (fade <= 0) {
+          mode = null;
+          return;
+        }
+        const r = R2 * (reduced() ? 1 : easeBack(clamp01((now - tIn) / 240)));
+        const mul = fade * (mode === "weak" ? Math.floor(now / 70) % 2 ? 0.55 : 0.2 : 1);
+        const age = now - tHit, rip = age < 520, rr = age / 6, band = now / 9 % (R2 * 5) - R2 * 2.5, d32 = img.data;
+        for (let py = 0; py < D; py++) for (let px2 = 0; px2 < D; px2++) {
+          const dx = px2 - (D >> 1), dy = py - (D >> 1), d = Math.hypot(dx, dy), o = (py * D + px2) * 4;
+          if (d > r + 0.4) {
+            d32[o + 3] = 0;
+            continue;
+          }
+          let a = 0.1 + 0.3 * Math.pow(d / r, 2.5), w = 0;
+          if (d >= r - 3) {
+            a = Math.max(a, 0.45);
+            w = 0.2;
+          }
+          if (d >= r - 1.3) {
+            a = 0.95;
+            w = 0.55;
+          }
+          if (Math.abs(dx * 0.8 + dy * 0.6 - band) < 1.6) {
+            a += 0.2;
+            w += 0.35;
+          }
+          const ang = Math.atan2(dy, dx);
+          if (d > r * 0.6 && d < r * 0.8 && ang > -2.75 && ang < -1.85) {
+            a = 0.85;
+            w = 1;
+          }
+          if (Math.hypot(dx - r * 0.42, dy - r * 0.48) < 1.4) {
+            a = 0.6;
+            w = 1;
+          }
+          if (rip) {
+            const k = 1 - age / 520;
+            if (Math.abs(Math.hypot(dx - hx, dy - hy) - rr) < 1.5) {
+              a += 0.6 * k;
+              w = 1;
+            }
+            if (age < 130) {
+              a += 0.2;
+              if (d >= r - 1.3) w = 1;
+            }
+          }
+          w = Math.min(1, w);
+          d32[o] = 120 + 135 * w;
+          d32[o + 1] = 205 + 50 * w;
+          d32[o + 2] = 255;
+          d32[o + 3] = Math.min(1, a) * mul * 255;
+        }
+        bx.putImageData(img, 0, 0);
+        ctx.drawImage(buf, cx - (D >> 1), cy - (D >> 1));
+      }
+    };
+  }
+  var tints = /* @__PURE__ */ new WeakMap();
+  function silhouette(spr, color = "#ffffff") {
+    let c = tints.get(spr);
+    if (!c) {
+      c = document.createElement("canvas");
+      c.width = spr.width;
+      c.height = spr.height;
+      c._res = spr._res;
+      const x = c.getContext("2d");
+      x.drawImage(spr, 0, 0);
+      x.globalCompositeOperation = "source-in";
+      x.fillStyle = color;
+      x.fillRect(0, 0, c.width, c.height);
+      tints.set(spr, c);
+    }
+    return c;
+  }
+
   // src/monster-room.js
   function monsterRoom() {
     roomShell();
@@ -3356,34 +3887,38 @@ button.brick { border-style: dashed; cursor: pointer; }
     cv.c.setAttribute("aria-label", "Potw\xF3r na polanie");
     const bg = bakeClearing(8, 4, GS.RUN.seed + GS.RUN.i);
     const run = GS.RUN;
-    const st2 = { mhp: maxHp, shake: 0, gone: 0, swing: 0, proj: null, shield: 0, flash: 0 };
+    const HAND = { x: 49, y: 31 }, HEROC = { x: 34, y: 32 }, MONC = { x: 100, y: 36 }, MOUTH = { x: 86, y: 38 }, EDGE = { x: 53, y: 35 };
+    const FX = fightFx(), shield = makeShield(32, 33, 21), auraFx = FX.loop(aura(el, MONC));
+    const st2 = { mhp: maxHp, gone: 0, lean: 0, monLean: 0, hop: 0, flash: 0, monHit: -1e9, heroHit: -1e9 };
     GS.scene = { cv, draw(t) {
-      const x = cv.x;
-      x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
+      const x = cv.x, [ox, oy] = FX.offset(t);
+      x.drawImage(bg, ox - 1, oy - 1, bg.width / 2 + 2, bg.height / 2 + 2);
+      x.save();
+      x.translate(ox, oy);
       draw(x, PETSPR[GS.G.hero.pet], 4, 34 - bob(t, 2), 1.25);
-      if (!(st2.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st2.swing, 16 - bob(t), 1.75);
-      if (st2.shield) {
-        x.strokeStyle = "rgba(140,220,255,.9)";
-        x.lineWidth = 2;
-        x.beginPath();
-        x.arc(36, 34, 20, 0, 7);
-        x.stroke();
-        x.fillStyle = "rgba(140,220,255,.18)";
-        x.fill();
-      }
+      const hAge = t - st2.heroHit, hk = hAge < 220 ? -Math.round(3 * (1 - hAge / 220)) : 0;
+      if (!(st2.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st2.lean + hk, 16 - bob(t), 1.75);
       if (st2.gone < 1) {
-        x.save();
-        x.globalAlpha = 1 - st2.gone;
-        const sx = 82 + (st2.shake ? Math.round(Math.sin(t / 20) * 2) : 0);
-        draw(x, mon.frames[Math.floor(t / 240) % 2], sx, 16 - bob(t, 1) - st2.gone * 10, 2.25);
+        const g = st2.gone, age = t - st2.monHit, kb = age < 260 ? Math.round(5 * (1 - age / 260)) : 0, sc = 2.25 * (1 - 0.45 * g);
+        const mx = 100 - 8 * sc + kb + st2.monLean + (g ? Math.round(Math.sin(t / 45) * 5 * g) : 0), my = 34 - 8 * sc - bob(t, 1) - st2.hop - g * 18;
+        const frame = mon.frames[Math.floor(t / 240) % 2];
+        x.globalAlpha = 1 - g * g;
+        draw(x, frame, mx, my, sc, g > 0);
+        if (age < 130) {
+          x.globalAlpha = 0.85;
+          draw(x, silhouette(frame), mx, my, sc, true);
+        }
+        x.globalAlpha = 1 - g;
         x.drawImage(E.icon, 70, 1, 13, 13);
         for (let i = 0; i < maxHp; i++) {
-          x.globalAlpha = (1 - st2.gone) * (i < st2.mhp ? 1 : 0.22);
+          x.globalAlpha = (1 - g) * (i < st2.mhp ? 1 : 0.22);
           x.drawImage(SPR.heart, 84 + i * 12, 1, 14, 14);
         }
-        x.restore();
+        x.globalAlpha = 1;
       }
-      if (st2.proj) x.drawImage(st2.proj.spr, st2.proj.x - 8, st2.proj.y - 8, 16, 16);
+      const dt = FX.draw(x, t);
+      shield.draw(x, t, dt);
+      x.restore();
     } };
     const anim = (ms, fn) => new Promise((res) => {
       const t0 = performance.now();
@@ -3395,16 +3930,62 @@ button.brick { border-style: dashed; cursor: pointer; }
       }
       requestAnimationFrame(f);
     });
-    const fly = (spr, a, b, y) => anim(450, (p) => {
-      st2.proj = p < 1 ? { spr, x: a + (b - a) * p, y: y - Math.sin(p * Math.PI) * 10 } : null;
-    });
-    const swing = () => anim(300, (p) => {
-      st2.swing = Math.round(Math.sin(p * Math.PI) * 18);
-    });
-    const shake = () => {
-      st2.shake = 1;
-      setTimeout(() => st2.shake = 0, 500);
-    };
+    const SND = { fire: snd.fire, water: snd.water, earth: snd.earth };
+    async function castSpell(k, good, onImpact) {
+      const d = FX.time(950);
+      FX.play(charge(HAND, k), 280);
+      snd.letter();
+      await anim(280, (p) => {
+        st2.lean = Math.round(Math.sin(p * Math.PI / 2) * 4);
+      });
+      if (left(run)) return;
+      SND[k]();
+      FX.play(SPELL_FX[k](HAND, MONC, { hit: good }), 950);
+      anim(260, (p) => {
+        st2.lean = Math.round(4 * (1 - p));
+      });
+      await sleep(d * ARRIVE);
+      if (left(run)) return;
+      if (good) {
+        st2.monHit = performance.now();
+        FX.shake(2, 240);
+      } else anim(520, (p) => {
+        st2.hop = Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 3);
+      });
+      onImpact();
+      await sleep(d * (1 - ARRIVE));
+    }
+    async function monsterAttack(blocked, k = el) {
+      const d = FX.time(850);
+      FX.play(charge(MOUTH, k), 260);
+      await anim(260, (p) => {
+        st2.monLean = -Math.round(Math.sin(p * Math.PI) * 5);
+      });
+      if (left(run)) return;
+      if (blocked) {
+        shield.show();
+        snd.shield();
+      } else shield.weak();
+      SND[k]();
+      FX.play(SPELL_FX[k](MOUTH, blocked ? EDGE : HEROC, { hit: true, spikes: !blocked, small: true, back: blocked ? 0.04 : 0 }), 850);
+      await sleep(d * ARRIVE);
+      if (left(run)) return;
+      if (blocked) {
+        shield.hit(EDGE.x, EDGE.y);
+        snd.deflect();
+        FX.shake(1, 160);
+      } else {
+        shield.shatter();
+        snd.crack();
+        st2.heroHit = performance.now();
+        st2.flash = 1;
+        setTimeout(() => st2.flash = 0, 600);
+        FX.play(sparks(HEROC, k), 500);
+        FX.shake(2, 260);
+      }
+      await sleep(d * (1 - ARRIVE));
+    }
+    if (window.__LW_TEST) window.__LW_TEST.fight = { cast: castSpell, attack: monsterAttack, shield, whirl: () => FX.play(tornado(MONC.x, groundY(MONC.x) + 2), 1150) };
     function makeHand(T) {
       const sol = [];
       if (T > 18 || T >= 6 && rnd() < lv.three) {
@@ -3464,14 +4045,16 @@ button.brick { border-style: dashed; cursor: pointer; }
         const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter, ms = took();
         record("math.cards", okSum, ms, `moc ${N}: ${[...sel].map((i) => hand[i]).join(" + ")} = ${total}`);
         record("logic.spell", okEl, ms, `${E.adj} \u2192 ${ELEM[spell].name}`);
-        await swing();
-        await fly(ELEM[spell].icon, 44, 96, 30);
+        const good = okSum && okEl;
+        await castSpell(spell, good, () => {
+          if (good) {
+            snd.hit();
+            st2.mhp--;
+            burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
+          }
+        });
         if (left(run)) return;
-        if (okSum && okEl) {
-          snd.hit();
-          shake();
-          st2.mhp--;
-          burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
+        if (good) {
           if (st2.mhp <= 0) return defeat();
           say(heroName(), `Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st2.mhp} ${st2.mhp === 1 ? "serduszko" : "serduszka"}.`);
         } else {
@@ -3485,7 +4068,7 @@ button.brick { border-style: dashed; cursor: pointer; }
           if (!okSum && !okEl) msg += " I sprawd\u017A, co pokonuje ka\u017Cdy czar.";
           say(mon.name, "Hi hi! " + msg);
         }
-        await sleep(1800);
+        await sleep(1400);
         if (left(run)) return;
         monsterTurn();
       });
@@ -3511,18 +4094,16 @@ button.brick { border-style: dashed; cursor: pointer; }
         save();
         b.classList.add(ok ? "right" : "wrong");
         if (ok) {
-          st2.shield = 1;
-          snd.letter();
-          await fly(E.icon, 92, 40, 30);
+          await monsterAttack(true);
+          if (left(run)) return;
           snd.ok();
           say(heroName(), `Tarcza! Odpowied\u017A ${q.ans} jest dobra. Atak odbity!`);
-          await sleep(1300);
-          st2.shield = 0;
+          await sleep(1e3);
+          shield.hide();
           if (left(run)) return;
         } else {
-          await fly(E.icon, 92, 36, 30);
-          st2.flash = 1;
-          setTimeout(() => st2.flash = 0, 600);
+          await monsterAttack(false);
+          if (left(run)) return;
           const fainted = await hurt();
           if (left(run)) return;
           const m = explain(q);
@@ -3534,9 +4115,11 @@ button.brick { border-style: dashed; cursor: pointer; }
       }));
     }
     async function defeat() {
-      snd.poof();
+      auraFx.stop();
+      snd.whirl();
       burst(cv.c, 40, PAL);
-      await anim(600, (p) => {
+      FX.play(tornado(MONC.x, groundY(MONC.x) + 2), 1150);
+      await anim(1e3, (p) => {
         st2.gone = p;
       });
       if (left(run)) return;

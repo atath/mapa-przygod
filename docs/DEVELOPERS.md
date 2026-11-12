@@ -54,6 +54,7 @@ SEED=561586849 node --test tests/expedition.test.mjs
 | `src/puzzles/` | Zagadki Sowy: generator bez DOM (`*.js`, testowany w Node) i ekran (`*-ui.js`) |
 | `src/puzzle-ui.js` | Wspólne części zagadek: układanie na dwa dotknięcia, klawiatura liczb, przycisk „Sprawdź” z trzema próbami |
 | `src/math-data.js`, `explain-ui.js` | Tarcza w walce: odpowiedzi z typowych pomyłek i obrazkowe wyjaśnienie |
+| `src/fight-fx.js` | Efekty walki rysowane w pikselowej scenie: zianie ogniem, fala, korzenie, sfera tarczy, wir |
 | `src/styles.css`, `src/index.html` | Wygląd i szablon strony |
 | `public/` | Manifest, service worker (tryb offline), ikony |
 | `tests/` | Testy (patrz wyżej) |

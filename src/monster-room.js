@@ -14,6 +14,7 @@ import { record, timer } from "./stats.js";
 import { zl } from "./money.js";
 import { dotRows, explain, genShield } from "./math-data.js";
 import { showExplain } from "./explain-ui.js";
+import { ARRIVE, SPELL_FX, aura, charge, fightFx, groundY, makeShield, silhouette, sparks, tornado } from "./fight-fx.js";
 
 /* ---------- Monster room (spells + math, turn-based) ---------- */
 export function monsterRoom() {
@@ -23,26 +24,64 @@ export function monsterRoom() {
   const cv = mountCanvas(8, 4); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", "Potwór na polanie");
   const bg = bakeClearing(8, 4, GS.RUN.seed + GS.RUN.i);
   const run = GS.RUN;
-  const st = { mhp: maxHp, shake: 0, gone: 0, swing: 0, proj: null, shield: 0, flash: 0 };
+  // where things are in the scene (128×64): the hero's hand, the monster, its mouth, the rim of the shield
+  const HAND = { x: 49, y: 31 }, HEROC = { x: 34, y: 32 }, MONC = { x: 100, y: 36 }, MOUTH = { x: 86, y: 38 }, EDGE = { x: 53, y: 35 };
+  const FX = fightFx(), shield = makeShield(32, 33, 21), auraFx = FX.loop(aura(el, MONC));
+  const st = { mhp: maxHp, gone: 0, lean: 0, monLean: 0, hop: 0, flash: 0, monHit: -1e9, heroHit: -1e9 };
   GS.scene = { cv, draw(t) {
-    const x = cv.x; x.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
+    const x = cv.x, [ox, oy] = FX.offset(t);
+    x.drawImage(bg, ox - 1, oy - 1, bg.width / 2 + 2, bg.height / 2 + 2);
+    x.save(); x.translate(ox, oy);
     draw(x, PETSPR[GS.G.hero.pet], 4, 34 - bob(t, 2), 1.25);
-    if (!(st.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st.swing, 16 - bob(t), 1.75);
-    if (st.shield) { x.strokeStyle = "rgba(140,220,255,.9)"; x.lineWidth = 2; x.beginPath(); x.arc(36, 34, 20, 0, 7); x.stroke(); x.fillStyle = "rgba(140,220,255,.18)"; x.fill(); }
+    const hAge = t - st.heroHit, hk = hAge < 220 ? -Math.round(3 * (1 - hAge / 220)) : 0; // knocked back when hit
+    if (!(st.flash && Math.floor(t / 80) % 2)) draw(x, GS.HERO, 20 + st.lean + hk, 16 - bob(t), 1.75);
     if (st.gone < 1) {
-      x.save(); x.globalAlpha = 1 - st.gone;
-      const sx = 82 + (st.shake ? Math.round(Math.sin(t / 20) * 2) : 0);
-      draw(x, mon.frames[Math.floor(t / 240) % 2], sx, 16 - bob(t, 1) - st.gone * 10, 2.25);
-      x.drawImage(E.icon, 70, 1, 13, 13);
-      for (let i = 0; i < maxHp; i++) { x.globalAlpha = (1 - st.gone) * (i < st.mhp ? 1 : 0.22); x.drawImage(SPR.heart, 84 + i * 12, 1, 14, 14); }
-      x.restore();
+      // hit: a white flash and a step back; beaten: the whirlwind lifts it, spinning and shrinking
+      const g = st.gone, age = t - st.monHit, kb = age < 260 ? Math.round(5 * (1 - age / 260)) : 0, sc = 2.25 * (1 - 0.45 * g);
+      const mx = 100 - 8 * sc + kb + st.monLean + (g ? Math.round(Math.sin(t / 45) * 5 * g) : 0), my = 34 - 8 * sc - bob(t, 1) - st.hop - g * 18;
+      const frame = mon.frames[Math.floor(t / 240) % 2];
+      x.globalAlpha = 1 - g * g; draw(x, frame, mx, my, sc, g > 0);
+      if (age < 130) { x.globalAlpha = 0.85; draw(x, silhouette(frame), mx, my, sc, true); }
+      x.globalAlpha = 1 - g; x.drawImage(E.icon, 70, 1, 13, 13);
+      for (let i = 0; i < maxHp; i++) { x.globalAlpha = (1 - g) * (i < st.mhp ? 1 : 0.22); x.drawImage(SPR.heart, 84 + i * 12, 1, 14, 14); }
+      x.globalAlpha = 1;
     }
-    if (st.proj) x.drawImage(st.proj.spr, st.proj.x - 8, st.proj.y - 8, 16, 16);
+    const dt = FX.draw(x, t); shield.draw(x, t, dt);
+    x.restore();
   } };
   const anim = (ms, fn) => new Promise((res) => { const t0 = performance.now(); function f(n) { const p = Math.min(1, (n - t0) / (reduced() ? ms / 3 : ms)); fn(p); if (p < 1) requestAnimationFrame(f); else res(); } requestAnimationFrame(f); });
-  const fly = (spr, a, b, y) => anim(450, (p) => { st.proj = p < 1 ? { spr, x: a + (b - a) * p, y: y - Math.sin(p * Math.PI) * 10 } : null; });
-  const swing = () => anim(300, (p) => { st.swing = Math.round(Math.sin(p * Math.PI) * 18); });
-  const shake = () => { st.shake = 1; setTimeout(() => (st.shake = 0), 500); };
+  const SND = { fire: snd.fire, water: snd.water, earth: snd.earth };
+  // The hero gathers the spell in the hand and lets it go; onImpact runs the moment it reaches the monster.
+  // good: it hits (flash, step back, shake). Otherwise it dies out on the way and the monster hops with glee.
+  async function castSpell(k, good, onImpact) {
+    const d = FX.time(950);
+    FX.play(charge(HAND, k), 280); snd.letter();
+    await anim(280, (p) => { st.lean = Math.round(Math.sin((p * Math.PI) / 2) * 4); });
+    if (left(run)) return;
+    SND[k](); FX.play(SPELL_FX[k](HAND, MONC, { hit: good }), 950);
+    anim(260, (p) => { st.lean = Math.round(4 * (1 - p)); });
+    await sleep(d * ARRIVE); if (left(run)) return;
+    if (good) { st.monHit = performance.now(); FX.shake(2, 240); }
+    else anim(520, (p) => { st.hop = Math.round(Math.abs(Math.sin(p * Math.PI * 2)) * 3); });
+    onImpact();
+    await sleep(d * (1 - ARRIVE));
+  }
+  // The monster leans in and lets its element loose. blocked: the sphere stands and the attack breaks on it.
+  // Otherwise the sphere flickers, too thin, and bursts when the attack arrives.
+  async function monsterAttack(blocked, k = el) {
+    const d = FX.time(850);
+    FX.play(charge(MOUTH, k), 260);
+    await anim(260, (p) => { st.monLean = -Math.round(Math.sin(p * Math.PI) * 5); });
+    if (left(run)) return;
+    if (blocked) { shield.show(); snd.shield(); } else shield.weak();
+    SND[k](); FX.play(SPELL_FX[k](MOUTH, blocked ? EDGE : HEROC, { hit: true, spikes: !blocked, small: true, back: blocked ? 0.04 : 0 }), 850);
+    await sleep(d * ARRIVE); if (left(run)) return;
+    if (blocked) { shield.hit(EDGE.x, EDGE.y); snd.deflect(); FX.shake(1, 160); }
+    else { shield.shatter(); snd.crack(); st.heroHit = performance.now(); st.flash = 1; setTimeout(() => (st.flash = 0), 600); FX.play(sparks(HEROC, k), 500); FX.shake(2, 260); }
+    await sleep(d * (1 - ARRIVE));
+  }
+  // for the browser tests and the effect preview: play any effect on demand
+  if (window.__LW_TEST) window.__LW_TEST.fight = { cast: castSpell, attack: monsterAttack, shield, whirl: () => FX.play(tornado(MONC.x, groundY(MONC.x) + 2), 1150) };
 
   function makeHand(T) {
     const sol = [];
@@ -82,10 +121,10 @@ export function monsterRoom() {
       const total = [...sel].reduce((a, i) => a + hand[i], 0), okSum = total === N, okEl = spell === counter, ms = took();
       record("math.cards", okSum, ms, `moc ${N}: ${[...sel].map((i) => hand[i]).join(" + ")} = ${total}`);
       record("logic.spell", okEl, ms, `${E.adj} → ${ELEM[spell].name}`);
-      await swing(); await fly(ELEM[spell].icon, 44, 96, 30);
+      const good = okSum && okEl;
+      await castSpell(spell, good, () => { if (good) { snd.hit(); st.mhp--; burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]); } });
       if (left(run)) return;
-      if (okSum && okEl) {
-        snd.hit(); shake(); st.mhp--; burst(cv.c, 24, [ELEM[spell].main, "#ffffff", "#ffe14d"]);
+      if (good) {
         if (st.mhp <= 0) return defeat();
         say(heroName(), `Trafione! ${ELEM[spell].why}! ${mon.name} ma jeszcze ${st.mhp} ${st.mhp === 1 ? "serduszko" : "serduszka"}.`);
       } else {
@@ -96,7 +135,7 @@ export function monsterRoom() {
         if (!okSum && !okEl) msg += " I sprawdź, co pokonuje każdy czar.";
         say(mon.name, "Hi hi! " + msg);
       }
-      await sleep(1800); if (left(run)) return;
+      await sleep(1400); if (left(run)) return;
       monsterTurn();
     });
     // prefix: a string, or {show, speak} when the spoken version is longer than what fits on screen
@@ -117,11 +156,11 @@ export function monsterRoom() {
       record("math." + q.kind, ok, took(), `${q.show.replace("?", "□")} → ${v}${ok ? "" : ` (${q.ans}) ${tag}`}`); save();
       b.classList.add(ok ? "right" : "wrong");
       if (ok) {
-        st.shield = 1; snd.letter(); await fly(E.icon, 92, 40, 30); snd.ok();
-        say(heroName(), `Tarcza! Odpowiedź ${q.ans} jest dobra. Atak odbity!`);
-        await sleep(1300); st.shield = 0; if (left(run)) return;
+        await monsterAttack(true); if (left(run)) return;
+        snd.ok(); say(heroName(), `Tarcza! Odpowiedź ${q.ans} jest dobra. Atak odbity!`);
+        await sleep(1000); shield.hide(); if (left(run)) return;
       } else {
-        await fly(E.icon, 92, 36, 30); st.flash = 1; setTimeout(() => (st.flash = 0), 600);
+        await monsterAttack(false); if (left(run)) return;
         const fainted = await hurt(); if (left(run)) return;
         // a picture of how to get there instead of just the number
         const m = explain(q);
@@ -133,8 +172,10 @@ export function monsterRoom() {
   }
 
   async function defeat() {
-    snd.poof(); burst(cv.c, 40, PAL);
-    await anim(600, (p) => { st.gone = p; });
+    // a whirlwind picks the monster up and carries it off
+    auraFx.stop(); snd.whirl(); burst(cv.c, 40, PAL);
+    FX.play(tornado(MONC.x, groundY(MONC.x) + 2), 1150);
+    await anim(1000, (p) => { st.gone = p; });
     if (left(run)) return;
     const loot = ri(2, 3) + (GS.G.level - 1); GS.RUN.coins += loot; GS.RUN.beaten++; GS.G.fights++; save(); updHud(); snd.coin();
     say(heroName(), `${pick(PRAISE)} ${mon.name} uciekł i zostawił ${zl(loot)}!`);
