@@ -134,9 +134,17 @@ export async function payWith(p, { wrongChange = false, overpay = false } = {}) 
 }
 
 // From camp through the world map into a land.
-export async function go(p, land = "forest") {
+export async function go(p, land = "forest", guess) {
   await p.click("#tripBtn"); await p.click(`[data-land="${land}"]`);
+  await passGuess(p, guess);
+}
+// The "how long will the trip take?" question that comes before some trips: answers it (first option by default).
+export async function passGuess(p, guess) {
   await p.waitForSelector("#sc canvas");
+  if ((await label(p)) !== "Przed wyprawą") return false;
+  await p.click(guess ? `[data-g="${guess}"]` : "[data-g]");
+  await p.waitForFunction(() => document.querySelector("#sc canvas")?.getAttribute("aria-label") !== "Przed wyprawą");
+  return true;
 }
 export const PATH_LABELS = ["Leśna ścieżka", "Górski szlak"];
 const leaves = (p, kind) => p.waitForFunction((k) => document.querySelector("#sc canvas")?.getAttribute("aria-label") !== k, kind, { timeout: 20000 });

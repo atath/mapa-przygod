@@ -9,6 +9,16 @@ export const h12 = (h) => ((h - 1 + 120) % 12) + 1;
 export const digital = (h, m) => `${h12(h)}:${m === 30 ? "30" : "00"}`;
 // how a Polish first-grader says it: 3:00 "trzecia", 3:30 "wpół do czwartej"
 export const words = (h, m) => (m === 30 ? `wpół do ${GEN[h12(h + 1)]}` : NOM[h12(h)]);
+// "na trzecią", "na wpół do czwartej": what you set the clock to
+const ACC = ["", "pierwszą", "drugą", "trzecią", "czwartą", "piątą", "szóstą", "siódmą", "ósmą", "dziewiątą", "dziesiątą", "jedenastą", "dwunastą"];
+export const wordsAcc = (h, m) => (m === 30 ? `wpół do ${GEN[h12(h + 1)]}` : ACC[h12(h)]);
+// with only the short hand a child says it roughly: "trzecia", "trochę po trzeciej", "wpół do czwartej", "prawie czwarta"
+export const rough = (h, m) => (m === 0 ? NOM[h12(h)] : m === 10 ? `trochę po ${GEN[h12(h)]}` : m === 30 ? `wpół do ${GEN[h12(h + 1)]}` : `prawie ${NOM[h12(h + 1)]}`);
+// how an answer reads on each level: words at level 1, words with the digits small at level 2, digits at level 3
+export function labelFor(o, lvl) {
+  const w = words(o.h, o.m), d = digital(o.h, o.m);
+  return lvl === 1 ? { ...o, label: w, sub: "" } : lvl === 2 ? { ...o, label: w, sub: d } : { ...o, label: d, sub: w };
+}
 const timeOpt = (h, m) => ({ a: digital(h, m), n: words(h, m), label: digital(h, m), sub: words(h, m), h: h12(h), m });
 
 export function genRead(lvl) {
@@ -24,18 +34,42 @@ export function genRead(lvl) {
       : `Duża wskazówka stoi na 12, więc jest pełna godzina. Mała pokazuje ${h12(h)}, czyli ${NOM[h12(h)]}: ${digital(h, m)}.`
   };
 }
+// Level 1 starts here: a clock with only the short hand, read roughly
+export function genHourOnly() {
+  const h = ri(1, 12), m = pick([0, 10, 30, 50]);
+  const near = { 0: [[-1, 50], [0, 30]], 10: [[-1, 50], [0, 30]], 30: [[0, 0], [0, 50]], 50: [[0, 30], [1, 10]] }[m];
+  const o = (hh, mm) => ({ a: `${h12(hh)}:${mm}`, n: rough(hh, mm), h: h12(hh), m: mm });
+  const right = o(h, m), opts = [right];
+  for (const [dh, dm] of shuffle([[pick([-1, 1]), 0], ...near]).map(([a, b]) => (b === 0 && a !== 0 && !near.some((x) => x[0] === a && x[1] === b) ? [a, m] : [a, b]))) {
+    const x = o(h + dh, dm); if (opts.length < 3 && !opts.some((y) => y.a === x.a)) opts.push(x);
+  }
+  const where = m === 0 ? `stoi dokładnie na ${h12(h)}` : m === 10 ? `minęła ${h12(h)} tylko trochę` : m === 30 ? `stoi w połowie drogi między ${h12(h)} a ${h12(h + 1)}` : `prawie dotyka ${h12(h + 1)}`;
+  return {
+    kind: "hour", title: "Która mniej więcej godzina?", h: h12(h), m, ans: right.a, opts: shuffle(opts),
+    say: "Ten zegar ma tylko małą wskazówkę. Która mniej więcej jest godzina?",
+    why: () => `Mała wskazówka ${where}, więc jest ${right.n}.`
+  };
+}
+
 export function genSet(lvl) {
   const h = ri(1, 12), m = lvl === 1 ? 0 : rnd() < 0.5 ? 30 : 0;
   return {
-    kind: "set", title: `Ustaw zegar na ${digital(h, m)}`, h, m, ans: digital(h, m),
-    say: `Ustaw zegar na godzinę ${words(h, m)}. Strzałkami przesuwasz małą wskazówkę, a przyciskiem dużą.`,
+    kind: "set", title: `Ustaw zegar na ${wordsAcc(h, m)}`, h, m, ans: digital(h, m),
+    say: `Ustaw zegar na ${wordsAcc(h, m)}. Kręć wskazówkami: o pół godziny albo o całą godzinę.`,
     why: () => m === 30
-      ? `Na ${digital(h, m)} duża wskazówka stoi na 6, a mała między ${h12(h)} a ${h12(h + 1)}.`
-      : `Na ${digital(h, m)} duża wskazówka stoi na 12, a mała na ${h12(h)}.`
+      ? `O ${wordsAt(h, m)} duża wskazówka stoi na 6, a mała między ${h12(h)} a ${h12(h + 1)}.`
+      : `O ${wordsAt(h, m)} duża wskazówka stoi na 12, a mała na ${h12(h)}.`
   };
 }
 const EVENTS = [["Bajka", "🎬"], ["Wizyta u babci", "👵"], ["Basen", "🏊"], ["Urodziny u koleżanki", "🎂"], ["Spacer z psem", "🐕"], ["Wycieczka do zoo", "🦒"]];
-const durWord = (min) => (min === 30 ? "pół godziny" : min === 60 ? "godzinę" : min === 90 ? "półtorej godziny" : `${min / 60} godziny`);
+// "pół godziny", "godzinę", "półtorej godziny", "2 godziny", "2 i pół godziny", "5 godzin"
+export function durWord(min) {
+  if (min <= 0) return "nic"; if (min === 30) return "pół godziny"; if (min === 60) return "godzinę"; if (min === 90) return "półtorej godziny";
+  const k = Math.floor(min / 60), half = min % 60 === 30;
+  return half ? `${k} i pół godziny` : `${k} ${k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? "godziny" : "godzin"}`;
+}
+// "o trzeciej", "o wpół do czwartej"
+export const wordsAt = (h, m) => (m === 30 ? `wpół do ${GEN[h12(h + 1)]}` : GEN[h12(h)]);
 export function genElapsed(lvl) {
   const [ev, e] = pick(EVENTS);
   const sm = lvl === 3 && rnd() < 0.5 ? 30 : 0, dur = pick(lvl === 1 ? [60] : lvl === 2 ? [60, 120, 180] : [30, 60, 90, 120]);
@@ -44,10 +78,10 @@ export function genElapsed(lvl) {
   const right = timeOpt(eh, em), opts = [right];
   for (const [a, b] of shuffle(wrong)) { const o = timeOpt(a, b); if (!opts.some((x) => x.a === o.a) && opts.length < (lvl === 1 ? 3 : 4)) opts.push(o); }
   return {
-    kind: "elapsed", title: "O której się skończy?", h, m: sm, e, ans: right.a, opts: shuffle(opts),
-    text: `${ev} zaczyna się o ${digital(h, sm)} i trwa ${durWord(dur)}.`,
+    kind: "elapsed", title: "O której się skończy?", h, m: sm, e, ans: right.a, opts: shuffle(opts), ev, dur, start: h * 60 + sm, end: endMin,
+    text: `${ev} zaczyna się o ${lvl === 3 ? digital(h, sm) : wordsAt(h, sm)} i trwa ${durWord(dur)}.`,
     say: `${ev} zaczyna się o ${words(h, sm)} i trwa ${durWord(dur)}. O której się skończy?`,
-    why: () => `${digital(h, sm)} i jeszcze ${durWord(dur)} to ${right.a}.${dur >= 60 ? " Godzina to jeden pełny obrót dużej wskazówki." : ""}`
+    why: () => `Jeśli zaczniemy o ${wordsAt(h, sm)} i poczekamy ${durWord(dur)}, będzie ${words(eh, em)}.${dur >= 60 ? " Godzina to jeden pełny obrót dużej wskazówki." : ""}`
   };
 }
 
@@ -100,7 +134,7 @@ export function genFeel(lvl) {
 }
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
-export function clockRoomTasks(lvl) { return [genRead(lvl), genSet(lvl), genElapsed(lvl)]; }
+export function clockRoomTasks(lvl) { return lvl === 1 ? [genHourOnly(), genSet(1), pick([genRead, genElapsed])(1)] : [genRead(lvl), genSet(lvl), genElapsed(lvl)]; }
 export function timeRoomTasks(lvl) { return lvl === 3 ? [genHowLong(lvl), genLonger(lvl), genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), genLonger(lvl), genFeel(lvl)]; }
 
 // "This trip took 12 minutes — as long as four songs": real time the child has just lived through
@@ -111,4 +145,30 @@ export function tripTimeLine(ms) {
   const songs = Math.round(min / 3);
   const cmp = songs >= 1 ? ` To tyle, co ${songs} ${songs === 1 ? "piosenka" : songs >= 2 && songs <= 4 ? "piosenki" : "piosenek"}.` : " To krócej niż jedna piosenka.";
   return `Ta wyprawa trwała ${min === 1 ? "minutę" : `${min} ${mw}`}.${cmp}${min >= 45 ? " Prawie jak cała lekcja w szkole!" : ""}`;
+}
+
+/* ---------- guess how long the trip will take, then compare at the chest ---------- */
+export const guessOptions = (lvl) => (lvl === 1 ? [2, 10, 60] : [2, 10, 30, 60]);
+const GUESS_ACC = { 2: "2 minuty", 10: "10 minut", 30: "pół godziny", 60: "godzinę" }, GUESS_GEN = { 2: "2 minut", 10: "10 minut", 30: "pół godziny", 60: "godziny" };
+export const guessLabel = (g) => GUESS_ACC[g];
+// the answer nearest to the real time, measured in ratios (2 → 10 minutes is as far as 10 → 50)
+export function guessHit(guess, min, opts) {
+  const d = (g) => Math.abs(Math.log(g) - Math.log(Math.max(0.5, min)));
+  return opts.reduce((best, g) => (d(g) < d(best) ? g : best), opts[0]) === guess;
+}
+const minAcc = (min) => (min < 1 ? "niecałą minutę" : min === 1 ? "minutę" : `${min} ${min % 10 >= 2 && min % 10 <= 4 && (min % 100 < 12 || min % 100 > 14) ? "minuty" : "minut"}`);
+// lines for the card at the chest; fem: the hero is a girl
+export function guessLines(guess, ms, opts, fem) {
+  const min = Math.round(ms / 60000), out = [];
+  if (guess) {
+    const hit = guessHit(guess, ms / 60000, opts), thought = fem ? "Myślałaś" : "Myślałeś";
+    out.push(hit ? `${fem ? "Dobrze myślałaś" : "Dobrze myślałeś"}: wyprawa trwała ${minAcc(min)}${min === guess ? "" : `, czyli około ${GUESS_GEN[guess]}`}!` : `${thought}, że potrwa ${GUESS_ACC[guess]}. Trwała ${minAcc(min)}.`);
+  }
+  // the song comparison; its first sentence repeats the time when the guess line already said it
+  const t = tripTimeLine(ms); if (t) out.push(guess ? t.split(". ").slice(1).join(". ") : t);
+  if (min >= 3) {
+    const n = Math.round(60 / min);
+    out.push(n <= 1 ? "Godzina to mniej więcej tyle, co ta wyprawa." : `Godzina to tyle, co ${n} ${n <= 4 ? "takie wyprawy" : "takich wypraw"}.`);
+  }
+  return out;
 }

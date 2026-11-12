@@ -10,6 +10,7 @@ import { heroName, petName, say } from "./shell.js";
 import { $, esc, pick, sleep } from "./util.js";
 import { playHouses } from "./puzzles/houses-ui.js";
 import { playTiles } from "./puzzles/tiles-ui.js";
+import { playPyramid } from "./puzzles/pyramid-ui.js";
 
 /* ================== Chest guardian: one puzzle before the chest, in every land ==================
    The owl gives one bigger puzzle you arrange and check, or a quick pair of questions.
@@ -17,7 +18,8 @@ import { playTiles } from "./puzzles/tiles-ui.js";
 export const LOGIC_KINDS = {
   houses: { play: () => playHouses(levelFor("logic")) },
   patterns: { play: () => playPatterns(levelFor("logic")) },
-  tiles: { play: () => playTiles(levelFor("logic")) }
+  tiles: { play: () => playTiles(levelFor("logic")) },
+  pyramid: { play: () => playPyramid(levelFor("math")) }
 };
 
 export function nextLogicKind(seen) {

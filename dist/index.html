@@ -495,6 +495,28 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   body.room .numpad .np { min-height: 34px; }
   body.room .tf { grid-template-columns: repeat(5, 14px); grid-auto-rows: 14px; }
 }
+.pyr { display: grid; gap: 4px; justify-items: center; }
+.pyr-row { display: flex; gap: 4px; }
+.brick { display: grid; place-items: center; width: 56px; height: 40px; border-radius: 6px; border: 3px solid var(--wood-dark); background: #fffaf0; font: 900 1.35rem var(--font-body); color: #24160a; font-variant-numeric: tabular-nums; padding: 0; }
+.brick.given { background: #e7c98f; }
+button.brick { border-style: dashed; cursor: pointer; }
+.brick.sel { background: var(--gold); border-style: solid; }
+.brick.bad { border-color: var(--bad); background: #fbebeb; }
+@media (max-height: 900px) { body.room .brick { width: 48px; height: 34px; font-size: 1.15rem; } }
+@media (max-height: 700px) { body.room .brick { height: 30px; } }
+/* clock tower: geared hands, half-hour bar; chest card about how long the trip took */
+.gear { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.gear .btn { padding: 6px 2px; font-size: .95rem; white-space: nowrap; }
+.hbar { display: flex; gap: 3px; align-items: center; }
+.hbar i { width: 34px; height: 16px; border-radius: 4px; border: 2px solid var(--wood-dark); background: var(--surface); }
+.hbar i.on { background: var(--leaf); }
+.hbar .over { color: var(--bad); font-size: 1.3rem; }
+.opts.times.words .opt .lb { font-size: 1.15rem; line-height: 1.15; }
+.opts.times.words .opt small { font-size: .95rem; }
+.opts.guess { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.opts.guess .opt { font-size: 1.2rem; font-weight: 800; }
+.timecard { font-weight: 700; font-size: .95rem; line-height: 1.3; padding: 6px 10px; border-radius: 12px; background: var(--surface); border: 2px solid var(--line); }
+@media (max-height: 700px) { body.room .gear { margin-bottom: 4px; } body.room .gear .btn { min-height: 40px; } .timecard { font-size: .85rem; } }
 
 </style>
 </head>
@@ -2705,6 +2727,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   var h12 = (h) => (h - 1 + 120) % 12 + 1;
   var digital = (h, m) => `${h12(h)}:${m === 30 ? "30" : "00"}`;
   var words = (h, m) => m === 30 ? `wp\xF3\u0142 do ${GEN[h12(h + 1)]}` : NOM[h12(h)];
+  var ACC = ["", "pierwsz\u0105", "drug\u0105", "trzeci\u0105", "czwart\u0105", "pi\u0105t\u0105", "sz\xF3st\u0105", "si\xF3dm\u0105", "\xF3sm\u0105", "dziewi\u0105t\u0105", "dziesi\u0105t\u0105", "jedenast\u0105", "dwunast\u0105"];
+  var wordsAcc = (h, m) => m === 30 ? `wp\xF3\u0142 do ${GEN[h12(h + 1)]}` : ACC[h12(h)];
+  var rough = (h, m) => m === 0 ? NOM[h12(h)] : m === 10 ? `troch\u0119 po ${GEN[h12(h)]}` : m === 30 ? `wp\xF3\u0142 do ${GEN[h12(h + 1)]}` : `prawie ${NOM[h12(h + 1)]}`;
+  function labelFor(o, lvl) {
+    const w = words(o.h, o.m), d = digital(o.h, o.m);
+    return lvl === 1 ? { ...o, label: w, sub: "" } : lvl === 2 ? { ...o, label: w, sub: d } : { ...o, label: d, sub: w };
+  }
   var timeOpt = (h, m) => ({ a: digital(h, m), n: words(h, m), label: digital(h, m), sub: words(h, m), h: h12(h), m });
   function genRead(lvl) {
     const h = ri(1, 12), m = rnd() < (lvl === 1 ? 0.35 : 0.6) ? 30 : 0;
@@ -2721,20 +2750,49 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       why: () => m === 30 ? `Du\u017Ca wskaz\xF3wka stoi na 6, wi\u0119c jest p\xF3\u0142 godziny. Ma\u0142a jest mi\u0119dzy ${h12(h)} a ${h12(h + 1)}, czyli wp\xF3\u0142 do ${GEN[h12(h + 1)]}: ${digital(h, m)}.` : `Du\u017Ca wskaz\xF3wka stoi na 12, wi\u0119c jest pe\u0142na godzina. Ma\u0142a pokazuje ${h12(h)}, czyli ${NOM[h12(h)]}: ${digital(h, m)}.`
     };
   }
+  function genHourOnly() {
+    const h = ri(1, 12), m = pick([0, 10, 30, 50]);
+    const near = { 0: [[-1, 50], [0, 30]], 10: [[-1, 50], [0, 30]], 30: [[0, 0], [0, 50]], 50: [[0, 30], [1, 10]] }[m];
+    const o = (hh, mm) => ({ a: `${h12(hh)}:${mm}`, n: rough(hh, mm), h: h12(hh), m: mm });
+    const right = o(h, m), opts = [right];
+    for (const [dh, dm] of shuffle([[pick([-1, 1]), 0], ...near]).map(([a, b]) => b === 0 && a !== 0 && !near.some((x) => x[0] === a && x[1] === b) ? [a, m] : [a, b])) {
+      const x = o(h + dh, dm);
+      if (opts.length < 3 && !opts.some((y) => y.a === x.a)) opts.push(x);
+    }
+    const where = m === 0 ? `stoi dok\u0142adnie na ${h12(h)}` : m === 10 ? `min\u0119\u0142a ${h12(h)} tylko troch\u0119` : m === 30 ? `stoi w po\u0142owie drogi mi\u0119dzy ${h12(h)} a ${h12(h + 1)}` : `prawie dotyka ${h12(h + 1)}`;
+    return {
+      kind: "hour",
+      title: "Kt\xF3ra mniej wi\u0119cej godzina?",
+      h: h12(h),
+      m,
+      ans: right.a,
+      opts: shuffle(opts),
+      say: "Ten zegar ma tylko ma\u0142\u0105 wskaz\xF3wk\u0119. Kt\xF3ra mniej wi\u0119cej jest godzina?",
+      why: () => `Ma\u0142a wskaz\xF3wka ${where}, wi\u0119c jest ${right.n}.`
+    };
+  }
   function genSet(lvl) {
     const h = ri(1, 12), m = lvl === 1 ? 0 : rnd() < 0.5 ? 30 : 0;
     return {
       kind: "set",
-      title: `Ustaw zegar na ${digital(h, m)}`,
+      title: `Ustaw zegar na ${wordsAcc(h, m)}`,
       h,
       m,
       ans: digital(h, m),
-      say: `Ustaw zegar na godzin\u0119 ${words(h, m)}. Strza\u0142kami przesuwasz ma\u0142\u0105 wskaz\xF3wk\u0119, a przyciskiem du\u017C\u0105.`,
-      why: () => m === 30 ? `Na ${digital(h, m)} du\u017Ca wskaz\xF3wka stoi na 6, a ma\u0142a mi\u0119dzy ${h12(h)} a ${h12(h + 1)}.` : `Na ${digital(h, m)} du\u017Ca wskaz\xF3wka stoi na 12, a ma\u0142a na ${h12(h)}.`
+      say: `Ustaw zegar na ${wordsAcc(h, m)}. Kr\u0119\u0107 wskaz\xF3wkami: o p\xF3\u0142 godziny albo o ca\u0142\u0105 godzin\u0119.`,
+      why: () => m === 30 ? `O ${wordsAt(h, m)} du\u017Ca wskaz\xF3wka stoi na 6, a ma\u0142a mi\u0119dzy ${h12(h)} a ${h12(h + 1)}.` : `O ${wordsAt(h, m)} du\u017Ca wskaz\xF3wka stoi na 12, a ma\u0142a na ${h12(h)}.`
     };
   }
   var EVENTS = [["Bajka", "\u{1F3AC}"], ["Wizyta u babci", "\u{1F475}"], ["Basen", "\u{1F3CA}"], ["Urodziny u kole\u017Canki", "\u{1F382}"], ["Spacer z psem", "\u{1F415}"], ["Wycieczka do zoo", "\u{1F992}"]];
-  var durWord = (min) => min === 30 ? "p\xF3\u0142 godziny" : min === 60 ? "godzin\u0119" : min === 90 ? "p\xF3\u0142torej godziny" : `${min / 60} godziny`;
+  function durWord(min) {
+    if (min <= 0) return "nic";
+    if (min === 30) return "p\xF3\u0142 godziny";
+    if (min === 60) return "godzin\u0119";
+    if (min === 90) return "p\xF3\u0142torej godziny";
+    const k = Math.floor(min / 60), half = min % 60 === 30;
+    return half ? `${k} i p\xF3\u0142 godziny` : `${k} ${k % 10 >= 2 && k % 10 <= 4 && (k % 100 < 12 || k % 100 > 14) ? "godziny" : "godzin"}`;
+  }
+  var wordsAt = (h, m) => m === 30 ? `wp\xF3\u0142 do ${GEN[h12(h + 1)]}` : GEN[h12(h)];
   function genElapsed(lvl) {
     const [ev, e] = pick(EVENTS);
     const sm = lvl === 3 && rnd() < 0.5 ? 30 : 0, dur = pick(lvl === 1 ? [60] : lvl === 2 ? [60, 120, 180] : [30, 60, 90, 120]);
@@ -2753,9 +2811,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       e,
       ans: right.a,
       opts: shuffle(opts),
-      text: `${ev} zaczyna si\u0119 o ${digital(h, sm)} i trwa ${durWord(dur)}.`,
+      ev,
+      dur,
+      start: h * 60 + sm,
+      end: endMin,
+      text: `${ev} zaczyna si\u0119 o ${lvl === 3 ? digital(h, sm) : wordsAt(h, sm)} i trwa ${durWord(dur)}.`,
       say: `${ev} zaczyna si\u0119 o ${words(h, sm)} i trwa ${durWord(dur)}. O kt\xF3rej si\u0119 sko\u0144czy?`,
-      why: () => `${digital(h, sm)} i jeszcze ${durWord(dur)} to ${right.a}.${dur >= 60 ? " Godzina to jeden pe\u0142ny obr\xF3t du\u017Cej wskaz\xF3wki." : ""}`
+      why: () => `Je\u015Bli zaczniemy o ${wordsAt(h, sm)} i poczekamy ${durWord(dur)}, b\u0119dzie ${words(eh, em)}.${dur >= 60 ? " Godzina to jeden pe\u0142ny obr\xF3t du\u017Cej wskaz\xF3wki." : ""}`
     };
   }
   var SPANS = [
@@ -2826,7 +2888,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   }
   var cap = (s) => s[0].toUpperCase() + s.slice(1);
   function clockRoomTasks(lvl) {
-    return [genRead(lvl), genSet(lvl), genElapsed(lvl)];
+    return lvl === 1 ? [genHourOnly(), genSet(1), pick([genRead, genElapsed])(1)] : [genRead(lvl), genSet(lvl), genElapsed(lvl)];
   }
   function timeRoomTasks(lvl) {
     return lvl === 3 ? [genHowLong(lvl), genLonger(lvl), genHowLong(lvl), genFeel(lvl)] : [genHowLong(lvl), genLonger(lvl), genFeel(lvl)];
@@ -2838,6 +2900,29 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const songs = Math.round(min / 3);
     const cmp = songs >= 1 ? ` To tyle, co ${songs} ${songs === 1 ? "piosenka" : songs >= 2 && songs <= 4 ? "piosenki" : "piosenek"}.` : " To kr\xF3cej ni\u017C jedna piosenka.";
     return `Ta wyprawa trwa\u0142a ${min === 1 ? "minut\u0119" : `${min} ${mw}`}.${cmp}${min >= 45 ? " Prawie jak ca\u0142a lekcja w szkole!" : ""}`;
+  }
+  var guessOptions = (lvl) => lvl === 1 ? [2, 10, 60] : [2, 10, 30, 60];
+  var GUESS_ACC = { 2: "2 minuty", 10: "10 minut", 30: "p\xF3\u0142 godziny", 60: "godzin\u0119" };
+  var GUESS_GEN = { 2: "2 minut", 10: "10 minut", 30: "p\xF3\u0142 godziny", 60: "godziny" };
+  var guessLabel = (g) => GUESS_ACC[g];
+  function guessHit(guess, min, opts) {
+    const d = (g) => Math.abs(Math.log(g) - Math.log(Math.max(0.5, min)));
+    return opts.reduce((best, g) => d(g) < d(best) ? g : best, opts[0]) === guess;
+  }
+  var minAcc = (min) => min < 1 ? "nieca\u0142\u0105 minut\u0119" : min === 1 ? "minut\u0119" : `${min} ${min % 10 >= 2 && min % 10 <= 4 && (min % 100 < 12 || min % 100 > 14) ? "minuty" : "minut"}`;
+  function guessLines(guess, ms, opts, fem) {
+    const min = Math.round(ms / 6e4), out = [];
+    if (guess) {
+      const hit = guessHit(guess, ms / 6e4, opts), thought = fem ? "My\u015Bla\u0142a\u015B" : "My\u015Bla\u0142e\u015B";
+      out.push(hit ? `${fem ? "Dobrze my\u015Bla\u0142a\u015B" : "Dobrze my\u015Bla\u0142e\u015B"}: wyprawa trwa\u0142a ${minAcc(min)}${min === guess ? "" : `, czyli oko\u0142o ${GUESS_GEN[guess]}`}!` : `${thought}, \u017Ce potrwa ${GUESS_ACC[guess]}. Trwa\u0142a ${minAcc(min)}.`);
+    }
+    const t = tripTimeLine(ms);
+    if (t) out.push(guess ? t.split(". ").slice(1).join(". ") : t);
+    if (min >= 3) {
+      const n = Math.round(60 / min);
+      out.push(n <= 1 ? "Godzina to mniej wi\u0119cej tyle, co ta wyprawa." : `Godzina to tyle, co ${n} ${n <= 4 ? "takie wyprawy" : "takich wypraw"}.`);
+    }
+    return out;
   }
 
   // src/chest-room.js
@@ -2914,7 +2999,13 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       tripEnd(GS.RUN, true);
       const opened = !GS.G.lands.includes("mountains") && GS.G.trips >= UNLOCK_TRIPS;
       if (opened) GS.G.lands.push("mountains");
-      const timeLine = tripTimeLine(GS.RUN.active || 0), landKey = GS.RUN.land;
+      const ms = GS.RUN.active || 0, landKey = GS.RUN.land, guess = GS.RUN.guess;
+      const timeCard = guessLines(guess, ms, GS.RUN.guessOpts || [], !isBoy());
+      if (guess) {
+        const hit = guessHit(guess, ms / 6e4, GS.RUN.guessOpts);
+        GS.G.guessStreak = hit ? Math.min(99, GS.G.guessStreak + 1) : 0;
+        record("time.guess", hit, 0, `${guess} min \u2192 ${Math.round(ms / 6e4)} min`);
+      }
       save();
       speak(pw.w);
       snd.fanfare();
@@ -2923,8 +3014,8 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       setTimeout(bigEffect, 700);
       $("coinN").textContent = GS.G.coins;
       if ($("grN")) $("grN").textContent = GS.G.gr;
-      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} z\u0142${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryli\u015Bmy now\u0105 krain\u0119: ${lands().mountains.name}!` : ""}`), 900);
-      $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
+      setTimeout(() => cv.c.isConnected && say(heroName(), `Has\u0142o \u201E${pw.w}\u201D otworzy\u0142o skrzyni\u0119! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} z\u0142${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogr\xF3dku co\u015B uros\u0142o!" : ""}${opened ? ` Odkryli\u015Bmy now\u0105 krain\u0119: ${lands().mountains.name}!` : ""}`), 900);
+      $("ctl").innerHTML = `${timeCard.length ? `<div class="timecard">\u23F1\uFE0F ${timeCard.map(esc).join(" ")}</div>` : ""}<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Nast\u0119pna wyprawa</button>`;
       $("campBtn").addEventListener("click", () => {
         GS.RUN = null;
         camp();
@@ -4693,11 +4784,120 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     });
   }
 
+  // src/puzzles/pyramid.js
+  function layout(nRows) {
+    const cells = [];
+    for (let k = 0; k < nRows; k++) for (let i = 0; i < nRows - k; i++) cells.push({ k, i });
+    const id = (k, i) => cells.findIndex((c) => c.k === k && c.i === i);
+    const triples = cells.filter((c) => c.k > 0).map((c) => ({ top: id(c.k, c.i), l: id(c.k - 1, c.i), r: id(c.k - 1, c.i + 1) }));
+    return { cells, triples, id };
+  }
+  function propagate(L2, known) {
+    const v = known.slice();
+    let subs = 0, moved = true;
+    while (moved) {
+      moved = false;
+      for (const t of L2.triples) {
+        const miss = [t.top, t.l, t.r].filter((x) => v[x] == null);
+        if (miss.length !== 1) continue;
+        if (v[t.top] == null) v[t.top] = v[t.l] + v[t.r];
+        else {
+          const other = v[t.l] == null ? t.r : t.l;
+          v[miss[0]] = v[t.top] - v[other];
+          subs++;
+          if (v[miss[0]] < 1) return null;
+        }
+        moved = true;
+      }
+    }
+    return v.every((x) => x != null) ? { v, subs } : null;
+  }
+  function genPyramid(lvl) {
+    const nRows = lvl === 3 ? 4 : 3, L2 = layout(nRows), nGiven = lvl === 3 ? 4 : 3, top = lvl === 3 ? 30 : 20;
+    const onlyAdd = lvl === 1 && rnd() < 0.5;
+    for (; ; ) {
+      const bottom = Array.from({ length: nRows }, () => ri(1, lvl === 3 ? 5 : 7)), v = Array(L2.cells.length).fill(null);
+      bottom.forEach((x, i) => v[L2.id(0, i)] = x);
+      for (const t of L2.triples) v[t.top] = v[t.l] + v[t.r];
+      if (v[v.length - 1] > top) continue;
+      const given = onlyAdd ? bottom.map((_, i) => L2.id(0, i)) : shuffle(L2.cells.map((_, j) => j)).slice(0, nGiven);
+      const known = v.map((x, j) => given.includes(j) ? x : null), r = propagate(L2, known);
+      if (!r) continue;
+      if (lvl === 1 && !onlyAdd && r.subs !== 1) continue;
+      if (lvl === 2 && (r.subs < 1 || r.subs > 2)) continue;
+      if (lvl === 3 && r.subs < 1) continue;
+      return { kind: "pyramid", nRows, cells: L2.cells, triples: L2.triples, values: v, given: given.slice().sort((a, b) => a - b), subs: r.subs };
+    }
+  }
+  function badTriples(q, vals) {
+    return q.triples.filter((t) => [t.top, t.l, t.r].every((x) => vals[x] != null) && vals[t.l] + vals[t.r] !== vals[t.top]);
+  }
+
+  // src/puzzles/pyramid-ui.js
+  function playPyramid(lvl) {
+    const q = genPyramid(lvl), vals = q.values.map((x, j) => q.given.includes(j) ? x : null);
+    let sel = null, locked = false;
+    say("M\u0105dra Sowa", "Ka\u017Cda ceg\u0142a to suma dw\xF3ch cegie\u0142 pod ni\u0105. Dotknij pust\u0105 ceg\u0142\u0119 i wpisz liczb\u0119.", "Piramida liczbowa! Ka\u017Cda ceg\u0142a to suma dw\xF3ch cegie\u0142 pod ni\u0105. Dotknij pust\u0105 ceg\u0142\u0119 i wpisz liczb\u0119.");
+    const rows = [];
+    for (let k = q.nRows - 1; k >= 0; k--) rows.push(q.cells.map((c, j) => ({ ...c, j })).filter((c) => c.k === k));
+    $("ctl").innerHTML = `<div class="task pz"><div class="pyr">${rows.map((r) => `<div class="pyr-row">${r.map((c) => q.given.includes(c.j) ? `<span class="brick given">${q.values[c.j]}</span>` : `<button class="brick" data-j="${c.j}" aria-label="pusta ceg\u0142a">?</button>`).join("")}</div>`).join("")}</div>
+      <div id="pad"></div></div><button class="btn main" id="checkBtn">Sprawd\u017A</button>`;
+    const brick = (j) => $("ctl").querySelector(`.brick[data-j="${j}"]`);
+    const paint2 = () => q.cells.forEach((_, j) => {
+      const b = brick(j);
+      if (!b) return;
+      b.textContent = vals[j] == null ? "?" : vals[j];
+      b.classList.toggle("sel", sel === j);
+      b.classList.remove("bad");
+    });
+    const pad = numPad($("pad"), { onInput: (v) => {
+      if (sel == null || locked) return;
+      vals[sel] = v === "" ? null : +v;
+      paint2();
+    } });
+    $("ctl").querySelector(".pyr").addEventListener("click", (e) => {
+      const b = e.target.closest("button.brick");
+      if (!b || locked) return;
+      sel = +b.dataset.j;
+      snd.step();
+      paint2();
+      pad.set(vals[sel]);
+    });
+    const empty = q.cells.map((_, j) => j).filter((j) => !q.given.includes(j));
+    testHook("pyramid", empty.map((j) => ({ j, v: q.values[j] })), empty.flatMap((j) => [`.brick[data-j="${j}"]`, ...[...String(q.values[j])].map((d) => `[data-d="${d}"]`)]).concat("#checkBtn"));
+    return runChecks({
+      skill: "math.pyramid",
+      check: () => {
+        if (empty.some((j) => vals[j] == null)) return { ready: false, msg: "Najpierw wpisz liczby do wszystkich pustych cegie\u0142." };
+        const bad = badTriples(q, vals);
+        bad.forEach((t2) => [t2.top, t2.l, t2.r].forEach((j) => {
+          const b = brick(j);
+          if (b) b.classList.add("bad");
+        }));
+        if (!bad.length) return { ok: true };
+        const t = bad[0];
+        return { ok: false, msg: `${vals[t.l]} i ${vals[t.r]} to nie ${vals[t.top]}. Popraw czerwone ceg\u0142y.` };
+      },
+      reveal: () => {
+        empty.forEach((j) => vals[j] = q.values[j]);
+        sel = null;
+        paint2();
+      },
+      lock: () => {
+        locked = true;
+        sel = null;
+        paint2();
+      },
+      note: (n) => `${q.nRows} rz\u0119dy, odejmowa\u0144: ${q.subs}${n > 1 ? `, pr\xF3by: ${n}` : ""}`
+    });
+  }
+
   // src/logic-room.js
   var LOGIC_KINDS = {
     houses: { play: () => playHouses(levelFor("logic")) },
     patterns: { play: () => playPatterns(levelFor("logic")) },
-    tiles: { play: () => playTiles(levelFor("logic")) }
+    tiles: { play: () => playTiles(levelFor("logic")) },
+    pyramid: { play: () => playPyramid(levelFor("math")) }
   };
   function nextLogicKind(seen) {
     const all = Object.keys(LOGIC_KINDS);
@@ -4775,7 +4975,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   }
 
   // src/time-rooms.js
-  function drawClock(c, h, m) {
+  function drawClock(c, h, m, { minute = true } = {}) {
     const x = c.getContext("2d"), W = c.width, R2 = W / 2 - 6;
     x.clearRect(0, 0, W, W);
     x.save();
@@ -4815,7 +5015,7 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       x.stroke();
     };
     hand((h12(h) % 12 + m / 60) / 12 * Math.PI * 2, R2 * 0.45, W / 26, "#2b6cb0");
-    hand(m / 60 * Math.PI * 2, R2 * 0.74, W / 44, "#e8442c");
+    if (minute) hand(m / 60 * Math.PI * 2, R2 * 0.74, W / 44, "#e8442c");
     x.fillStyle = "#ffcf3a";
     x.beginPath();
     x.arc(0, 0, W / 40, 0, Math.PI * 2);
@@ -4847,15 +5047,16 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
       await sleep(500);
       if (left(run)) return;
       let r;
-      if (q.kind === "set") r = await setClock(q);
+      if (q.kind === "set" || q.kind === "elapsed") r = await gearClock(q, lvl);
       else {
-        say(petName(), q.kind === "read" ? "Kt\xF3ra godzina jest na zegarze?" : `${q.text} O kt\xF3rej si\u0119 sko\u0144czy?`, q.say);
-        r = await askChoice(q, {
-          skill: q.kind === "read" ? "time.read" : "time.elapsed",
-          cls: "times",
-          head: `${clockHTML()}<p class="task-q">${q.kind === "read" ? "Kt\xF3ra godzina?" : `<span class="em">${q.e}</span> ${esc(q.text)}<br>O kt\xF3rej si\u0119 sko\u0144czy?`}</p>`,
-          after: (el) => drawClock(el.querySelector(".clock"), q.h, q.m),
-          note: (miss) => `${q.kind === "read" ? "zegar " : "koniec "}${q.ans}${miss ? `, pomy\u0142ki: ${miss}` : ""}`
+        const hour = q.kind === "hour";
+        say(petName(), hour ? q.title : "Kt\xF3ra godzina jest na zegarze?", q.say);
+        r = await askChoice(hour ? q : { ...q, opts: q.opts.map((o) => labelFor(o, lvl)) }, {
+          skill: hour ? "time.hour" : "time.read",
+          cls: `times${hour || lvl < 3 ? " words" : ""}`,
+          head: `${clockHTML()}<p class="task-q">${esc(q.title)}</p>`,
+          after: (el) => drawClock(el.querySelector(".clock"), q.h, q.m, { minute: !hour }),
+          note: (miss) => `${hour ? "ma\u0142a wskaz\xF3wka " : "zegar "}${q.ans}${miss ? `, pomy\u0142ki: ${miss}` : ""}`
         });
       }
       if (left(run)) return;
@@ -4863,56 +5064,76 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     }
     finish(run, good, "Zegar nie ma przed nami tajemnic!");
   }
-  function setClock(q) {
+  function gearClock(q, lvl) {
     return new Promise((resolve) => {
-      const run = GS.RUN, took = timer();
-      let h = h12(q.h + 4 + Math.floor(Math.random() * 5)), m = q.m === 30 ? 0 : 30, misses = 0, done = false;
-      say(petName(), `Ustaw zegar na ${q.ans}, czyli ${words(q.h, q.m)}.`, q.say);
-      $("ctl").innerHTML = `<div class="task">${clockHTML("big")}<p class="task-q">Ustaw: <b>${esc(q.ans)}</b></p></div>
-      <div class="setclock">
-        <button class="btn small" id="hBack" aria-label="Ma\u0142a wskaz\xF3wka do ty\u0142u">\u25C0 ma\u0142a</button>
-        <button class="btn small" id="hFwd" aria-label="Ma\u0142a wskaz\xF3wka do przodu">ma\u0142a \u25B6</button>
-        <button class="btn small" id="mFlip">du\u017Ca na ${m === 0 ? "6" : "12"}</button>
+      const run = GS.RUN, took = timer(), el = q.kind === "elapsed", mod = (x) => (x % 720 + 720) % 720;
+      const target = el ? q.end : h12(q.h) * 60 + q.m, start = el ? q.start : mod(target + (rnd() < 0.5 ? -1 : 1) * 30 * ri(4, 8));
+      let t = start, shown = start, misses = 0, done = false, anim = 0;
+      const segs = el ? q.dur / 30 : 0;
+      if (el) say(petName(), `${q.text} Przekr\u0119\u0107 zegar o ${durWord(q.dur)}.`, `${q.say.replace(" O kt\xF3rej si\u0119 sko\u0144czy?", "")} Przekr\u0119\u0107 zegar o ${durWord(q.dur)} i zobacz, o kt\xF3rej si\u0119 sko\u0144czy.`);
+      else say(petName(), `Ustaw zegar na ${wordsAcc(q.h, q.m)}.`, q.say);
+      $("ctl").innerHTML = `<div class="task">${clockHTML("big")}<p class="task-q">${el ? `<span class="em">${q.e}</span> ${esc(q.text)}` : `Ustaw: <b>${esc(lvl === 3 ? q.ans : words(q.h, q.m))}</b>`}</p>
+        ${el ? `<div class="hbar" aria-label="Up\u0142ywaj\u0105cy czas">${Array.from({ length: segs }, () => "<i></i>").join("")}<b class="over" hidden>+</b></div>` : ""}</div>
+      <div class="gear">
+        <button class="btn small" id="tBack60" aria-label="Godzin\u0119 do ty\u0142u">\u25C0 godz.</button><button class="btn small" id="tBack30" aria-label="P\xF3\u0142 godziny do ty\u0142u">\u25C0 p\xF3\u0142</button>
+        <button class="btn small" id="tFwd30" aria-label="P\xF3\u0142 godziny do przodu">p\xF3\u0142 \u25B6</button><button class="btn small" id="tFwd60" aria-label="Godzin\u0119 do przodu">godz. \u25B6</button>
       </div>
       <button class="btn main" id="clockOk">Gotowe</button>`;
-      if (window.__LW_TEST) window.__LW_TEST.q = { kind: "set", ans: q.ans, h: h12(q.h), m: q.m, cur: () => ({ h, m }) };
-      const cnv = app.querySelector("#ctl .clock"), paint2 = () => {
-        drawClock(cnv, h, m);
-        $("mFlip").textContent = `du\u017Ca na ${m === 0 ? "6" : "12"}`;
+      const diff = mod(target - start);
+      testHook(q.kind, q.ans, [...Array(Math.floor(diff / 60)).fill("#tFwd60"), ...Array(diff % 60 / 30).fill("#tFwd30"), "#clockOk"]);
+      if (window.__LW_TEST) Object.assign(window.__LW_TEST.q, { h: h12(q.h), m: q.m, cur: () => ({ h: h12(Math.floor(t / 60)), m: t % 60 }) });
+      const cnv = app.querySelector("#ctl .clock");
+      const paint2 = () => {
+        drawClock(cnv, Math.floor(shown / 60), shown % 60);
+        if (el) {
+          const n = Math.round((t - start) / 30);
+          app.querySelectorAll(".hbar i").forEach((x, i) => x.classList.toggle("on", i < n));
+          app.querySelector(".hbar .over").hidden = n <= segs;
+        }
+      };
+      const move = (d) => {
+        if (done) return;
+        const from = shown;
+        t += d;
+        snd.step();
+        if (el) t = Math.max(start - 60, Math.min(start + 12 * 60, t));
+        else t = mod(t);
+        const to = el ? t : from + ((t - from) % 720 + 1080) % 720 - 360;
+        if (reduced() || window.__LW_TEST) {
+          shown = mod(t);
+          return paint2();
+        }
+        const t0 = performance.now(), my = ++anim;
+        const step = (now) => {
+          if (my !== anim) return;
+          const p = Math.min(1, (now - t0) / 350);
+          shown = mod(from + (to - from) * p);
+          paint2();
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
       };
       paint2();
-      $("hBack").addEventListener("click", () => {
-        if (done) return;
-        h = h12(h - 1);
-        snd.step();
-        paint2();
-      });
-      $("hFwd").addEventListener("click", () => {
-        if (done) return;
-        h = h12(h + 1);
-        snd.step();
-        paint2();
-      });
-      $("mFlip").addEventListener("click", () => {
-        if (done) return;
-        m = m === 0 ? 30 : 0;
-        snd.step();
-        paint2();
-      });
+      $("tBack60").addEventListener("click", () => move(-60));
+      $("tBack30").addEventListener("click", () => move(-30));
+      $("tFwd30").addEventListener("click", () => move(30));
+      $("tFwd60").addEventListener("click", () => move(60));
       $("clockOk").addEventListener("click", async () => {
         if (done) return;
-        if (h === h12(q.h) && m === q.m) {
+        const ch = Math.floor(mod(t) / 60), cm = mod(t) % 60;
+        if (mod(t) === mod(target)) {
           done = true;
           snd.ok();
           burst(cnv);
-          record("time.set", misses === 0, took(), `${q.ans}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
+          record(el ? "time.elapsed" : "time.set", misses === 0, took(), `${q.ans}${misses ? `, pomy\u0142ki: ${misses}` : ""}`);
           save();
-          say(heroName(), `Jest ${q.ans}!`);
+          say(heroName(), el ? `${q.ev} sko\u0144czy si\u0119 o ${wordsAt(Math.floor(target / 60), target % 60)}!` : `Jest ${words(q.h, q.m)}!`);
           resolve({ ok: misses === 0 });
           return;
         }
         misses++;
-        const hint = m !== q.m ? q.m === 30 ? "Przy p\xF3\u0142 godzinie du\u017Ca wskaz\xF3wka stoi na 6." : "Przy pe\u0142nej godzinie du\u017Ca wskaz\xF3wka stoi na 12." : `Ma\u0142a wskaz\xF3wka ma pokaza\u0107 ${q.m === 30 ? `miejsce mi\u0119dzy ${h12(q.h)} a ${h12(q.h + 1)}` : h12(q.h)}.`;
+        const passed = t - start;
+        const hint = el ? passed < 0 ? "Zegar cofn\u0105\u0142 si\u0119 przed pocz\u0105tek. Kr\u0119\u0107 do przodu." : `Min\u0119\u0142o ${durWord(passed)}, a ${q.ev.toLowerCase()} trwa ${durWord(q.dur)}.` : `Jest ${words(ch, cm)}, a ma by\u0107 ${words(q.h, q.m)}.${cm !== q.m ? q.m === 30 ? " Przy p\xF3\u0142 godzinie du\u017Ca wskaz\xF3wka stoi na 6." : " Przy pe\u0142nej godzinie du\u017Ca wskaz\xF3wka stoi na 12." : ""}`;
         if (misses === 1) {
           snd.bad();
           say(petName(), `Jeszcze nie. ${hint}`);
@@ -4921,11 +5142,11 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
         done = true;
         const fainted = await hurt();
         if (left(run)) return;
-        h = h12(q.h);
-        m = q.m;
+        t = el ? target : mod(target);
+        shown = mod(target);
         paint2();
-        if (!fainted) say(petName(), `Tak wygl\u0105da ${q.ans}. ${q.why()}`);
-        record("time.set", false, took(), `${q.ans}, pomy\u0142ki: ${misses}`);
+        if (!fainted) say(petName(), `Tak wygl\u0105da ${words(Math.floor(mod(target) / 60), target % 60)}. ${q.why()}`);
+        record(el ? "time.elapsed" : "time.set", false, took(), `${q.ans}, pomy\u0142ki: ${misses}`);
         save();
         await sleep(3200);
         if (left(run)) return;
@@ -5032,7 +5253,32 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
     const maxHp = 3 + wellHearts(GS.G.camp);
     GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, gr: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key2 };
     tripStart(GS.RUN);
-    room();
+    if (GS.G.guessStreak < 3 || GS.G.trips % 5 === 0) guessScreen();
+    else room();
+  }
+  var BEFORE = "Przed wypraw\u0105";
+  function guessScreen() {
+    roomShell();
+    const run = GS.RUN, opts = guessOptions(levelFor("time"));
+    const cv = mountCanvas(8, 4);
+    $("sc").appendChild(cv.c);
+    cv.c.setAttribute("aria-label", BEFORE);
+    const bg = bakeClearing(8, 4, run.seed + 5);
+    GS.scene = { cv, draw(t) {
+      const c = cv.x;
+      c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2);
+      draw(c, PETSPR[GS.G.hero.pet], 30, 34 - bob(t, 2), 1.25);
+      draw(c, GS.HERO, 46, 16 - bob(t), 1.75);
+    } };
+    say(petName(), "Zanim ruszymy: jak my\u015Blisz, ile potrwa ta wyprawa?");
+    $("ctl").innerHTML = `<div class="opts guess">${opts.map((g) => `<button class="btn opt" data-g="${g}">\u23F1\uFE0F ${guessLabel(g)}</button>`).join("")}</div>`;
+    app.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => {
+      if (left(run) || run.guess) return;
+      run.guess = +b.dataset.g;
+      run.guessOpts = opts;
+      snd.letter();
+      room();
+    }));
   }
   function roomShell() {
     GS.scene = null;

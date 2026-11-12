@@ -6,6 +6,8 @@ import { genSeq, genOdd, genCount, genGrow, figCells, patternPair } from "../src
 import { genShield, explain } from "../src/math-data.js";
 import { genHouses, holds, perms } from "../src/puzzles/houses.js";
 import { genFloor, genPiece, placePiece, connected, same } from "../src/puzzles/tiles.js";
+import { genPyramid, layout, propagate, badTriples } from "../src/puzzles/pyramid.js";
+import { genHourOnly, rough, wordsAcc, wordsAt, durWord, guessHit, guessLines, labelFor, clockRoomTasks } from "../src/time-data.js";
 import { genRead, genSet, genElapsed, genHowLong, genLonger, genFeel, words, digital, tripTimeLine, ACTS, SPANS } from "../src/time-data.js";
 
 const N = 1500;
@@ -164,4 +166,43 @@ test("counting in steps and growing figures continue their rule", () => {
   }
   assert.deepEqual([1, 2, 3, 4].map((k) => figCells("cross", k).length), [5, 9, 13, 17]);
   assert.deepEqual([1, 2, 3, 4].map((k) => figCells("stairs", k).length), [1, 3, 6, 10]);
+});
+
+test("number pyramid: solvable step by step, so the answer is the only one", () => {
+  seedRandom(seed);
+  for (const lvl of [1, 2, 3]) for (let i = 0; i < N; i++) {
+    const q = genPyramid(lvl), L = layout(q.nRows);
+    assert.equal(q.nRows, lvl === 3 ? 4 : 3); assert.equal(q.given.length, lvl === 3 ? 4 : 3);
+    const r = propagate(L, q.values.map((v, j) => (q.given.includes(j) ? v : null)));
+    assert.ok(r, "stuck"); assert.deepEqual(r.v, q.values);
+    assert.equal(badTriples(q, q.values).length, 0);
+    assert.ok(q.values.every((v) => v >= 1)); assert.ok(q.values.at(-1) <= (lvl === 3 ? 30 : 20));
+    if (lvl === 2) assert.ok(r.subs >= 1 && r.subs <= 2);
+    if (lvl === 1) assert.ok(r.subs <= 1);
+  }
+});
+
+test("clock in words: rough readings, setting, starting at; the short hand alone on level 1", () => {
+  assert.equal(rough(3, 0), "trzecia"); assert.equal(rough(3, 10), "trochę po trzeciej");
+  assert.equal(rough(3, 30), "wpół do czwartej"); assert.equal(rough(3, 50), "prawie czwarta"); assert.equal(rough(12, 50), "prawie pierwsza");
+  assert.equal(wordsAcc(3, 0), "trzecią"); assert.equal(wordsAcc(12, 30), "wpół do pierwszej"); assert.equal(wordsAt(7, 0), "siódmej");
+  assert.deepEqual([30, 60, 90, 120, 150, 300].map(durWord), ["pół godziny", "godzinę", "półtorej godziny", "2 godziny", "2 i pół godziny", "5 godzin"]);
+  assert.deepEqual([1, 2, 3].map((l) => labelFor({ h: 3, m: 30 }, l)).map((o) => [o.label, o.sub]), [["wpół do czwartej", ""], ["wpół do czwartej", "3:30"], ["3:30", "wpół do czwartej"]]);
+  seedRandom(seed);
+  for (let i = 0; i < N; i++) {
+    const q = genHourOnly(), a = q.opts.map((o) => o.a), n = q.opts.map((o) => o.n);
+    assert.equal(q.opts.length, 3); assert.ok(a.includes(q.ans)); assert.equal(new Set(a).size, 3); assert.equal(new Set(n).size, 3);
+    assert.ok([0, 10, 30, 50].includes(q.m));
+    const t = clockRoomTasks(1).map((x) => x.kind); assert.equal(t[0], "hour"); assert.equal(t[1], "set"); assert.ok(["read", "elapsed"].includes(t[2]));
+  }
+});
+
+test("guessing the trip length: the nearest guess counts, the card reads well", () => {
+  assert.ok(guessHit(10, 9, [2, 10, 60])); assert.ok(!guessHit(2, 9, [2, 10, 60])); assert.ok(guessHit(2, 3, [2, 10, 60]));
+  assert.ok(guessHit(30, 25, [2, 10, 30, 60])); assert.ok(guessHit(60, 50, [2, 10, 30, 60]));
+  assert.deepEqual(guessLines(2, 11 * 60000, [2, 10, 60], true), ["Myślałaś, że potrwa 2 minuty. Trwała 11 minut.", "To tyle, co 4 piosenki.", "Godzina to tyle, co 5 takich wypraw."]);
+  assert.deepEqual(guessLines(10, 10 * 60000, [2, 10, 60], false), ["Dobrze myślałeś: wyprawa trwała 10 minut!", "To tyle, co 3 piosenki.", "Godzina to tyle, co 6 takich wypraw."]);
+  assert.equal(guessLines(60, 9 * 60000, [2, 10, 60], true)[0], "Myślałaś, że potrwa godzinę. Trwała 9 minut.");
+  assert.equal(guessLines(null, 20 * 60000, [], true).at(-1), "Godzina to tyle, co 3 takie wyprawy.");
+  assert.equal(guessLines(null, 20 * 60000, [], true)[0], "Ta wyprawa trwała 20 minut. To tyle, co 7 piosenek.");
 });

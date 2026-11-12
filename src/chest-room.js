@@ -8,11 +8,11 @@ import { PETSPR } from "./pets.js";
 import { SPR } from "./props.js";
 import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
-import { heroName, petName, say, sayHTML } from "./shell.js";
+import { heroName, isBoy, petName, say, sayHTML } from "./shell.js";
 import { $, app, esc, shuffle } from "./util.js";
 import { growGarden, houseBonus } from "./camp-data.js";
 import { record, timer, tripEnd } from "./stats.js";
-import { tripTimeLine } from "./time-data.js";
+import { guessHit, guessLines } from "./time-data.js";
 import { lands, UNLOCK_TRIPS } from "./lands.js";
 
 /* ---------- Chest (password from collected runes) ---------- */
@@ -56,12 +56,18 @@ export function chestRoom() {
     GS.G.coins += GS.RUN.coins; GS.G.gr += GS.RUN.gr; GS.G.trips++; growGarden(GS.G.camp);
     record("polish.password", misses === 0, took(), `${pw.w}${misses ? `, pomyłki: ${misses}` : ""}`); tripEnd(GS.RUN, true);
     const opened = !GS.G.lands.includes("mountains") && GS.G.trips >= UNLOCK_TRIPS; if (opened) GS.G.lands.push("mountains");
-    const timeLine = tripTimeLine(GS.RUN.active || 0), landKey = GS.RUN.land;
+    const ms = GS.RUN.active || 0, landKey = GS.RUN.land, guess = GS.RUN.guess;
+    const timeCard = guessLines(guess, ms, GS.RUN.guessOpts || [], !isBoy());
+    if (guess) {
+      const hit = guessHit(guess, ms / 60000, GS.RUN.guessOpts);
+      GS.G.guessStreak = hit ? Math.min(99, GS.G.guessStreak + 1) : 0;
+      record("time.guess", hit, 0, `${guess} min → ${Math.round(ms / 60000)} min`);
+    }
     save();
     speak(pw.w); snd.fanfare(); praise(pw.w.toUpperCase() + "!"); bigEffect(); setTimeout(bigEffect, 700);
     $("coinN").textContent = GS.G.coins; if ($("grN")) $("grN").textContent = GS.G.gr;
-    setTimeout(() => cv.c.isConnected && say(heroName(), `Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} zł${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}${timeLine ? " " + timeLine : ""}${opened ? ` Odkryliśmy nową krainę: ${lands().mountains.name}!` : ""}`), 900);
-    $("ctl").innerHTML = `<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Następna wyprawa</button>`;
+    setTimeout(() => cv.c.isConnected && say(heroName(), `Hasło „${pw.w}” otworzyło skrzynię! Pokonane potwory: ${GS.RUN.beaten}. Zdobyte: ${GS.RUN.coins} zł${house ? ` (w tym ${house} od domu)` : ""} i ${GS.RUN.gr} gr.${GS.G.camp.beds.length ? " W ogródku coś urosło!" : ""}${opened ? ` Odkryliśmy nową krainę: ${lands().mountains.name}!` : ""}`), 900);
+    $("ctl").innerHTML = `${timeCard.length ? `<div class="timecard">⏱️ ${timeCard.map(esc).join(" ")}</div>` : ""}<button class="btn main" id="campBtn">Wracamy do obozu</button><button class="btn" id="againBtn">Następna wyprawa</button>`;
     $("campBtn").addEventListener("click", () => { GS.RUN = null; camp(); });
     $("againBtn").addEventListener("click", () => startTrip(landKey));
   }

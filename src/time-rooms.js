@@ -9,13 +9,14 @@ import { save } from "./save.js";
 import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { heroName, petName, say } from "./shell.js";
 import { record, timer } from "./stats.js";
-import { clockRoomTasks, digital, h12, timeRoomTasks, words } from "./time-data.js";
-import { $, app, esc, sleep } from "./util.js";
+import { clockRoomTasks, digital, durWord, h12, labelFor, timeRoomTasks, words, wordsAcc, wordsAt } from "./time-data.js";
+import { testHook } from "./puzzle-ui.js";
+import { $, app, esc, reduced, ri, rnd, sleep } from "./util.js";
 
 /* ================== Clock face ==================
    Drawn smoothly (not pixelated) so the numbers stay crisp. Colours make the hands easy to tell apart:
    the short hour hand is blue, the long minute hand red. */
-export function drawClock(c, h, m) {
+export function drawClock(c, h, m, { minute = true } = {}) {
   const x = c.getContext("2d"), W = c.width, R = W / 2 - 6;
   x.clearRect(0, 0, W, W); x.save(); x.translate(W / 2, W / 2);
   x.fillStyle = "#7a4b2a"; x.beginPath(); x.arc(0, 0, R, 0, Math.PI * 2); x.fill();
@@ -29,7 +30,7 @@ export function drawClock(c, h, m) {
   for (let n = 1; n <= 12; n++) { const a = (n / 12) * Math.PI * 2; x.fillText(String(n), Math.sin(a) * R * 0.6, -Math.cos(a) * R * 0.6 + W / 120); }
   const hand = (a, len, w, col) => { x.strokeStyle = col; x.lineWidth = w; x.lineCap = "round"; x.beginPath(); x.moveTo(-Math.sin(a) * len * 0.12, Math.cos(a) * len * 0.12); x.lineTo(Math.sin(a) * len, -Math.cos(a) * len); x.stroke(); };
   hand(((h12(h) % 12) + m / 60) / 12 * Math.PI * 2, R * 0.45, W / 26, "#2b6cb0");
-  hand((m / 60) * Math.PI * 2, R * 0.74, W / 44, "#e8442c");
+  if (minute) hand((m / 60) * Math.PI * 2, R * 0.74, W / 44, "#e8442c");
   x.fillStyle = "#ffcf3a"; x.beginPath(); x.arc(0, 0, W / 40, 0, Math.PI * 2); x.fill();
   x.restore();
 }
@@ -55,14 +56,15 @@ export async function clockRoom() {
   for (const q of clockRoomTasks(lvl)) {
     await sleep(500); if (left(run)) return;
     let r;
-    if (q.kind === "set") r = await setClock(q);
+    if (q.kind === "set" || q.kind === "elapsed") r = await gearClock(q, lvl);
     else {
-      say(petName(), q.kind === "read" ? "Która godzina jest na zegarze?" : `${q.text} O której się skończy?`, q.say);
-      r = await askChoice(q, {
-        skill: q.kind === "read" ? "time.read" : "time.elapsed", cls: "times",
-        head: `${clockHTML()}<p class="task-q">${q.kind === "read" ? "Która godzina?" : `<span class="em">${q.e}</span> ${esc(q.text)}<br>O której się skończy?`}</p>`,
-        after: (el) => drawClock(el.querySelector(".clock"), q.h, q.m),
-        note: (miss) => `${q.kind === "read" ? "zegar " : "koniec "}${q.ans}${miss ? `, pomyłki: ${miss}` : ""}`
+      const hour = q.kind === "hour";
+      say(petName(), hour ? q.title : "Która godzina jest na zegarze?", q.say);
+      r = await askChoice(hour ? q : { ...q, opts: q.opts.map((o) => labelFor(o, lvl)) }, {
+        skill: hour ? "time.hour" : "time.read", cls: `times${hour || lvl < 3 ? " words" : ""}`,
+        head: `${clockHTML()}<p class="task-q">${esc(q.title)}</p>`,
+        after: (el) => drawClock(el.querySelector(".clock"), q.h, q.m, { minute: !hour }),
+        note: (miss) => `${hour ? "mała wskazówka " : "zegar "}${q.ans}${miss ? `, pomyłki: ${miss}` : ""}`
       });
     }
     if (left(run)) return;
@@ -71,40 +73,61 @@ export async function clockRoom() {
   finish(run, good, "Zegar nie ma przed nami tajemnic!");
 }
 
-// the child moves the hands: arrows turn the short hand an hour, one button flips the long hand between 12 and 6
-function setClock(q) {
+// The geared clock: the child turns the hands by half an hour or a whole hour and both hands move together,
+// the short one gliding along with the long one. "set": set a time; "elapsed": start at the beginning of
+// something and turn the clock on by how long it lasts, while a bar of half hours fills up.
+function gearClock(q, lvl) {
   return new Promise((resolve) => {
-    const run = GS.RUN, took = timer();
-    let h = h12(q.h + 4 + Math.floor(Math.random() * 5)), m = q.m === 30 ? 0 : 30, misses = 0, done = false;
-    say(petName(), `Ustaw zegar na ${q.ans}, czyli ${words(q.h, q.m)}.`, q.say);
-    $("ctl").innerHTML = `<div class="task">${clockHTML("big")}<p class="task-q">Ustaw: <b>${esc(q.ans)}</b></p></div>
-      <div class="setclock">
-        <button class="btn small" id="hBack" aria-label="Mała wskazówka do tyłu">◀ mała</button>
-        <button class="btn small" id="hFwd" aria-label="Mała wskazówka do przodu">mała ▶</button>
-        <button class="btn small" id="mFlip">duża na ${m === 0 ? "6" : "12"}</button>
+    const run = GS.RUN, took = timer(), el = q.kind === "elapsed", mod = (x) => ((x % 720) + 720) % 720;
+    const target = el ? q.end : h12(q.h) * 60 + q.m, start = el ? q.start : mod(target + (rnd() < 0.5 ? -1 : 1) * 30 * ri(4, 8));
+    let t = start, shown = start, misses = 0, done = false, anim = 0;
+    const segs = el ? q.dur / 30 : 0;
+    if (el) say(petName(), `${q.text} Przekręć zegar o ${durWord(q.dur)}.`, `${q.say.replace(" O której się skończy?", "")} Przekręć zegar o ${durWord(q.dur)} i zobacz, o której się skończy.`);
+    else say(petName(), `Ustaw zegar na ${wordsAcc(q.h, q.m)}.`, q.say);
+    $("ctl").innerHTML = `<div class="task">${clockHTML("big")}<p class="task-q">${el ? `<span class="em">${q.e}</span> ${esc(q.text)}` : `Ustaw: <b>${esc(lvl === 3 ? q.ans : words(q.h, q.m))}</b>`}</p>
+        ${el ? `<div class="hbar" aria-label="Upływający czas">${Array.from({ length: segs }, () => "<i></i>").join("")}<b class="over" hidden>+</b></div>` : ""}</div>
+      <div class="gear">
+        <button class="btn small" id="tBack60" aria-label="Godzinę do tyłu">◀ godz.</button><button class="btn small" id="tBack30" aria-label="Pół godziny do tyłu">◀ pół</button>
+        <button class="btn small" id="tFwd30" aria-label="Pół godziny do przodu">pół ▶</button><button class="btn small" id="tFwd60" aria-label="Godzinę do przodu">godz. ▶</button>
       </div>
       <button class="btn main" id="clockOk">Gotowe</button>`;
-    if (window.__LW_TEST) window.__LW_TEST.q = { kind: "set", ans: q.ans, h: h12(q.h), m: q.m, cur: () => ({ h, m }) };
-    const cnv = app.querySelector("#ctl .clock"), paint = () => { drawClock(cnv, h, m); $("mFlip").textContent = `duża na ${m === 0 ? "6" : "12"}`; };
+    const diff = mod(target - start);
+    testHook(q.kind, q.ans, [...Array(Math.floor(diff / 60)).fill("#tFwd60"), ...Array((diff % 60) / 30).fill("#tFwd30"), "#clockOk"]);
+    if (window.__LW_TEST) Object.assign(window.__LW_TEST.q, { h: h12(q.h), m: q.m, cur: () => ({ h: h12(Math.floor(t / 60)), m: t % 60 }) });
+    const cnv = app.querySelector("#ctl .clock");
+    const paint = () => {
+      drawClock(cnv, Math.floor(shown / 60), shown % 60);
+      if (el) { const n = Math.round((t - start) / 30); app.querySelectorAll(".hbar i").forEach((x, i) => x.classList.toggle("on", i < n)); app.querySelector(".hbar .over").hidden = n <= segs; }
+    };
+    const move = (d) => {
+      if (done) return; const from = shown; t += d; snd.step();
+      if (el) t = Math.max(start - 60, Math.min(start + 12 * 60, t)); else t = mod(t);
+      const to = el ? t : from + (((t - from) % 720) + 1080) % 720 - 360; // the short way round
+      if (reduced() || window.__LW_TEST) { shown = mod(t); return paint(); }
+      const t0 = performance.now(), my = ++anim;
+      const step = (now) => { if (my !== anim) return; const p = Math.min(1, (now - t0) / 350); shown = mod(from + (to - from) * p); paint(); if (p < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    };
     paint();
-    $("hBack").addEventListener("click", () => { if (done) return; h = h12(h - 1); snd.step(); paint(); });
-    $("hFwd").addEventListener("click", () => { if (done) return; h = h12(h + 1); snd.step(); paint(); });
-    $("mFlip").addEventListener("click", () => { if (done) return; m = m === 0 ? 30 : 0; snd.step(); paint(); });
+    $("tBack60").addEventListener("click", () => move(-60)); $("tBack30").addEventListener("click", () => move(-30));
+    $("tFwd30").addEventListener("click", () => move(30)); $("tFwd60").addEventListener("click", () => move(60));
     $("clockOk").addEventListener("click", async () => {
       if (done) return;
-      if (h === h12(q.h) && m === q.m) {
-        done = true; snd.ok(); burst(cnv); record("time.set", misses === 0, took(), `${q.ans}${misses ? `, pomyłki: ${misses}` : ""}`); save();
-        say(heroName(), `Jest ${q.ans}!`); resolve({ ok: misses === 0 }); return;
+      const ch = Math.floor(mod(t) / 60), cm = mod(t) % 60;
+      if (mod(t) === mod(target)) {
+        done = true; snd.ok(); burst(cnv); record(el ? "time.elapsed" : "time.set", misses === 0, took(), `${q.ans}${misses ? `, pomyłki: ${misses}` : ""}`); save();
+        say(heroName(), el ? `${q.ev} skończy się o ${wordsAt(Math.floor(target / 60), target % 60)}!` : `Jest ${words(q.h, q.m)}!`); resolve({ ok: misses === 0 }); return;
       }
       misses++;
-      const hint = m !== q.m ? (q.m === 30 ? "Przy pół godzinie duża wskazówka stoi na 6." : "Przy pełnej godzinie duża wskazówka stoi na 12.")
-        : `Mała wskazówka ma pokazać ${q.m === 30 ? `miejsce między ${h12(q.h)} a ${h12(q.h + 1)}` : h12(q.h)}.`;
+      const passed = t - start;
+      const hint = el ? (passed < 0 ? "Zegar cofnął się przed początek. Kręć do przodu." : `Minęło ${durWord(passed)}, a ${q.ev.toLowerCase()} trwa ${durWord(q.dur)}.`)
+        : `Jest ${words(ch, cm)}, a ma być ${words(q.h, q.m)}.${cm !== q.m ? (q.m === 30 ? " Przy pół godzinie duża wskazówka stoi na 6." : " Przy pełnej godzinie duża wskazówka stoi na 12.") : ""}`;
       if (misses === 1) { snd.bad(); say(petName(), `Jeszcze nie. ${hint}`); return; }
       done = true;
       const fainted = await hurt(); if (left(run)) return;
-      h = h12(q.h); m = q.m; paint();
-      if (!fainted) say(petName(), `Tak wygląda ${q.ans}. ${q.why()}`);
-      record("time.set", false, took(), `${q.ans}, pomyłki: ${misses}`); save();
+      t = el ? target : mod(target); shown = mod(target); paint();
+      if (!fainted) say(petName(), `Tak wygląda ${words(Math.floor(mod(target) / 60), target % 60)}. ${q.why()}`);
+      record(el ? "time.elapsed" : "time.set", false, took(), `${q.ans}, pomyłki: ${misses}`); save();
       await sleep(3200); if (left(run)) return;
       resolve({ ok: false });
     });

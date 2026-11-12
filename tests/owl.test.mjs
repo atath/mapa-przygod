@@ -2,11 +2,11 @@
 // wrong checks only explain at first and cost a heart on the last one.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { serve, open, startWith, oneProfile, go, playRoom, label, readDB } from "./helpers.mjs";
+import { serve, open, startWith, oneProfile, go, playRoom, label, readDB, passGuess } from "./helpers.mjs";
 
 let srv; before(async () => { srv = await serve(); }); after(() => srv.close());
 
-export const OWL_KINDS = ["houses", "patterns", "tiles"];
+export const OWL_KINDS = ["houses", "patterns", "tiles", "pyramid"];
 const SCREENS = [["small phone", 360, 640], ["phone", 390, 844], ["tablet upright", 768, 1024], ["tablet lying", 1024, 768]];
 
 async function owlOnly(p, kind, level, extra = {}) {
@@ -109,6 +109,42 @@ test("a wrong shield answer shows how to count it and records the kind of mistak
     await p.click("#explainOk"); await p.waitForSelector(".card");
     const a = (await readDB(p)).profiles.p1.stats.answers.find((x) => x.k.startsWith("math.") && x.k !== "math.cards");
     assert.equal(a.ok, false); assert.match(a.d, /\(\d+\) (o 1|inne działanie|bez pożyczki|przepisana|pół zadania|inny)$/);
+    assert.deepEqual(o.errs, []);
+  } finally { await o.close(); }
+});
+
+test("before a trip the child guesses how long it takes; the chest compares, the streak is saved", { timeout: 120000 }, async () => {
+  const o = await open(); const p = o.p;
+  try {
+    await p.addInitScript(() => { window.__LW_TEST.rooms = ["chest"]; });
+    await startWith(p, srv.url, oneProfile({ level: 1, trips: 3 }));
+    await p.click("#tripBtn"); await p.click('[data-land="forest"]'); await p.waitForSelector("[data-g]");
+    assert.deepEqual(await p.$$eval("[data-g]", (b) => b.map((x) => +x.dataset.g)), [2, 10, 60]);
+    assert.ok(await passGuess(p, 2));
+    const r = await playRoom(p); assert.ok(r.ok);
+    const card = await p.textContent(".timecard");
+    assert.match(card, /Dobrze myślałaś|Myślałaś, że potrwa 2 minuty/);
+    const db = await readDB(p); assert.equal(db.profiles.p1.guessStreak, 1, "a short trip makes 2 minutes the right guess");
+    assert.ok(db.profiles.p1.stats.answers.some((a) => a.k === "time.guess" && a.ok));
+    // three hits in a row: the question comes back only every fifth trip
+    await startWith(p, srv.url, oneProfile({ level: 1, trips: 6, guessStreak: 3 }));
+    await p.click("#tripBtn"); await p.click('[data-land="forest"]'); await p.waitForSelector("#sc canvas");
+    assert.equal(await label(p), "Skrzynia ze skarbem", "no question after three good guesses");
+    assert.deepEqual(o.errs, []);
+  } finally { await o.close(); }
+});
+
+test("clock tower on level 1: the short hand alone, answers in words, both hands turn together", { timeout: 120000 }, async () => {
+  const o = await open({ viewport: { width: 360, height: 640 } }); const p = o.p;
+  try {
+    await p.addInitScript(() => { window.__LW_TEST.rooms = ["clock", "chest"]; });
+    await startWith(p, srv.url, oneProfile({ level: 1, lands: ["forest", "mountains"] }));
+    await go(p, "mountains");
+    await p.waitForFunction(() => window.__LW_TEST.q && window.__LW_TEST.q.kind === "hour");
+    const labels = await p.$$eval("#ctl .opt .lb", (b) => b.map((x) => x.textContent));
+    assert.ok(labels.every((t) => !/\d/.test(t)), `level 1 answers are words: ${labels}`);
+    const r = await playRoom(p); assert.ok(r.ok, r.why);
+    assert.deepEqual(r.asked.slice(0, 2), ["hour", "set"]);
     assert.deepEqual(o.errs, []);
   } finally { await o.close(); }
 });

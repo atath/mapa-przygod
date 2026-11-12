@@ -472,3 +472,25 @@ body.campview #sc canvas { width: auto; max-width: 100%; max-height: 42vh; max-h
   body.room .numpad .np { min-height: 34px; }
   body.room .tf { grid-template-columns: repeat(5, 14px); grid-auto-rows: 14px; }
 }
+.pyr { display: grid; gap: 4px; justify-items: center; }
+.pyr-row { display: flex; gap: 4px; }
+.brick { display: grid; place-items: center; width: 56px; height: 40px; border-radius: 6px; border: 3px solid var(--wood-dark); background: #fffaf0; font: 900 1.35rem var(--font-body); color: #24160a; font-variant-numeric: tabular-nums; padding: 0; }
+.brick.given { background: #e7c98f; }
+button.brick { border-style: dashed; cursor: pointer; }
+.brick.sel { background: var(--gold); border-style: solid; }
+.brick.bad { border-color: var(--bad); background: #fbebeb; }
+@media (max-height: 900px) { body.room .brick { width: 48px; height: 34px; font-size: 1.15rem; } }
+@media (max-height: 700px) { body.room .brick { height: 30px; } }
+/* clock tower: geared hands, half-hour bar; chest card about how long the trip took */
+.gear { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.gear .btn { padding: 6px 2px; font-size: .95rem; white-space: nowrap; }
+.hbar { display: flex; gap: 3px; align-items: center; }
+.hbar i { width: 34px; height: 16px; border-radius: 4px; border: 2px solid var(--wood-dark); background: var(--surface); }
+.hbar i.on { background: var(--leaf); }
+.hbar .over { color: var(--bad); font-size: 1.3rem; }
+.opts.times.words .opt .lb { font-size: 1.15rem; line-height: 1.15; }
+.opts.times.words .opt small { font-size: .95rem; }
+.opts.guess { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.opts.guess .opt { font-size: 1.2rem; font-weight: 800; }
+.timecard { font-weight: 700; font-size: .95rem; line-height: 1.3; padding: 6px 10px; border-radius: 12px; background: var(--surface); border: 2px solid var(--line); }
+@media (max-height: 700px) { body.room .gear { margin-bottom: 4px; } body.room .gear .btn { min-height: 40px; } .timecard { font-size: .85rem; } }

@@ -10,6 +10,10 @@ import { doorRoom, signRoom } from "./polish-rooms.js";
 import { logicRoom } from "./logic-room.js";
 import { clockRoom, timeRoom } from "./time-rooms.js";
 import { lands } from "./lands.js";
+import { levelFor } from "./content.js";
+import { guessLabel, guessOptions } from "./time-data.js";
+import { PETSPR } from "./pets.js";
+import { bakeClearing, bob, draw, mountCanvas } from "./scene.js";
 import { ICON } from "./props.js";
 import { dialogHTML, gw, heroName, hudHTML, petName, say, wireHud, wireSay } from "./shell.js";
 import { $, app, esc, pick, ri, shuffle, sleep } from "./util.js";
@@ -41,7 +45,23 @@ export function startTrip(landKey) {
   const maxHp = 3 + wellHearts(GS.G.camp);
   GS.RUN = { rooms, i: 0, hp: maxHp, maxHp, coins: 0, gr: 0, beaten: 0, seed: ri(1, 1e6), pw, runes, got: [], hints: libraryHints(GS.G.camp), land: key };
   tripStart(GS.RUN);
-  room();
+  // a few trips in a row the child first guesses how long the trip will take; the chest tells how long it took
+  if (GS.G.guessStreak < 3 || GS.G.trips % 5 === 0) guessScreen(); else room();
+}
+const BEFORE = "Przed wyprawą";
+function guessScreen() {
+  roomShell();
+  const run = GS.RUN, opts = guessOptions(levelFor("time"));
+  const cv = mountCanvas(8, 4); $("sc").appendChild(cv.c); cv.c.setAttribute("aria-label", BEFORE);
+  const bg = bakeClearing(8, 4, run.seed + 5);
+  GS.scene = { cv, draw(t) { const c = cv.x; c.drawImage(bg, 0, 0, bg.width / 2, bg.height / 2); draw(c, PETSPR[GS.G.hero.pet], 30, 34 - bob(t, 2), 1.25); draw(c, GS.HERO, 46, 16 - bob(t), 1.75); } };
+  say(petName(), "Zanim ruszymy: jak myślisz, ile potrwa ta wyprawa?");
+  $("ctl").innerHTML = `<div class="opts guess">${opts.map((g) => `<button class="btn opt" data-g="${g}">⏱️ ${guessLabel(g)}</button>`).join("")}</div>`;
+  app.querySelectorAll("[data-g]").forEach((b) => b.addEventListener("click", () => {
+    if (left(run) || run.guess) return;
+    run.guess = +b.dataset.g; run.guessOpts = opts; snd.letter();
+    room();
+  }));
 }
 export function roomShell() {
   GS.scene = null;

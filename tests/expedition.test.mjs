@@ -1,7 +1,7 @@
 // Whole expeditions on every level, the level-3 try limit, and leaving a trip halfway.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { serve, open, startWith, oneProfile, playRoom, setLevel, text, readDB, label, go, PATH_LABELS } from "./helpers.mjs";
+import { serve, open, startWith, oneProfile, playRoom, setLevel, text, readDB, label, go, passGuess, PATH_LABELS } from "./helpers.mjs";
 
 let srv; before(async () => { srv = await serve(); }); after(() => srv.close());
 
@@ -16,7 +16,7 @@ for (const land of ["forest", "mountains"]) for (const level of [1, 2, 3]) {
         await o.p.click("#tripBtn");
         assert.ok(await o.p.$('.land.locked[data-land="mountains"]'), "the mountains should still be locked");
         await o.p.click('[data-land="mountains"]', { force: true }); assert.ok(await o.p.$(".lands"), "a locked land must not start a trip");
-        await o.p.click('[data-land="forest"]'); await o.p.waitForSelector("#sc canvas");
+        await o.p.click('[data-land="forest"]'); await passGuess(o.p);
       } else await go(o.p, land);
       const rooms = [];
       for (let i = 0; i < 12; i++) {
